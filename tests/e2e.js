@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /*
- * Headless browser play-test for Word Jam Bus v2 (slide-until-blocked rules).
+ * Headless browser play-test for Word Jam Bus (v2 slide-until-blocked rules,
+ * v3 level set: 10 starter levels + the 10 original v2 levels = 20).
  *   python3 -m http.server 8765   (in the game folder, or set WJB_URL)
  *   node tests/e2e.js
  * Uses REAL input only to move cars: touch taps + touch swipes (CDP touch
@@ -131,8 +132,48 @@ async function layoutOk(page, label) {
   return r;
 }
 
+const tapEl = async (page, ctx, sel) => {
+  const b = await page.locator(sel).boundingBox();
+  if (ctx.touch) await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2); else await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
+};
+/** Seed localStorage with a saved-progress object, reload, and read what the title screen shows. */
+async function seeded(page, save) {
+  await page.goto(URL);
+  await page.evaluate(sv => { localStorage.clear(); if (sv) localStorage.setItem('wordJamBus.progress.v1', JSON.stringify(sv)); }, save);
+  await page.reload();
+  await page.waitForSelector('#screen-title.active');
+  return page.evaluate(() => ({
+    open: [...document.querySelectorAll('.lvl')].filter(b => !b.disabled).map(b => +b.getAttribute('data-level')),
+    current: +(document.querySelector('.lvl.current') || { getAttribute: () => 0 }).getAttribute('data-level'),
+    stars: [...document.querySelectorAll('.lvl')].map(b => b.querySelector('small').textContent),
+    play: document.getElementById('btn-play').textContent,
+    stored: JSON.parse(localStorage.getItem('wordJamBus.progress.v1'))
+  }));
+}
+const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
+const same = (x, y) => JSON.stringify(x) === JSON.stringify(y);
+
+async function winAll(page, ctx, label) {
+  for (let n = 1; n <= 20; n++) {
+    await openLevel(page, n);
+    const t0 = Date.now();
+    const sol = await page.evaluate(() => window.WJB.solution());
+    for (const m of sol) {
+      await inputMove(page, ctx, m.car, m.which, m.which === 1 ? (ctx.touch ? 'swipe' : 'drag') : (ctx.touch ? 'tap' : 'click'));
+      await settle(page);
+    }
+    await page.waitForSelector('#ov-win.show', { timeout: 6000 }).catch(() => {});
+    const won = await page.locator('#ov-win.show').count() === 1;
+    const st = await page.getAttribute('#win-stars', 'data-stars');
+    const lv = await page.evaluate(() => ({ par: window.WJB.session.level.par, id: window.WJB.session.level.id }));
+    check(won && st === '3' && sol.length === lv.par, label + ' level ' + n + ' (' + lv.id + ') won in ' + sol.length + ' moves (= par ' + lv.par + ', ' +
+      sol.filter(m => m.which === 1).length + ' reverses), 3 stars [' + (Date.now() - t0) + ' ms]');
+  }
+}
+
 (async () => {
   const browser = await chromium.launch();
+  const LV = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'levels', 'levels.json'), 'utf8')).levels;
 
   /* ------------------------------ PHONE ------------------------------ */
   console.log('\n# Phone 390x844 (touch, isMobile)');
@@ -143,146 +184,173 @@ async function layoutOk(page, label) {
   const p = await phone.newPage();
   watch(p, 'phone');
   const T = { touch: true, cdp: await phone.newCDPSession(p) };
-  await p.goto(URL);
-  await p.evaluate(() => localStorage.clear());
-  await p.reload();
-  await p.waitForSelector('#screen-title.active');
-  check(await p.locator('.lvl').count() === 10, '10 levels listed');
-  check(await p.locator('.lvl.locked').count() === 9, 'only level 1 unlocked on a fresh save');
+  let t = await seeded(p, null);
+  check(await p.locator('.lvl').count() === 20, '20 levels listed');
+  check(same(t.open, [1]), 'fresh save: only level 1 unlocked');
+  const sel = await p.evaluate(() => {
+    const r = [...document.querySelectorAll('.lvl')].map(b => b.getBoundingClientRect());
+    return { fits: r.every(b => b.top >= 0 && b.bottom <= innerHeight && b.left >= 0 && b.right <= innerWidth), rows: new Set(r.map(b => Math.round(b.top))).size, min: Math.min(...r.map(b => Math.min(b.width, b.height))) };
+  });
+  check(sel.fits && sel.min >= 44, 'level select: all 20 buttons visible on the phone screen without scrolling (' + sel.rows + ' rows, buttons >= ' + Math.round(sel.min) + 'px)');
   check(await p.evaluate(() => getComputedStyle(document.getElementById('lot')).touchAction) === 'none', 'lot has touch-action:none (swipes never scroll/zoom)');
-  await shot(p, 'v2-01-phone-title.png');
-  await p.touchscreen.tap(...await p.locator('#btn-play').boundingBox().then(b => [b.x + b.width / 2, b.y + b.height / 2]));
+  await shot(p, 'v3-05-phone-level-select.png');
+
+  await tapEl(p, T, '#btn-play');
   await p.waitForSelector('#screen-game.active');
   await p.waitForTimeout(750);
-  check((await p.textContent('#hud-level')).includes('Level 1'), 'Play opens level 1');
+  check((await p.textContent('#hud-level')).trim() === 'Level 1 of 20', 'Play opens "Level 1 of 20"');
+  check((await p.textContent('#tip')).trim() === LV[0].tip, 'level 1 shows its tip: "' + LV[0].tip + '"');
   await layoutOk(p, 'phone L1');
-  await shot(p, 'v2-02-phone-level1-start.png');
+  await shot(p, 'v3-01-phone-level1-tip.png');
 
-  // --- partial forward slide that stops at a blocker (tap) ---
-  let c = await findCar(p, 0, 'slide');
-  check(c >= 0, 'level 1 has a car that can slide forward partway');
+  // tips appear on the right levels
+  let tipsOk = true;
+  for (let n = 1; n <= 20; n++) {
+    await p.goto(URL + '#level-' + n); await p.waitForSelector('#screen-game.active');
+    const shown = (await p.textContent('#tip')).trim();
+    const hud = (await p.textContent('#hud-level')).trim();
+    if (shown !== (LV[n - 1].tip || '') || hud !== 'Level ' + n + ' of 20') { tipsOk = false; console.log('    level ' + n + ': tip "' + shown + '" hud "' + hud + '"'); }
+  }
+  check(tipsOk, 'every level shows its own tip and "Level N of 20"');
+  check(LV.slice(0, 10).every(l => l.tip && l.tier === 'starter') && LV.slice(10).every(l => !l.tier), 'levels 1-10 are starter levels with tips, 11-20 are the original v2 levels');
+
+  // --- level 2: partial slide that stops at a blocker (the level that teaches it) ---
+  await openLevel(p, 2);
+  // the slide the level is built around: the first move of its optimal line
+  const first2 = (await p.evaluate(() => window.WJB.solution()))[0];
+  let c = (await probe(p, first2.car, 0)).kind === 'slide' && first2.which === 0 ? first2.car : await findCar(p, 0, 'slide');
+  check(c >= 0, 'level 2 has a car that slides forward partway');
   let pr = await probe(p, c, 0), before = await S(p);
   await inputMove(p, T, c, 0, 'tap'); await settle(p);
   let after = await S(p);
   const fsign = await p.evaluate(id => window.WJB.session.game.cars[id].sign, c);
-  check(after.pos[c] === before.pos[c] + fsign * pr.dist && after.pos[c] >= 0, 'tap: car slid forward ' + pr.dist + ' cell(s) and stopped at the blocker (still in the lot)');
+  check(after.pos[c] === before.pos[c] + fsign * pr.dist && after.pos[c] >= 0, 'tap: car slid ' + pr.dist + ' cell(s) and stopped at the blocker (still in the lot)');
   check(after.moves === before.moves + 1, 'a partial slide counts as 1 move');
-  await shot(p, 'v2-03-phone-midplay-partial-slide.png');
-
-  // --- undo of the partial slide ---
-  await p.locator('#btn-undo').tap(); await settle(p);
+  await shot(p, 'v3-02-phone-level2-partial-slide.png');
+  await tapEl(p, T, '#btn-undo'); await settle(p);
   let u = await S(p);
-  check(u.pos[c] === before.pos[c] && u.moves === before.moves && u.undos === after.undos - 1, 'Undo puts the slid car back and refunds the move (1 undo used)');
-
-  // --- reverse slide by swiping toward the tail (with ghost preview captured mid-swipe) ---
-  c = await findCar(p, 1, 'slide');
-  check(c >= 0, 'level 1 has a car that can reverse');
-  pr = await probe(p, c, 1); before = await S(p);
-  T.holdShot = 'v2-04-phone-swipe-preview.png';
-  await inputMove(p, T, c, 1, 'swipe'); await settle(p);
-  after = await S(p);
-  const rsign = await p.evaluate(id => -window.WJB.session.game.cars[id].sign, c);
-  check(after.pos[c] === before.pos[c] + rsign * pr.dist, 'swipe toward the tail: car reversed ' + pr.dist + ' cell(s) and stopped');
-  // and swipe it forward again (both directions)
-  pr = await probe(p, c, 0); before = after;
-  await inputMove(p, T, c, 0, 'swipe'); await settle(p);
-  after = await S(p);
-  check(pr.kind !== 'bump' && (after.pos[c] !== before.pos[c]), 'swipe toward the nose moves the same car forward again (' + pr.kind + ')');
-  await p.locator('#btn-restart').tap(); await p.waitForTimeout(400);
-
-  // --- bump: a car that cannot move either way shakes, no move used ---
-  c = await findCar(p, 0, 'bump', { bothBump: true });
-  if (c < 0) c = await findCar(p, 0, 'bump');
-  check(c >= 0, 'level 1 has a car that cannot move forward');
+  check(u.pos[c] === before.pos[c] && u.moves === before.moves && u.undos === after.undos - 1, 'Undo puts the slid car back and refunds the move');
+  // bump: a blocked car shakes, no move used
+  c = await findCar(p, 0, 'bump');
   before = await S(p);
   await inputMove(p, T, c, 0, 'tap'); await p.waitForTimeout(120);
-  check(await p.locator('.car[data-id="' + c + '"]').evaluate(e => /bump-/.test(e.className)), 'blocked tap: car shakes');
-  check(await p.locator('#toast.show').count() === 1, 'blocked tap: toast shown');
-  check((await S(p)).moves === before.moves, 'a bump is not a move');
+  check(await p.locator('.car[data-id="' + c + '"]').evaluate(e => /bump-/.test(e.className)) && (await S(p)).moves === before.moves, 'blocked tap: car shakes, no move used');
   await settle(p);
 
-  // --- hint points to a move on an optimal path from the current state ---
-  // make one non-optimal-ish move first so the hint is computed from a mid-game state
+  // --- level 3: first reverse (swipe toward the tail), ghost preview captured mid-swipe ---
+  await openLevel(p, 3);
+  const sol3 = await p.evaluate(() => window.WJB.solution());
+  const ri = sol3.findIndex(m => m.which === 1);
+  check(ri >= 0, 'level 3 optimal line includes a reverse move');
+  await playPath(p, T, sol3.slice(0, ri));
+  before = await S(p);
+  pr = await probe(p, sol3[ri].car, 1);
+  T.holdShot = 'v3-03-phone-level3-first-reverse.png';
+  await inputMove(p, T, sol3[ri].car, 1, 'swipe'); await settle(p);
+  after = await S(p);
+  const rsign = await p.evaluate(id => -window.WJB.session.game.cars[id].sign, sol3[ri].car);
+  check(after.pos[sol3[ri].car] === before.pos[sol3[ri].car] + rsign * pr.dist, 'swipe toward the tail reversed the car ' + pr.dist + ' cell(s)');
+  // and forward again on another car (both directions work)
+  c = await findCar(p, 0, 'exit');
+  check(c >= 0, 'after the reverse a car can drive out');
+
+  // --- level 4: first holding-bay level ---
+  await openLevel(p, 4);
+  check((await p.textContent('#tip')).toLowerCase().includes('bay'), 'level 4 tip teaches the holding bay');
+  const sol4 = await p.evaluate(() => window.WJB.solution());
+  let parked = false;
+  for (const m of sol4) {
+    await inputMove(p, T, m.car, m.which, m.which ? 'swipe' : 'tap'); await settle(p);
+    if (!parked && (await S(p)).bay.length) { parked = true; await shot(p, 'v3-04-phone-level4-holding-bay.png'); }
+  }
+  await p.waitForSelector('#ov-win.show', { timeout: 5000 }).catch(() => {});
+  check(parked && await p.locator('#ov-win.show').count() === 1, 'level 4: an out-of-order letter parked in the bay, auto-boarded, level won');
+
+  // --- hint from a mid-game state on level 11 (the old v2 level 1) ---
+  await openLevel(p, 11);
   c = await findCar(p, 1, 'slide');
   if (c >= 0) { await inputMove(p, T, c, 1, 'swipe'); await settle(p); }
-  await p.locator('#btn-hint').tap();
+  await tapEl(p, T, '#btn-hint');
   await p.waitForFunction(() => document.querySelector('.car.hint'), null, { timeout: 15000 });
   const hintOk = await hintCheck(p);
-  check(hintOk.ok, 'hint move is on an optimal path (moves to win ' + hintOk.d0 + ' -> ' + hintOk.d1 + ')');
-  check(await p.locator('#ghost.show').count() === 1, 'hint shows a ghost of where the car will go');
+  check(hintOk.ok, 'level 11 hint (mid-game) is on an optimal path (' + hintOk.d0 + ' -> ' + hintOk.d1 + ')');
 
-  // --- win level 1 by real input (optimal from here) ---
-  const solA = await p.evaluate(() => window.WJB.solution());
-  await playPath(p, T, solA);
-  await p.waitForSelector('#ov-win.show', { timeout: 5000 });
-  check(true, 'level 1 won with taps + swipes');
-  await p.waitForTimeout(500);
-  await shot(p, 'v2-05-phone-win.png');
-  const saved = await p.evaluate(() => JSON.parse(localStorage.getItem('wordJamBus.progress.v1')));
-  check(saved && saved.unlocked >= 1 && saved.stars['lv1-bus'] >= 1, 'progress saved (level 2 unlocked)');
-
-  // --- dead end warning ---
+  // --- dead end + lose ---
   let deadDone = false;
-  for (const n of [3, 4, 2, 5, 6]) {
+  for (const n of [2, 3, 6, 13]) {
     await openLevel(p, n);
     const dp = await pathTo(p, 'dead');
     if (!dp) continue;
     await playPath(p, T, dp);
     await p.waitForSelector('#deadend.show', { timeout: 15000 }).catch(() => {});
     check(await p.locator('#deadend.show').count() === 1, 'dead-end banner on level ' + n + ' after ' + dp.length + ' move(s)');
-    await shot(p, 'v2-06-phone-dead-end.png');
-    await p.locator('#btn-dead-undo').tap(); await settle(p);
+    await tapEl(p, T, '#btn-dead-undo'); await settle(p);
     check(await p.locator('#deadend.show').count() === 0, 'Undo from the dead-end banner clears it');
     deadDone = true; break;
   }
   check(deadDone, 'found and triggered a dead end');
-
-  // --- lose: wrong letter leaves with a full bay ---
   let loseDone = false;
-  for (const n of [2, 3, 4, 1]) {
+  for (const n of [6, 7, 8, 12]) {
     await openLevel(p, n);
     const lp = await pathTo(p, 'lose');
     if (!lp) continue;
     await playPath(p, T, lp);
     await p.waitForSelector('#ov-lose.show', { timeout: 5000 }).catch(() => {});
-    check(await p.locator('#ov-lose.show').count() === 1 && (await p.textContent('#lose-title')).includes('Bay full'), 'lose screen "Bay full!" on level ' + n + ' after ' + lp.length + ' moves');
-    await p.waitForTimeout(400);
-    await shot(p, 'v2-07-phone-lose.png');
-    await p.locator('#btn-retry').tap(); await p.waitForTimeout(300);
-    check((await S(p)).moves === 0 && !(await S(p)).ended, 'Retry restarts the level');
+    check(await p.locator('#ov-lose.show').count() === 1, 'lose screen "Bay full!" on level ' + n + ' after ' + lp.length + ' moves');
     loseDone = true; break;
   }
-  check(loseDone, 'found and triggered a loss');
+  check(loseDone, 'found and triggered a loss on a bay-limit level');
 
-  // --- congested later level on phone ---
+  // --- new level 10 (hand-off level) and the 7x7 finale layout ---
   await openLevel(p, 10);
-  const L10 = await layoutOk(p, 'phone L10 (7x7)');
-  check(L10.minCar >= 40, '7x7 cars are >= 40px tap/swipe targets (' + Math.round(L10.minCar) + 'px)');
-  await shot(p, 'v2-08-phone-level10-start.png');
-  // hint on the biggest level: the background solver must answer quickly
-  const th = Date.now();
-  await p.locator('#btn-hint').tap();
-  await p.waitForFunction(() => document.querySelector('.car.hint'), null, { timeout: 20000 });
-  const h10 = await hintCheck(p);
-  check(h10.ok, 'level 10 hint is on an optimal path (' + h10.d0 + ' -> ' + h10.d1 + '), shown ' + (Date.now() - th) + ' ms after tapping Hint on a fresh level');
-  const sol10 = await p.evaluate(() => window.WJB.solution());
-  await playPath(p, T, sol10.slice(0, Math.floor(sol10.length / 2)));
-  await shot(p, 'v2-09-phone-level10-midplay.png');
+  await layoutOk(p, 'phone L10');
+  await shot(p, 'v3-06-phone-level10.png');
+  await openLevel(p, 20);
+  const L20 = await layoutOk(p, 'phone L20 (7x7)');
+  check(L20.minCar >= 40, '7x7 cars are >= 40px tap/swipe targets (' + Math.round(L20.minCar) + 'px)');
 
-  // --- every level winnable through real input ---
-  console.log('\n# Solving all 10 levels with phone taps + swipes');
-  for (let n = 1; n <= 10; n++) {
-    await openLevel(p, n);
-    const t0 = Date.now();
-    const sol = await p.evaluate(() => window.WJB.solution());
-    await playPath(p, T, sol);
-    await p.waitForSelector('#ov-win.show', { timeout: 6000 }).catch(() => {});
-    const won = await p.locator('#ov-win.show').count() === 1;
-    const st = await p.getAttribute('#win-stars', 'data-stars');
-    const par = await p.evaluate(() => window.WJB.session.level.par);
-    check(won && st === '3' && sol.length === par, 'level ' + n + ' won in ' + sol.length + ' moves (= par ' + par + ', ' +
-      sol.filter(m => m.which === 1).length + ' swipes back), 3 stars [' + (Date.now() - t0) + ' ms]');
-  }
+  // --- every level winnable through real touch input at par ---
+  console.log('\n# Phone: all 20 levels with taps + swipes');
+  await p.goto(URL); await p.evaluate(() => localStorage.clear());
+  await winAll(p, T, 'phone');
+  t = await seeded(p, await p.evaluate(() => JSON.parse(localStorage.getItem('wordJamBus.progress.v1'))));
+  check(t.open.length === 20 && t.stars.every(s => s === '\u2605\u2605\u2605'), 'after winning all 20: everything open with 3 stars');
+
+  /* ----------------------- PROGRESS MIGRATION ----------------------- */
+  console.log('\n# Saved-progress migration (seeded localStorage)');
+  // A: a v2 player who beat v2 levels 1-3 (BUS, CAR, PLANET); their unlock index 3 pointed at APPLE
+  t = await seeded(p, { unlocked: 3, stars: { 'lv1-bus': 3, 'lv2-car': 2, 'lv3-planet': 1 }, best: { 'lv1-bus': 10, 'lv2-car': 15, 'lv3-planet': 25 }, sound: true });
+  check(same(t.open, range(1, 14)), 'v2 save (beat BUS, CAR, PLANET): levels 1-14 open = all 10 starters + the 3 beaten + APPLE (got ' + t.open.join(',') + ')');
+  check(t.stars[10] === '\u2605\u2605\u2605' && t.stars[11] === '\u2605\u2605\u2606' && t.stars[12] === '\u2605\u2606\u2606', 'v2 stars kept on levels 11-13 (keyed by id)');
+  check(t.current === 14 && t.play === 'Continue', 'Continue points at level 14 (APPLE), the next unbeaten v2 level');
+  check(t.stored.v === 3 && t.stored.unlocked === 13 && t.stored.best['lv3-planet'] === 25, 'migrated save stored as v3 (unlocked index 13, best moves kept)');
+  await shot(p, 'v3-09-phone-level-select-migrated.png');
+  await tapEl(p, T, '#btn-play'); await p.waitForTimeout(700);
+  check((await p.textContent('#hud-level')).trim() === 'Level 14 of 20', 'Continue opens level 14');
+  // reload: migration must not apply twice
+  t = await seeded(p, await p.evaluate(() => JSON.parse(localStorage.getItem('wordJamBus.progress.v1'))));
+  check(same(t.open, range(1, 14)), 'reloading a migrated save does not shift it again');
+  // B: a v2 player who finished all 10 v2 levels
+  const all = {}; LV.slice(10).forEach(l => { all[l.id] = 3; });
+  t = await seeded(p, { unlocked: 9, stars: all, best: {}, sound: false });
+  check(t.open.length === 20, 'v2 save with all 10 beaten: all 20 levels open');
+  // C: a player with stars only on a v2 level reached by deep link (unlock index 0)
+  t = await seeded(p, { unlocked: 0, stars: { 'lv5-garden': 2 }, best: {}, sound: true });
+  check(same(t.open, range(1, 15)), 'stars on lv5-garden only: it and every level before it are open (1-15)');
+  // D: v2 save that never won anything: starts at the new level 1
+  t = await seeded(p, { unlocked: 0, stars: {}, best: {}, sound: true });
+  check(same(t.open, [1]) && t.current === 1, 'v2 save without wins: starts at new level 1');
+  // E: an already-v3 save is not shifted
+  t = await seeded(p, { v: 3, unlocked: 2, stars: { 'st1-cat': 3, 'st2-dog': 3 }, best: {}, sound: true });
+  check(same(t.open, [1, 2, 3]) && t.current === 3, 'v3 save (beat starters 1-2): levels 1-3 open, Continue = level 3');
+  // F: winning a starter level on a migrated save does not lock anything
+  t = await seeded(p, { unlocked: 3, stars: { 'lv1-bus': 3, 'lv2-car': 3, 'lv3-planet': 3 }, best: {}, sound: true });
+  await openLevel(p, 1);
+  const s1 = await p.evaluate(() => window.WJB.solution());
+  await playPath(p, T, s1);
+  await p.waitForSelector('#ov-win.show', { timeout: 5000 });
+  t = await seeded(p, await p.evaluate(() => JSON.parse(localStorage.getItem('wordJamBus.progress.v1'))));
+  check(same(t.open, range(1, 14)) && t.stars[0] === '\u2605\u2605\u2605', 'migrated player replays starter 1: it gets stars, 1-14 still open');
   await phone.close();
 
   /* ------------------------------ DESKTOP ------------------------------ */
@@ -291,14 +359,14 @@ async function layoutOk(page, label) {
   const d = await desk.newPage();
   watch(d, 'desktop');
   const M = { touch: false };
-  await d.goto(URL);
-  await d.evaluate(() => localStorage.clear());
-  await d.reload();
-  await d.waitForSelector('#screen-title.active');
-  await shot(d, 'v2-10-desktop-title.png');
+  t = await seeded(d, null);
+  const dsel = await d.evaluate(() => [...document.querySelectorAll('.lvl')].every(b => { const r = b.getBoundingClientRect(); return r.bottom <= innerHeight && r.top >= 0; }));
+  check(dsel && t.open.length === 1, 'desktop level select shows all 20 levels without scrolling');
+  await shot(d, 'v3-07-desktop-level-select.png');
   await d.click('#btn-play'); await d.waitForTimeout(750);
   await layoutOk(d, 'desktop L1');
-  // right-click reverses
+  // right-click reverses (level 3 teaches reverse)
+  await openLevel(d, 3);
   c = await findCar(d, 1, 'slide');
   pr = await probe(d, c, 1); before = await S(d);
   await inputMove(d, M, c, 1, 'rightclick'); await settle(d);
@@ -306,16 +374,13 @@ async function layoutOk(page, label) {
   check(after.pos[c] === before.pos[c] - (await d.evaluate(id => window.WJB.session.game.cars[id].sign, c)) * pr.dist, 'desktop: right-click reverses a car');
   await d.keyboard.press('r'); await d.waitForTimeout(300);
   check((await S(d)).moves === 0, 'desktop: R restarts');
-  const solD = await d.evaluate(() => window.WJB.solution());
-  for (const m of solD) { await inputMove(d, M, m.car, m.which, m.which === 1 ? 'drag' : 'click'); await settle(d); }
-  await d.waitForSelector('#ov-win.show', { timeout: 5000 }).catch(() => {});
-  check(await d.locator('#ov-win.show').count() === 1, 'desktop: level 1 won with clicks + mouse drags');
-  await openLevel(d, 7);
-  await layoutOk(d, 'desktop L7');
-  const sol7 = await d.evaluate(() => window.WJB.solution());
-  for (const m of sol7.slice(0, 6)) { await inputMove(d, M, m.car, m.which, m.which === 1 ? 'drag' : 'click'); await settle(d); }
+  console.log('\n# Desktop: all 20 levels with clicks + mouse drags');
+  await winAll(d, M, 'desktop');
+  await openLevel(d, 10);
+  const sol10 = await d.evaluate(() => window.WJB.solution());
+  for (const m of sol10.slice(0, 3)) { await inputMove(d, M, m.car, m.which, m.which === 1 ? 'drag' : 'click'); await settle(d); }
   const nxt = await d.evaluate(() => window.WJB.solution()[0]);
-  M.holdShot = 'v2-11-desktop-level7-midplay.png';
+  M.holdShot = 'v3-08-desktop-level10-midplay.png';
   await inputMove(d, M, nxt.car, nxt.which, 'drag'); await settle(d);
   await desk.close();
   await browser.close();

@@ -78,13 +78,13 @@ button { font: inherit; color: inherit; touch-action: manipulation; cursor: poin
 .title { margin: 14px 0 2px; font-size: 40px; letter-spacing: .5px; color: #fff; text-shadow: 0 3px 0 rgba(0, 0, 0, .18); }
 .title b { color: var(--bus); }
 .subtitle { margin: 0 0 14px; color: #f2f8ff; font-weight: 700; }
-.howto { margin: 16px 0 6px; background: rgba(255, 255, 255, .9); border-radius: 16px; padding: 10px 14px; text-align: left; font-size: 14px; line-height: 1.35; }
+.howto { margin: 12px 0 4px; background: rgba(255, 255, 255, .9); border-radius: 16px; padding: 10px 14px; text-align: left; font-size: 14px; line-height: 1.35; }
 .howto div { display: flex; gap: 10px; align-items: flex-start; padding: 5px 0; }
 .dot { flex: 0 0 22px; height: 22px; border-radius: 50%; background: var(--bus); display: grid; place-items: center; font-weight: 900; font-size: 13px; }
-.levels-h { color: #fff; margin: 14px 0 8px; text-shadow: 0 2px 0 rgba(0, 0, 0, .15); }
-.level-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; width: 100%; max-width: 380px; }
+.levels-h { color: #fff; margin: 10px 0 8px; text-shadow: 0 2px 0 rgba(0, 0, 0, .15); }
+.level-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; width: 100%; max-width: 380px; }
 .lvl {
-  position: relative; aspect-ratio: 1; border: 0; border-radius: 14px; background: #fff; font-weight: 900; font-size: 20px;
+  position: relative; aspect-ratio: 5 / 4; border: 0; border-radius: 14px; background: #fff; font-weight: 900; font-size: 20px;
   box-shadow: 0 4px 0 rgba(0, 0, 0, .15); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
 }
 .lvl small { font-size: 10px; letter-spacing: 1px; color: #f0a800; }

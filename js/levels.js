@@ -1,8 +1,619 @@
 /* GENERATED from levels/levels.json by `node tools/verify-levels.js --write`. Do not edit by hand. */
 window.WJB_LEVELS = [
  {
-  "id": "lv1-bus",
+  "id": "st1-cat",
   "suggested_level": 1,
+  "tier": "starter",
+  "teaches": "exit",
+  "safe": true,
+  "word": "CAT",
+  "grid": [
+   3,
+   3
+  ],
+  "bay": 4,
+  "par": 3,
+  "tip": "Tap a car to drive it out the way its nose points. Letters board in order: C, A, T.",
+  "cars": [
+   {
+    "l": "C",
+    "r": 2,
+    "c": 1,
+    "dir": "left"
+   },
+   {
+    "l": "A",
+    "r": 1,
+    "c": 2,
+    "dir": "up"
+   },
+   {
+    "l": "T",
+    "r": 2,
+    "c": 3,
+    "dir": "right"
+   }
+  ]
+ },
+ {
+  "id": "st2-dog",
+  "suggested_level": 2,
+  "tier": "starter",
+  "teaches": "slide",
+  "safe": true,
+  "word": "DOG",
+  "grid": [
+   3,
+   3
+  ],
+  "bay": 4,
+  "par": 4,
+  "tip": "A blocked car still rolls forward until it bumps into something. Use that to clear a lane!",
+  "cars": [
+   {
+    "l": "O",
+    "r": 3,
+    "c": 3,
+    "dir": "left"
+   },
+   {
+    "l": "G",
+    "r": 2,
+    "c": 3,
+    "dir": "down"
+   },
+   {
+    "l": "M",
+    "r": 2,
+    "c": 1,
+    "dir": "right"
+   },
+   {
+    "l": "D",
+    "r": 3,
+    "c": 1,
+    "dir": "up"
+   }
+  ]
+ },
+ {
+  "id": "st3-sun",
+  "suggested_level": 3,
+  "tier": "starter",
+  "teaches": "reverse",
+  "safe": true,
+  "word": "SUN",
+  "grid": [
+   4,
+   4
+  ],
+  "bay": 4,
+  "par": 5,
+  "tip": "Swipe a car toward its tail (or right-click) to back it up. Cars only leave nose-first.",
+  "cars": [
+   {
+    "l": "S",
+    "r": 2,
+    "c": 1,
+    "dir": "left"
+   },
+   {
+    "l": "X",
+    "r": 3,
+    "c": 4,
+    "dir": "down"
+   },
+   {
+    "l": "H",
+    "r": 4,
+    "c": 4,
+    "dir": "up"
+   },
+   {
+    "l": "U",
+    "r": 4,
+    "c": 3,
+    "dir": "right"
+   },
+   {
+    "l": "N",
+    "r": 3,
+    "c": 2,
+    "dir": "right"
+   }
+  ]
+ },
+ {
+  "id": "st4-hat",
+  "suggested_level": 4,
+  "tier": "starter",
+  "teaches": "bay",
+  "safe": true,
+  "word": "HAT",
+  "grid": [
+   4,
+   4
+  ],
+  "bay": 4,
+  "par": 5,
+  "tip": "Wrong letter in the way? Drive it out: it waits in the holding bay and hops on when its turn comes.",
+  "cars": [
+   {
+    "l": "K",
+    "r": 2,
+    "c": 3,
+    "dir": "left"
+   },
+   {
+    "l": "T",
+    "r": 4,
+    "c": 3,
+    "dir": "up"
+   },
+   {
+    "l": "N",
+    "r": 4,
+    "c": 2,
+    "dir": "up"
+   },
+   {
+    "l": "H",
+    "r": 4,
+    "c": 1,
+    "dir": "right"
+   },
+   {
+    "l": "A",
+    "r": 2,
+    "c": 1,
+    "dir": "down"
+   }
+  ]
+ },
+ {
+  "id": "st5-fish",
+  "suggested_level": 5,
+  "tier": "starter",
+  "teaches": "word",
+  "safe": true,
+  "word": "FISH",
+  "grid": [
+   4,
+   4
+  ],
+  "bay": 4,
+  "par": 6,
+  "tip": "A four-letter word! Work out which car is in the way of the F first.",
+  "cars": [
+   {
+    "l": "F",
+    "r": 3,
+    "c": 3,
+    "dir": "down"
+   },
+   {
+    "l": "I",
+    "r": 3,
+    "c": 1,
+    "dir": "right"
+   },
+   {
+    "l": "H",
+    "r": 2,
+    "c": 2,
+    "dir": "down"
+   },
+   {
+    "l": "B",
+    "r": 4,
+    "c": 3,
+    "dir": "left"
+   },
+   {
+    "l": "S",
+    "r": 2,
+    "c": 4,
+    "dir": "up"
+   },
+   {
+    "l": "K",
+    "r": 4,
+    "c": 2,
+    "dir": "right"
+   }
+  ]
+ },
+ {
+  "id": "st6-milk",
+  "suggested_level": 6,
+  "tier": "starter",
+  "teaches": "bay-limit",
+  "word": "MILK",
+  "grid": [
+   4,
+   4
+  ],
+  "bay": 3,
+  "par": 6,
+  "tip": "The bay holds 3 now. If a wrong letter drives out while it is full, you lose!",
+  "cars": [
+   {
+    "l": "L",
+    "r": 3,
+    "c": 4,
+    "dir": "left"
+   },
+   {
+    "l": "D",
+    "r": 2,
+    "c": 1,
+    "dir": "up"
+   },
+   {
+    "l": "I",
+    "r": 2,
+    "c": 4,
+    "dir": "up"
+   },
+   {
+    "l": "H",
+    "r": 4,
+    "c": 3,
+    "dir": "right"
+   },
+   {
+    "l": "Z",
+    "r": 4,
+    "c": 2,
+    "dir": "right"
+   },
+   {
+    "l": "K",
+    "r": 3,
+    "c": 2,
+    "dir": "down"
+   },
+   {
+    "l": "M",
+    "r": 1,
+    "c": 4,
+    "dir": "left"
+   },
+   {
+    "l": "F",
+    "r": 1,
+    "c": 3,
+    "dir": "down"
+   }
+  ]
+ },
+ {
+  "id": "st7-frog",
+  "suggested_level": 7,
+  "tier": "starter",
+  "teaches": "trucks",
+  "word": "FROG",
+  "grid": [
+   5,
+   5
+  ],
+  "bay": 3,
+  "par": 7,
+  "tip": "Long trucks move as one piece and slide just like cars.",
+  "cars": [
+   {
+    "l": "W",
+    "r": 4,
+    "c": 1,
+    "dir": "up"
+   },
+   {
+    "l": "R",
+    "r": 2,
+    "c": 1,
+    "dir": "left"
+   },
+   {
+    "l": "F",
+    "r": 3,
+    "c": 3,
+    "dir": "down",
+    "len": 2
+   },
+   {
+    "l": "H",
+    "r": 1,
+    "c": 5,
+    "dir": "left"
+   },
+   {
+    "l": "Y",
+    "r": 1,
+    "c": 4,
+    "dir": "right"
+   },
+   {
+    "l": "G",
+    "r": 4,
+    "c": 3,
+    "dir": "left",
+    "len": 2
+   },
+   {
+    "l": "O",
+    "r": 5,
+    "c": 4,
+    "dir": "up"
+   },
+   {
+    "l": "N",
+    "r": 1,
+    "c": 3,
+    "dir": "right",
+    "len": 2
+   }
+  ]
+ },
+ {
+  "id": "st8-train",
+  "suggested_level": 8,
+  "tier": "starter",
+  "teaches": "dense",
+  "word": "TRAIN",
+  "grid": [
+   5,
+   5
+  ],
+  "bay": 3,
+  "par": 8,
+  "tip": "A busier lot. Back cars up to make room before you drive out.",
+  "cars": [
+   {
+    "l": "J",
+    "r": 4,
+    "c": 4,
+    "dir": "left"
+   },
+   {
+    "l": "N",
+    "r": 2,
+    "c": 2,
+    "dir": "left"
+   },
+   {
+    "l": "R",
+    "r": 4,
+    "c": 2,
+    "dir": "up",
+    "len": 2
+   },
+   {
+    "l": "T",
+    "r": 3,
+    "c": 3,
+    "dir": "right",
+    "len": 2
+   },
+   {
+    "l": "M",
+    "r": 2,
+    "c": 3,
+    "dir": "right"
+   },
+   {
+    "l": "A",
+    "r": 3,
+    "c": 4,
+    "dir": "right"
+   },
+   {
+    "l": "I",
+    "r": 3,
+    "c": 1,
+    "dir": "down",
+    "len": 2
+   },
+   {
+    "l": "K",
+    "r": 2,
+    "c": 5,
+    "dir": "up"
+   },
+   {
+    "l": "K",
+    "r": 1,
+    "c": 5,
+    "dir": "left"
+   },
+   {
+    "l": "D",
+    "r": 5,
+    "c": 1,
+    "dir": "down",
+    "len": 2
+   }
+  ]
+ },
+ {
+  "id": "st9-tiger",
+  "suggested_level": 9,
+  "tier": "starter",
+  "teaches": "plan",
+  "word": "TIGER",
+  "grid": [
+   5,
+   5
+  ],
+  "bay": 3,
+  "par": 9,
+  "tip": "Plan ahead: which letter can leave first, and what is blocking the next one?",
+  "cars": [
+   {
+    "l": "J",
+    "r": 5,
+    "c": 1,
+    "dir": "down",
+    "len": 2
+   },
+   {
+    "l": "R",
+    "r": 5,
+    "c": 2,
+    "dir": "up"
+   },
+   {
+    "l": "K",
+    "r": 3,
+    "c": 3,
+    "dir": "right"
+   },
+   {
+    "l": "T",
+    "r": 5,
+    "c": 4,
+    "dir": "down",
+    "len": 2
+   },
+   {
+    "l": "K",
+    "r": 1,
+    "c": 3,
+    "dir": "left",
+    "len": 2
+   },
+   {
+    "l": "M",
+    "r": 3,
+    "c": 2,
+    "dir": "right"
+   },
+   {
+    "l": "F",
+    "r": 2,
+    "c": 1,
+    "dir": "up",
+    "len": 2
+   },
+   {
+    "l": "G",
+    "r": 2,
+    "c": 4,
+    "dir": "up"
+   },
+   {
+    "l": "E",
+    "r": 3,
+    "c": 4,
+    "dir": "up"
+   },
+   {
+    "l": "Y",
+    "r": 1,
+    "c": 1,
+    "dir": "left"
+   },
+   {
+    "l": "I",
+    "r": 2,
+    "c": 2,
+    "dir": "left"
+   }
+  ]
+ },
+ {
+  "id": "st10-house",
+  "suggested_level": 10,
+  "tier": "starter",
+  "teaches": "handoff",
+  "word": "HOUSE",
+  "grid": [
+   5,
+   5
+  ],
+  "bay": 3,
+  "par": 9,
+  "tip": "Last warm-up! Next come the big jammed lots.",
+  "cars": [
+   {
+    "l": "X",
+    "r": 3,
+    "c": 2,
+    "dir": "up",
+    "len": 3
+   },
+   {
+    "l": "Z",
+    "r": 2,
+    "c": 1,
+    "dir": "up",
+    "len": 2
+   },
+   {
+    "l": "E",
+    "r": 2,
+    "c": 3,
+    "dir": "left"
+   },
+   {
+    "l": "U",
+    "r": 4,
+    "c": 1,
+    "dir": "down"
+   },
+   {
+    "l": "W",
+    "r": 1,
+    "c": 5,
+    "dir": "up"
+   },
+   {
+    "l": "J",
+    "r": 2,
+    "c": 5,
+    "dir": "up"
+   },
+   {
+    "l": "V",
+    "r": 1,
+    "c": 2,
+    "dir": "right",
+    "len": 2
+   },
+   {
+    "l": "H",
+    "r": 1,
+    "c": 3,
+    "dir": "right"
+   },
+   {
+    "l": "Y",
+    "r": 4,
+    "c": 5,
+    "dir": "right"
+   },
+   {
+    "l": "V",
+    "r": 3,
+    "c": 4,
+    "dir": "right"
+   },
+   {
+    "l": "S",
+    "r": 5,
+    "c": 4,
+    "dir": "down"
+   },
+   {
+    "l": "O",
+    "r": 5,
+    "c": 1,
+    "dir": "right"
+   }
+  ]
+ },
+ {
+  "id": "lv1-bus",
+  "suggested_level": 11,
   "word": "BUS",
   "grid": [
    5,
@@ -10,7 +621,7 @@ window.WJB_LEVELS = [
   ],
   "bay": 3,
   "par": 10,
-  "tip": "Tap a car to drive it forward; swipe it along its lane to back it up. Cars slide until they bump into something.",
+  "tip": "Bigger lots from here on: mix slides, reverses and the bay to clear the way.",
   "cars": [
    {
     "l": "S",
@@ -88,7 +699,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "lv2-car",
-  "suggested_level": 2,
+  "suggested_level": 12,
   "word": "CAR",
   "grid": [
    5,
@@ -200,7 +811,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "lv3-planet",
-  "suggested_level": 3,
+  "suggested_level": 13,
   "word": "PLANET",
   "grid": [
    5,
@@ -313,7 +924,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "lv4-apple",
-  "suggested_level": 4,
+  "suggested_level": 14,
   "word": "APPLE",
   "grid": [
    5,
@@ -422,7 +1033,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "lv5-garden",
-  "suggested_level": 5,
+  "suggested_level": 15,
   "word": "GARDEN",
   "grid": [
    6,
@@ -584,7 +1195,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "lv6-rocket",
-  "suggested_level": 6,
+  "suggested_level": 16,
   "word": "ROCKET",
   "grid": [
    6,
@@ -725,7 +1336,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "lv7-ticket",
-  "suggested_level": 7,
+  "suggested_level": 17,
   "word": "TICKET",
   "grid": [
    6,
@@ -879,7 +1490,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "lv8-mother",
-  "suggested_level": 8,
+  "suggested_level": 18,
   "word": "MOTHER",
   "grid": [
    6,
@@ -1027,7 +1638,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "lv9-busstop",
-  "suggested_level": 9,
+  "suggested_level": 19,
   "words": [
    "BUS",
    "STOP"
@@ -1199,7 +1810,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "lv10-school",
-  "suggested_level": 10,
+  "suggested_level": 20,
   "word": "SCHOOL",
   "grid": [
    7,

@@ -12,18 +12,28 @@
   var STORE_KEY = 'wordJamBus.progress.v1';
 
   /* ---------------- persistence ---------------- */
+  // Saved progress: { v, unlocked, stars{id:n}, best{id:moves}, sound }.
+  // Stars are keyed by level id, so they survive level re-ordering. `unlocked`
+  // is an index into LEVELS: saves without `v` come from builds before the 10
+  // starter levels were inserted at the front, so their index is shifted past
+  // the starter levels (which are unlocked for anyone with earlier progress).
+  var PROGRESS_VERSION = 3;
+  var STARTER_COUNT = LEVELS.filter(function (lv) { return lv.tier === 'starter'; }).length;
   function loadProgress() {
     var p = null;
     try { p = JSON.parse(localStorage.getItem(STORE_KEY)); } catch (e) { p = null; }
     if (!p || typeof p !== 'object') p = {};
-    p.unlocked = Math.max(0, Math.min(LEVELS.length - 1, p.unlocked | 0));
     p.stars = p.stars || {};
     p.best = p.best || {};
+    if (p.v === undefined && ((p.unlocked | 0) > 0 || Object.keys(p.stars).length)) p.unlocked = (p.unlocked | 0) + STARTER_COUNT;
+    p.v = PROGRESS_VERSION;
+    p.unlocked = Math.max(0, Math.min(LEVELS.length - 1, p.unlocked | 0));
     if (p.sound === undefined) p.sound = true;
     return p;
   }
   function saveProgress() { try { localStorage.setItem(STORE_KEY, JSON.stringify(progress)); } catch (e) { /* private mode */ } }
   var progress = loadProgress();
+  saveProgress(); // persist a migrated save right away
 
   /* ---------------- sound + haptics (generated, no assets) ---------------- */
   var Sound = {
@@ -71,7 +81,7 @@
     grid.innerHTML = '';
     LEVELS.forEach(function (lv, i) {
       var b = document.createElement('button');
-      var locked = i > progress.unlocked;
+      var locked = !isUnlocked(i);
       var stars = progress.stars[lv.id] || 0;
       b.className = 'lvl' + (locked ? ' locked' : '') + (stars ? ' done' : '') + (i === firstUnsolved() ? ' current' : '');
       b.setAttribute('data-level', i + 1);
@@ -84,8 +94,18 @@
     $('btn-sound').textContent = 'Sound: ' + (progress.sound ? 'on' : 'off');
     $('btn-play').textContent = Object.keys(progress.stars).length ? 'Continue' : 'Play';
   }
+  /** A level is open if it is within the unlock frontier or it (or any later level) was ever completed. */
+  function isUnlocked(i) {
+    if (i <= progress.unlocked) return true;
+    for (var j = i; j < LEVELS.length; j++) if (progress.stars[LEVELS[j].id]) return true;
+    return false;
+  }
+  /** Where "Play/Continue" goes: the first unsolved open level after the furthest completed one. */
   function firstUnsolved() {
-    for (var i = 0; i <= progress.unlocked; i++) if (!progress.stars[LEVELS[i].id]) return i;
+    var last = -1, i;
+    for (i = 0; i < LEVELS.length; i++) if (progress.stars[LEVELS[i].id]) last = i;
+    for (i = last + 1; i < LEVELS.length; i++) if (isUnlocked(i) && !progress.stars[LEVELS[i].id]) return i;
+    for (i = 0; i < LEVELS.length; i++) if (isUnlocked(i) && !progress.stars[LEVELS[i].id]) return i;
     return progress.unlocked;
   }
 
@@ -668,7 +688,7 @@
   $('btn-sound').addEventListener('click', function () { progress.sound = !progress.sound; saveProgress(); Sound.unlock(); renderLevelGrid(); });
   $('btn-reset').addEventListener('click', function () {
     if (!window.confirm('Reset all level progress?')) return;
-    progress = { unlocked: 0, stars: {}, best: {}, sound: progress.sound };
+    progress = { v: PROGRESS_VERSION, unlocked: 0, stars: {}, best: {}, sound: progress.sound };
     saveProgress(); renderLevelGrid();
   });
   document.addEventListener('keydown', function (e) {
