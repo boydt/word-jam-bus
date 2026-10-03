@@ -258,3 +258,32 @@ button { font: inherit; color: inherit; touch-action: manipulation; cursor: poin
 @media (max-height: 640px) {
   .howto { display: none; }
 }
+
+/* ---------- v2: sliding cars, move preview ---------- */
+.lot { touch-action: none; }
+.car { transition: left .2s cubic-bezier(.3, .8, .4, 1), top .2s cubic-bezier(.3, .8, .4, 1), transform .26s cubic-bezier(.55, 0, .9, .45), opacity .26s; }
+.lot.no-anim .car { transition: none !important; }
+.car .chassis .tail { position: absolute; left: 1%; top: 14%; bottom: 14%; width: 4%; border-radius: 30%; background: rgba(255, 70, 70, .85); }
+.car.pressed .chassis { filter: brightness(1.12); box-shadow: inset 0 -5px 0 rgba(0, 0, 0, .18), 0 0 0 3px rgba(255, 255, 255, .85); }
+.lane, .ghost, .exit-mark { position: absolute; pointer-events: none; display: none; }
+.lane { z-index: 1; border-radius: 10px; background: rgba(255, 255, 255, .14); }
+.lane.show { display: block; }
+.lane.bump { background: rgba(239, 75, 75, .25); }
+.ghost { z-index: 4; border-radius: 12px; border: 3px dashed rgba(255, 255, 255, .95); background: rgba(255, 255, 255, .12); box-sizing: border-box; }
+.ghost.show { display: block; }
+.ghost.exit { border-color: #7dffb0; background: rgba(47, 191, 113, .22); }
+.ghost.bump { border-color: #ff7b7b; background: rgba(239, 75, 75, .18); }
+.ghost.sticky { animation: hintpulse2 .7s ease-in-out infinite alternate; }
+@keyframes hintpulse2 { from { opacity: .55; } to { opacity: 1; } }
+.exit-mark {
+  z-index: 5; width: calc(var(--cell) * .5); height: calc(var(--cell) * .5); margin: calc(var(--cell) * -.25) 0 0 calc(var(--cell) * -.25);
+  border-radius: 50%; background: #2fbf71; color: #fff; font-weight: 900; font-size: calc(var(--cell) * .32);
+  place-items: center; box-shadow: 0 2px 6px rgba(0, 0, 0, .35);
+}
+.exit-mark.show { display: grid; }
+.exit-mark::after { content: "\2192"; }
+.exit-mark.left::after { content: "\2190"; }
+.exit-mark.up::after { content: "\2191"; }
+.exit-mark.down::after { content: "\2193"; }
+.btn-hint.thinking { opacity: .6; }
+.car.hint .chassis { box-shadow: inset 0 -5px 0 rgba(0, 0, 0, .18), 0 0 0 4px #fff200; }

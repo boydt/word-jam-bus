@@ -6,7 +6,9 @@
   var $ = function (id) { return document.getElementById(id); };
   var PALETTE = ['#ff6b6b', '#4dabf7', '#51cf66', '#ff922b', '#cc5de8', '#20c997', '#f06595', '#5c7cfa', '#94d82d', '#e8590c', '#15aabf', '#be4bdb'];
   var ANGLE = { right: 0, down: 90, left: 180, up: -90 };
-  var UNDOS_PER_LEVEL = 3, HINTS_PER_LEVEL = 1;
+  var OPP = { right: 'left', left: 'right', up: 'down', down: 'up' };
+  var UNDOS_PER_LEVEL = 5, HINTS_PER_LEVEL = 3;
+  var FWD = E.FWD, BACK = E.BACK;
   var STORE_KEY = 'wordJamBus.progress.v1';
 
   /* ---------------- persistence ---------------- */
@@ -43,6 +45,7 @@
       o.start(t); o.stop(t + dur + 0.02);
     },
     exit: function () { this.tone(180, 0.22, 'square', 0.05, 420); },
+    slide: function () { this.tone(140, 0.12, 'triangle', 0.08, 200); },
     fill: function (k) { this.tone(620 + (k || 0) * 90, 0.16, 'sine', 0.16, 980 + (k || 0) * 90); },
     bay: function () { this.tone(330, 0.14, 'triangle', 0.14, 260); },
     bump: function () { this.tone(120, 0.18, 'sine', 0.3, 60); },
@@ -98,7 +101,8 @@
       index: index, level: level, game: game, state: E.initialState(game),
       history: [], undos: UNDOS_PER_LEVEL, hints: HINTS_PER_LEVEL, bumps: 0,
       ended: false, dead: false, token: (cur ? cur.token + 1 : 1),
-      chain: Promise.resolve(), disp: { idx: 0, bay: [], wild: {} }, carEls: []
+      chain: Promise.resolve(), disp: { idx: 0, bay: [], wild: {} }, carEls: [],
+      plan: null, planOptimal: false, search: null, serial: 0, pendingHint: false
     };
     hideOverlays();
     $('toast').classList.remove('show');
@@ -125,6 +129,8 @@
     layout();
     renderHud();
     try { history.replaceState(null, '', '#level-' + (index + 1)); } catch (e) { /* file:// in some browsers */ }
+    $('btn-hint').classList.remove('thinking');
+    setTimeout(ensureSearch, 60); // precompute an optimal plan so the first hint is instant
   }
 
   function buildWord() {
@@ -162,7 +168,7 @@
 
   function buildLot() {
     var lot = $('lot');
-    lot.innerHTML = '';
+    lot.innerHTML = '<div id="lane" class="lane"></div><div id="ghost" class="ghost"></div><div id="exit-mark" class="exit-mark"></div>';
     cur.carEls = cur.game.cars.map(function (car, i) {
       var el = document.createElement('div');
       var chunk = car.l.length > 1, wild = car.l === '?';
@@ -174,12 +180,28 @@
       el.setAttribute('aria-label', (wild ? 'wildcard taxi' : 'car ' + car.l) + ' facing ' + car.dir);
       el.style.setProperty('--c', PALETTE[(i * 5 + car.r * 3 + car.c) % PALETTE.length]);
       el.innerHTML = '<div class="chassis"><i class="rear"></i><i class="stripe"></i><i class="glass"></i>' +
-        '<span class="lights"><i></i><i></i></span><i class="arrow"></i></div>' +
+        '<span class="lights"><i></i><i></i></span><i class="arrow"></i><i class="tail"></i></div>' +
         '<div class="roof">' + car.l + '</div>';
-      if (cur.state.removed[i]) el.style.display = 'none';
+      if (cur.state.pos[i] < 0) el.style.display = 'none';
       lot.appendChild(el);
       return el;
     });
+  }
+
+  /** Pixel box of car i at axis position p. */
+  function carBox(i, p) {
+    var car = cur.game.cars[i];
+    return car.horiz
+      ? { left: p * cell, top: car.lane * cell, width: car.len * cell, height: cell }
+      : { left: car.lane * cell, top: p * cell, width: cell, height: car.len * cell };
+  }
+  function placeCar(i) {
+    var el = cur.carEls[i], p = cur.state.pos[i];
+    if (p < 0) { el.style.display = 'none'; return; }
+    var b = carBox(i, p);
+    el.style.display = '';
+    el.style.left = b.left + 'px'; el.style.top = b.top + 'px';
+    el.style.width = b.width + 'px'; el.style.height = b.height + 'px';
   }
 
   function layout() {
@@ -203,20 +225,17 @@
     lot.style.setProperty('--cell', cell + 'px');
     document.documentElement.style.setProperty('--cell', cell + 'px');
     var pad = Math.round(cell * 0.07);
+    lot.classList.add('no-anim');
     g.cars.forEach(function (car, i) {
       var el = cur.carEls[i];
-      var rs = car.cells.map(function (x) { return x[0]; }), cs = car.cells.map(function (x) { return x[1]; });
-      var r0 = Math.min.apply(null, rs), c0 = Math.min.apply(null, cs);
-      var hr = Math.max.apply(null, rs) - r0 + 1, wc = Math.max.apply(null, cs) - c0 + 1;
-      el.style.left = (c0 - 1) * cell + 'px';
-      el.style.top = (r0 - 1) * cell + 'px';
-      el.style.width = wc * cell + 'px';
-      el.style.height = hr * cell + 'px';
+      if (!el.classList.contains('leaving')) placeCar(i);
       var ch = el.querySelector('.chassis');
       ch.style.width = (car.len * cell - pad * 2) + 'px';
       ch.style.height = (cell - pad * 2) + 'px';
       ch.style.transform = 'translate(-50%, -50%) rotate(' + ANGLE[car.dir] + 'deg)';
     });
+    void lot.offsetWidth;
+    lot.classList.remove('no-anim');
   }
 
   /* ---------------- HUD rendering (from the display state) ---------------- */
@@ -287,17 +306,14 @@
     return wait(ms || 340).then(function () { el.remove(); });
   }
 
-  function driveOut(i) {
-    var car = cur.game.cars[i], el = cur.carEls[i], g = cur.game;
-    var head = car.cells[0], dist;
-    if (car.dir === 'right') dist = (g.cols - head[1] + car.len) * cell;
-    else if (car.dir === 'left') dist = (head[1] - 1 + car.len) * cell;
-    else if (car.dir === 'down') dist = (g.rows - head[0] + car.len) * cell;
-    else dist = (head[0] - 1 + car.len) * cell;
-    dist += cell * 0.3;
+  function driveOut(i, fromPos) {
+    var car = cur.game.cars[i], el = cur.carEls[i];
+    // distance from the nose to the edge, plus the car's own length
+    var nose = car.sign > 0 ? fromPos + car.len - 1 : fromPos;
+    var dist = (car.sign > 0 ? car.span - 1 - nose : nose) + car.len + 0.3;
+    dist *= cell;
     var v = E.DIRS[car.dir];
     el.classList.add('leaving');
-    el.classList.remove('hint');
     el.querySelector('.roof').style.opacity = '0';
     el.style.transform = 'translate(' + v[1] * dist + 'px,' + v[0] * dist + 'px)';
     setTimeout(function () { el.style.display = 'none'; }, 300);
@@ -312,30 +328,48 @@
     toast._t = setTimeout(function () { t.classList.remove('show'); }, 900);
   }
 
-  function onTap(i) {
+  function bump(i, which, by) {
+    var car = cur.game.cars[i], el = cur.carEls[i];
+    cur.bumps++;
+    var dir = which === FWD ? car.dir : OPP[car.dir];
+    var cls = 'bump-' + dir;
+    el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+    var bl = by >= 0 ? cur.carEls[by] : null;
+    if (bl) { bl.classList.remove('blocker'); void bl.offsetWidth; bl.classList.add('blocker'); }
+    setTimeout(function () { el.classList.remove(cls); if (bl) bl.classList.remove('blocker'); }, 420);
+    Sound.bump(); buzz(30);
+    toast(by >= 0 ? 'Blocked!' : 'Wall!');
+  }
+
+  /** Perform a move: which = FWD (toward the nose) or BACK (reverse). */
+  function doMove(i, which) {
     if (!cur || cur.ended) return;
     Sound.unlock();
     var el = cur.carEls[i];
-    var res = E.step(cur.game, cur.state, i);
+    if (!el || el.classList.contains('leaving')) return;
+    var fromPos = cur.state.pos[i];
+    var res = E.step(cur.game, cur.state, i, which);
     if (res.result === 'gone') return;
-    if (res.result === 'blocked') {
-      cur.bumps++;
-      var cls = 'bump-' + cur.game.cars[i].dir;
-      el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
-      var bl = cur.carEls[res.by];
-      bl.classList.remove('blocker'); void bl.offsetWidth; bl.classList.add('blocker');
-      setTimeout(function () { el.classList.remove(cls); bl.classList.remove('blocker'); }, 420);
-      Sound.bump(); buzz(30);
-      toast('Blocked!');
+    if (res.result === 'bump') { bump(i, which, res.by); return; }
+    clearHint();
+    advancePlan(i, which);
+    if (res.result === 'slide') {
+      cur.history.push(cur.state);
+      cur.state = res.state;
+      Sound.slide();
+      placeCar(i);
+      $('deadend').classList.remove('show');
+      renderHud();
+      afterMove();
       return;
     }
     var from = rectCenter(el.querySelector('.roof'));
-    clearHint();
-    driveOut(i);
+    driveOut(i, fromPos);
     Sound.exit();
     if (res.result === 'lose') {
       cur.ended = true;
       cur.state = res.state;
+      cancelSearch();
       renderHud();
       enqueue(function () {
         var slots = $('bay').querySelectorAll('.slot');
@@ -344,8 +378,9 @@
           Sound.lose(); buzz([60, 40, 60]);
           return wait(250);
         }).then(function () {
+          $('deadend').classList.remove('show');
           $('lose-title').textContent = 'Bay full!';
-          $('lose-detail').textContent = 'The ' + res.unit + ' car had nowhere to park. Plan which wrong letters you can afford to park in the bay.';
+          $('lose-detail').textContent = 'The ' + res.unit + ' car had nowhere to park. Slide decoys out of the way instead of driving them out.';
           overlay('ov-lose', true);
         });
       });
@@ -388,20 +423,62 @@
         });
       });
     });
-    // 3) end-of-move checks
     if (res.won) {
       cur.ended = true;
+      cancelSearch();
       enqueue(function () { syncDisplay(); renderHud(); return wait(150).then(winLevel); });
-    } else if (E.solve(cur.game, cur.state).par === null) {
-      cur.dead = true;
-      enqueue(function () { syncDisplay(); renderHud(); $('deadend').classList.add('show'); Sound.bump(); });
     } else {
-      cur.dead = false;
       enqueue(function () { syncDisplay(); renderHud(); });
+      afterMove();
     }
   }
 
-  function clearHint() { cur.carEls.forEach(function (el) { el.classList.remove('hint'); }); }
+  /* ---------- solver in the background: dead-end warning + hints ---------- */
+  // cur.plan: a known winning move list from the current state (optimal if
+  // cur.planOptimal). Following it keeps it valid; any other move drops it.
+  function advancePlan(i, which) {
+    if (cur.plan && cur.plan.length && cur.plan[0].car === i && cur.plan[0].which === which) cur.plan = cur.plan.slice(1);
+    else { cur.plan = null; cur.planOptimal = false; }
+    cur.pendingHint = false;
+    $('btn-hint').classList.remove('thinking');
+  }
+  function cancelSearch() { if (cur && cur.search) { cur.search.cancelled = true; cur.search = null; } }
+
+  /** Run a BFS from the current state in small time slices; cb(status, api). */
+  function searchAsync(cb) {
+    cancelSearch();
+    var token = cur.token, serial = cur.serial;
+    var job = { cancelled: false, serial: serial, api: E.createSearch(cur.game, cur.state) };
+    cur.search = job;
+    (function slice() {
+      if (job.cancelled || !cur || cur.token !== token || cur.serial !== serial) return;
+      var t0 = Date.now(), st;
+      do { st = job.api.run(3000); } while (st === 'running' && Date.now() - t0 < 14);
+      if (st === 'running') { setTimeout(slice, 0); return; }
+      if (cur.search === job) cur.search = null;
+      cb(st, job.api);
+    })();
+  }
+
+  /** Make sure we know a winning line from the current state (or that none exists). */
+  function ensureSearch() {
+    if (!cur || cur.ended) return;
+    if (cur.plan) { if (cur.pendingHint) deliverHint(); return; }
+    if (cur.search && cur.search.serial === cur.serial) return; // already working on it
+    var serial = cur.serial;
+    searchAsync(function (st, api) {
+      if (cur.serial !== serial || cur.ended) return;
+      if (st === 'win') {
+        cur.plan = api.path; cur.planOptimal = true; cur.dead = false;
+        if (cur.pendingHint) deliverHint();
+      } else if (st === 'none') {
+        cur.dead = true; cur.pendingHint = false;
+        $('btn-hint').classList.remove('thinking');
+        enqueue(function () { if (cur.ended) return; $('deadend').classList.add('show'); Sound.bump(); });
+      }
+    });
+  }
+  function afterMove() { cur.serial++; ensureSearch(); }
 
   function winLevel() {
     var lv = cur.level, moves = cur.state.moves, par = lv.par;
@@ -427,33 +504,149 @@
     if (!cur || cur.ended || cur.undos <= 0 || !cur.history.length) return;
     cur.undos--;
     cur.token++;
+    cancelSearch();
     cur.chain = Promise.resolve();
     $('fly-layer').innerHTML = '';
-    cur.state = cur.history.pop();
+    var prev = cur.history.pop();
+    var revived = [];
+    prev.pos.forEach(function (p, i) { if (p >= 0 && cur.state.pos[i] < 0) revived.push(i); });
+    cur.state = prev;
     cur.dead = false;
+    cur.plan = null; cur.planOptimal = false;
     $('deadend').classList.remove('show');
+    clearHint();
     syncDisplay();
-    buildLot();
-    layout();
+    if (revived.length) { buildLot(); layout(); }
+    else cur.game.cars.forEach(function (c, i) { placeCar(i); }); // animated slide back
     renderHud();
     toast('Undo');
+    afterMove();
+  }
+
+  function clearHint() {
+    if (!cur || !cur.carEls) return;
+    cur.carEls.forEach(function (el) { el.classList.remove('hint'); el.removeAttribute('data-hint'); });
+    hideGhost(true);
+  }
+
+  function showHint(m) {
+    clearHint();
+    var el = cur.carEls[m.car];
+    el.classList.add('hint');
+    el.setAttribute('data-hint', m.which === FWD ? 'fwd' : 'back');
+    showGhost(m.car, m.which, true);
+  }
+
+  function deliverHint() {
+    cur.pendingHint = false;
+    $('btn-hint').classList.remove('thinking');
+    if (!cur.plan || !cur.plan.length || cur.hints <= 0) return;
+    cur.hints--;
+    renderHud();
+    showHint(cur.plan[0]);
   }
 
   function hint() {
     if (!cur || cur.ended || cur.hints <= 0) return;
-    var sol = E.solve(cur.game, cur.state);
-    if (sol.par === null) { $('deadend').classList.add('show'); return; }
-    cur.hints--;
-    clearHint();
-    cur.carEls[sol.path[0]].classList.add('hint');
-    renderHud();
+    if (cur.dead) { $('deadend').classList.add('show'); return; }
+    if (cur.plan && cur.planOptimal) { cur.pendingHint = true; deliverHint(); return; }
+    cur.pendingHint = true;
+    $('btn-hint').classList.add('thinking');
+    ensureSearch();
+  }
+
+  /* ---------------- move preview (which way will it go?) ---------------- */
+  function showGhost(i, which, sticky) {
+    var g = cur.game, car = g.cars[i], p = cur.state.pos[i];
+    var ghost = $('ghost'), lane = $('lane'), mark = $('exit-mark');
+    if (!ghost || p < 0) return;
+    var grid = E.buildGrid(g, cur.state.pos);
+    var pr = E.probe(g, grid, cur.state.pos, i, which);
+    var s = which === FWD ? car.sign : -car.sign;
+    ghost.className = 'ghost'; lane.className = 'lane'; mark.className = 'exit-mark';
+    var b0 = carBox(i, p), dest;
+    if (pr.kind === 'bump') {
+      ghost.className = 'ghost show bump' + (sticky ? ' sticky' : '');
+      dest = b0;
+    } else if (pr.kind === 'slide') {
+      dest = carBox(i, p + s * pr.dist);
+      ghost.className = 'ghost show' + (sticky ? ' sticky' : '');
+    } else {
+      // exit: lane highlight to the edge + exit arrow
+      var edgeP = s > 0 ? car.span - car.len : 0;
+      dest = carBox(i, edgeP);
+      ghost.className = 'ghost show exit' + (sticky ? ' sticky' : '');
+      var dir = car.dir;
+      mark.className = 'exit-mark show ' + dir;
+      var mx = dest.left + dest.width / 2, my = dest.top + dest.height / 2;
+      if (dir === 'right') mx = g.cols * cell - cell * 0.22; if (dir === 'left') mx = cell * 0.22;
+      if (dir === 'down') my = g.rows * cell - cell * 0.22; if (dir === 'up') my = cell * 0.22;
+      mark.style.left = mx + 'px'; mark.style.top = my + 'px';
+    }
+    ghost.style.left = dest.left + 'px'; ghost.style.top = dest.top + 'px';
+    ghost.style.width = dest.width + 'px'; ghost.style.height = dest.height + 'px';
+    // lane strip covering start..dest
+    var L = Math.min(b0.left, dest.left), T = Math.min(b0.top, dest.top);
+    var R = Math.max(b0.left + b0.width, dest.left + dest.width), B = Math.max(b0.top + b0.height, dest.top + dest.height);
+    lane.style.left = L + 'px'; lane.style.top = T + 'px'; lane.style.width = (R - L) + 'px'; lane.style.height = (B - T) + 'px';
+    lane.className = 'lane show' + (pr.kind === 'bump' ? ' bump' : '') + (car.horiz ? ' h' : ' v');
+  }
+  function hideGhost(force) {
+    var ghost = $('ghost');
+    if (!ghost) return;
+    if (!force && ghost.classList.contains('sticky')) return;
+    ghost.className = 'ghost'; $('lane').className = 'lane'; $('exit-mark').className = 'exit-mark';
   }
 
   /* ---------------- wiring ---------------- */
-  $('lot').addEventListener('click', function (e) {
+  /*
+   * Controls: TAP a car = drive forward (toward its nose). SWIPE / DRAG a car
+   * along its axis = move it that way (toward the nose = forward, toward the
+   * tail = reverse). Desktop extras: right-click or Shift+click = reverse.
+   * While the finger is down, a ghost shows exactly where the car will stop.
+   */
+  var drag = null;
+  var lotEl = $('lot');
+  lotEl.addEventListener('pointerdown', function (e) {
+    if (!cur || cur.ended) return;
+    if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 2) return;
     var el = e.target.closest ? e.target.closest('.car') : null;
-    if (el && !el.classList.contains('leaving')) onTap(+el.getAttribute('data-id'));
+    if (!el || el.classList.contains('leaving')) return;
+    e.preventDefault();
+    var id = +el.getAttribute('data-id');
+    var back = e.pointerType === 'mouse' && (e.button === 2 || e.shiftKey);
+    drag = { id: id, x: e.clientX, y: e.clientY, pid: e.pointerId, which: back ? BACK : FWD, swiped: false, cancel: false, forced: back };
+    try { lotEl.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    clearHint();
+    el.classList.add('pressed');
+    showGhost(id, drag.which);
   });
+  lotEl.addEventListener('pointermove', function (e) {
+    if (!drag || e.pointerId !== drag.pid) return;
+    var car = cur.game.cars[drag.id];
+    var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    var along = car.horiz ? dx : dy, perp = car.horiz ? dy : dx;
+    var th = Math.max(10, cell * 0.2);
+    if (Math.abs(along) >= th && Math.abs(along) >= Math.abs(perp)) {
+      var w = (along > 0 ? 1 : -1) === car.sign ? FWD : BACK;
+      drag.swiped = true; drag.cancel = false;
+      if (w !== drag.which || !$('ghost').classList.contains('show')) { drag.which = w; showGhost(drag.id, w); }
+    } else if (Math.abs(perp) >= th * 1.5 && Math.abs(perp) > Math.abs(along) * 1.5) {
+      drag.cancel = true; hideGhost(true);   // sideways drag = cancel
+    }
+  });
+  function endDrag(e, commit) {
+    if (!drag || (e && e.pointerId !== drag.pid)) return;
+    var d = drag; drag = null;
+    var el = cur.carEls[d.id];
+    if (el) el.classList.remove('pressed');
+    hideGhost(true);
+    if (commit && !d.cancel) doMove(d.id, d.which);
+  }
+  lotEl.addEventListener('pointerup', function (e) { endDrag(e, true); });
+  lotEl.addEventListener('pointercancel', function (e) { endDrag(e, false); });
+  lotEl.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
   $('btn-play').addEventListener('click', function () { Sound.unlock(); startLevel(firstUnsolved()); });
   $('btn-menu').addEventListener('click', function () { if (cur) cur.token++; hideOverlays(); renderLevelGrid(); show('screen-title'); });
   $('btn-restart').addEventListener('click', function () { if (cur) startLevel(cur.index); });
@@ -496,8 +689,10 @@
     get session() { return cur; },
     get progress() { return progress; },
     startLevel: startLevel,
+    /** optimal remaining moves from the current state: [{car, which: 0 fwd | 1 back}] */
     solution: function () { return cur ? E.solve(cur.game, cur.state).path : null; },
-    idle: function () { return cur ? cur.chain : Promise.resolve(); }
+    idle: function () { return cur ? cur.chain : Promise.resolve(); },
+    searching: function () { return !!(cur && cur.search); }
   };
 
   // Boot: #level-N or ?level=N opens that level directly (handy for testing), otherwise the title screen.

@@ -26,9 +26,9 @@
       <p class="subtitle">Unjam the lot. Spell the word.</p>
       <button id="btn-play" class="btn btn-big btn-go">Play</button>
       <div class="howto">
-        <div><span class="dot">1</span>Tap a car to drive it the way it faces. It can only leave if its lane is clear.</div>
-        <div><span class="dot">2</span>Letters fill the bus in word order. Wrong letters wait in the holding bay and hop on later.</div>
-        <div><span class="dot">3</span>If a car leaves while the bay is full, the level fails.</div>
+        <div><span class="dot">1</span><span><b>Tap</b> a car to drive it forward. <b>Swipe</b> it along its lane to slide it either way. Cars slide until they hit something.</span></div>
+        <div><span class="dot">2</span><span>A car leaves the lot only nose-first, when the lane ahead is clear. Letters board the bus in word order; wrong letters wait in the holding bay.</span></div>
+        <div><span class="dot">3</span><span>If a car leaves while the bay is full, the level fails.</span></div>
       </div>
       <h2 class="levels-h">Levels</h2>
       <div id="level-grid" class="level-grid"></div>
@@ -51,7 +51,7 @@
       </div>
       <button id="btn-undo" class="icon-btn" aria-label="Undo">
         <svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>
-        <span id="undo-count" class="badge">3</span>
+        <span id="undo-count" class="badge">5</span>
       </button>
       <button id="btn-restart" class="icon-btn" aria-label="Restart level">
         <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>
@@ -78,7 +78,7 @@
 
     <footer class="foot">
       <div id="tip" class="tip"></div>
-      <button id="btn-hint" class="btn btn-small btn-hint">Hint <span id="hint-count" class="badge">1</span></button>
+      <button id="btn-hint" class="btn btn-small btn-hint">Hint <span id="hint-count" class="badge">3</span></button>
     </footer>
 
     <div id="deadend" class="deadend" aria-hidden="true">
