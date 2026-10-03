@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#2b6cb0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="description" content="Word Jam Bus: a parking-jam word puzzle. Drive letter cars out of the lot in the order that spells the word.">
+<title>Word Jam Bus</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='4' y='12' width='56' height='36' rx='10' fill='%23f6c026'/%3E%3Crect x='10' y='18' width='12' height='12' rx='3' fill='%23fff'/%3E%3Crect x='26' y='18' width='12' height='12' rx='3' fill='%23fff'/%3E%3Crect x='42' y='18' width='12' height='12' rx='3' fill='%23fff'/%3E%3Ccircle cx='18' cy='50' r='6' fill='%23333'/%3E%3Ccircle cx='46' cy='50' r='6' fill='%23333'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- Title / level select -->
+  <section id="screen-title" class="screen active" aria-label="Title">
+    <div class="title-wrap">
+      <div class="logo" aria-hidden="true">
+        <div class="logo-bus">
+          <span>W</span><span>O</span><span>R</span><span>D</span>
+          <i class="wheel w1"></i><i class="wheel w2"></i>
+        </div>
+      </div>
+      <h1 class="title">Word Jam <b>Bus</b></h1>
+      <p class="subtitle">Unjam the lot. Spell the word.</p>
+      <button id="btn-play" class="btn btn-big btn-go">Play</button>
+      <div class="howto">
+        <div><span class="dot">1</span>Tap a car to drive it the way it faces. It can only leave if its lane is clear.</div>
+        <div><span class="dot">2</span>Letters fill the bus in word order. Wrong letters wait in the holding bay and hop on later.</div>
+        <div><span class="dot">3</span>If a car leaves while the bay is full, the level fails.</div>
+      </div>
+      <h2 class="levels-h">Levels</h2>
+      <div id="level-grid" class="level-grid"></div>
+      <div class="title-foot">
+        <button id="btn-sound" class="btn btn-small btn-ghost" aria-label="Toggle sound">Sound: on</button>
+        <button id="btn-reset" class="btn btn-small btn-ghost">Reset progress</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Game -->
+  <section id="screen-game" class="screen" aria-label="Game">
+    <header class="hud">
+      <button id="btn-menu" class="icon-btn" aria-label="Levels">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="hud-mid">
+        <div id="hud-level" class="hud-level">Level 1</div>
+        <div class="hud-moves">Moves <b id="hud-moves">0</b> <span class="par">/ Par <span id="hud-par">0</span></span></div>
+      </div>
+      <button id="btn-undo" class="icon-btn" aria-label="Undo">
+        <svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>
+        <span id="undo-count" class="badge">3</span>
+      </button>
+      <button id="btn-restart" class="icon-btn" aria-label="Restart level">
+        <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>
+      </button>
+    </header>
+
+    <main id="play" class="play">
+    <div id="bus-zone" class="bus-zone">
+      <div id="bus" class="bus">
+        <div id="word" class="word"></div>
+        <i class="wheel w1"></i><i class="wheel w2"></i>
+      </div>
+    </div>
+
+    <div id="lot-wrap" class="lot-wrap">
+      <div id="lot" class="lot"></div>
+    </div>
+
+    <div id="bay-zone" class="bay-zone">
+      <div class="bay-label">Holding bay <span id="bay-count"></span></div>
+      <div id="bay" class="bay"></div>
+    </div>
+    </main>
+
+    <footer class="foot">
+      <div id="tip" class="tip"></div>
+      <button id="btn-hint" class="btn btn-small btn-hint">Hint <span id="hint-count" class="badge">1</span></button>
+    </footer>
+
+    <div id="deadend" class="deadend" aria-hidden="true">
+      <div><b>Dead end!</b> These cars can't finish the word now.</div>
+      <div class="row">
+        <button id="btn-dead-undo" class="btn btn-small">Undo</button>
+        <button id="btn-dead-retry" class="btn btn-small btn-go">Retry</button>
+      </div>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <div id="fly-layer" class="fly-layer"></div>
+  </section>
+
+  <!-- Overlays -->
+  <div id="ov-win" class="overlay" aria-hidden="true">
+    <div class="card">
+      <div class="card-emoji" aria-hidden="true">
+        <div class="mini-bus"><i class="wheel w1"></i><i class="wheel w2"></i></div>
+      </div>
+      <h2>Level complete!</h2>
+      <div id="win-word" class="win-word"></div>
+      <div id="win-stars" class="stars"></div>
+      <p id="win-detail" class="detail"></p>
+      <button id="btn-next" class="btn btn-big btn-go">Next level</button>
+      <div class="row">
+        <button id="btn-replay" class="btn btn-ghost">Replay</button>
+        <button id="btn-win-menu" class="btn btn-ghost">Levels</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="ov-lose" class="overlay" aria-hidden="true">
+    <div class="card">
+      <h2 id="lose-title">Bay full!</h2>
+      <p id="lose-detail" class="detail"></p>
+      <button id="btn-retry" class="btn btn-big btn-go">Retry</button>
+      <div class="row">
+        <button id="btn-lose-menu" class="btn btn-ghost">Levels</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/engine.js"></script>
+<script src="js/levels.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>

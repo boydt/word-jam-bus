@@ -1,0 +1,724 @@
+{
+ "format": "Word Jam Bus levels v1 (compatible with spelling-car-jam-brief.md). Optional extensions: car.len (cells, default 1; r,c = head cell, body extends behind), car.l may be a 2-letter chunk (e.g. 'TH') or '?' wildcard, level.words [..] instead of level.word. Game extension: level.tip (player-facing hint text; solvers ignore it).",
+ "levels": [
+  {
+   "id": "ex1-bus",
+   "suggested_level": 1,
+   "note": "Tutorial: blocked tap shakes; wrong-order exit waits in bay and auto-fills",
+   "word": "BUS",
+   "grid": [
+    5,
+    5
+   ],
+   "bay": 5,
+   "par": 3,
+   "cars": [
+    {
+     "l": "B",
+     "r": 4,
+     "c": 2,
+     "dir": "left"
+    },
+    {
+     "l": "S",
+     "r": 2,
+     "c": 3,
+     "dir": "right"
+    },
+    {
+     "l": "U",
+     "r": 3,
+     "c": 3,
+     "dir": "up"
+    }
+   ],
+   "tip": "Tap a car to drive it out the way it faces. Blocked cars just bump. Spell B-U-S!"
+  },
+  {
+   "id": "ex2-car",
+   "suggested_level": 3,
+   "note": "First decoy (D) that must be cleared",
+   "word": "CAR",
+   "grid": [
+    5,
+    5
+   ],
+   "bay": 5,
+   "par": 4,
+   "cars": [
+    {
+     "l": "C",
+     "r": 3,
+     "c": 3,
+     "dir": "down"
+    },
+    {
+     "l": "D",
+     "r": 4,
+     "c": 3,
+     "dir": "left"
+    },
+    {
+     "l": "A",
+     "r": 2,
+     "c": 2,
+     "dir": "up"
+    },
+    {
+     "l": "R",
+     "r": 3,
+     "c": 4,
+     "dir": "right"
+    }
+   ],
+   "tip": "Not every letter is in the word. Park extras in the holding bay to clear a lane."
+  },
+  {
+   "id": "ex3-planet",
+   "suggested_level": 8,
+   "note": "Original test-page level (2 decoys, chained auto-fill)",
+   "word": "PLANET",
+   "grid": [
+    5,
+    5
+   ],
+   "bay": 5,
+   "par": 8,
+   "cars": [
+    {
+     "l": "O",
+     "r": 1,
+     "c": 3,
+     "dir": "left"
+    },
+    {
+     "l": "S",
+     "r": 2,
+     "c": 3,
+     "dir": "right"
+    },
+    {
+     "l": "L",
+     "r": 2,
+     "c": 4,
+     "dir": "up"
+    },
+    {
+     "l": "T",
+     "r": 3,
+     "c": 2,
+     "dir": "left"
+    },
+    {
+     "l": "P",
+     "r": 3,
+     "c": 3,
+     "dir": "up"
+    },
+    {
+     "l": "A",
+     "r": 3,
+     "c": 4,
+     "dir": "right"
+    },
+    {
+     "l": "E",
+     "r": 4,
+     "c": 2,
+     "dir": "up"
+    },
+    {
+     "l": "N",
+     "r": 4,
+     "c": 4,
+     "dir": "left"
+    }
+   ],
+   "tip": "Wrong letters wait in the bay, then hop on by themselves when it is their turn."
+  },
+  {
+   "id": "ex4-apple",
+   "suggested_level": 12,
+   "note": "Repeated letters: 3 P cars for 2 P slots (any P fills the next P)",
+   "word": "APPLE",
+   "grid": [
+    5,
+    5
+   ],
+   "bay": 4,
+   "par": 7,
+   "cars": [
+    {
+     "l": "A",
+     "r": 3,
+     "c": 3,
+     "dir": "up"
+    },
+    {
+     "l": "P",
+     "r": 2,
+     "c": 3,
+     "dir": "right"
+    },
+    {
+     "l": "L",
+     "r": 2,
+     "c": 5,
+     "dir": "up"
+    },
+    {
+     "l": "P",
+     "r": 3,
+     "c": 2,
+     "dir": "left"
+    },
+    {
+     "l": "P",
+     "r": 4,
+     "c": 3,
+     "dir": "down"
+    },
+    {
+     "l": "E",
+     "r": 3,
+     "c": 4,
+     "dir": "right"
+    },
+    {
+     "l": "S",
+     "r": 3,
+     "c": 5,
+     "dir": "down"
+    },
+    {
+     "l": "M",
+     "r": 1,
+     "c": 3,
+     "dir": "left"
+    }
+   ],
+   "tip": "Any P car can fill any P seat. The bay is smaller now: 4 spots."
+  },
+  {
+   "id": "ex5-garden",
+   "suggested_level": 18,
+   "note": "6x6, bay 4 with zero slack (min bay needed = 4) (polish: +2 free decoys S, O fill the empty bottom rows)",
+   "word": "GARDEN",
+   "grid": [
+    6,
+    6
+   ],
+   "bay": 4,
+   "par": 7,
+   "cars": [
+    {
+     "l": "P",
+     "r": 2,
+     "c": 3,
+     "dir": "left"
+    },
+    {
+     "l": "P",
+     "r": 3,
+     "c": 1,
+     "dir": "left"
+    },
+    {
+     "l": "E",
+     "r": 1,
+     "c": 1,
+     "dir": "down"
+    },
+    {
+     "l": "R",
+     "r": 4,
+     "c": 1,
+     "dir": "down"
+    },
+    {
+     "l": "G",
+     "r": 1,
+     "c": 5,
+     "dir": "left"
+    },
+    {
+     "l": "N",
+     "r": 3,
+     "c": 3,
+     "dir": "down"
+    },
+    {
+     "l": "D",
+     "r": 1,
+     "c": 4,
+     "dir": "left"
+    },
+    {
+     "l": "A",
+     "r": 1,
+     "c": 6,
+     "dir": "up"
+    },
+    {
+     "l": "T",
+     "r": 5,
+     "c": 6,
+     "dir": "right"
+    },
+    {
+     "l": "S",
+     "r": 6,
+     "c": 2,
+     "dir": "left"
+    },
+    {
+     "l": "O",
+     "r": 6,
+     "c": 4,
+     "dir": "right"
+    }
+   ],
+   "tip": "Bigger lot, tight bay. Count your free spots before you park."
+  },
+  {
+   "id": "ex6-rocket",
+   "suggested_level": 25,
+   "note": "Hard: bay 3, deep dependency chain, most first taps are traps",
+   "word": "ROCKET",
+   "grid": [
+    6,
+    6
+   ],
+   "bay": 3,
+   "par": 7,
+   "cars": [
+    {
+     "l": "E",
+     "r": 5,
+     "c": 3,
+     "dir": "left"
+    },
+    {
+     "l": "S",
+     "r": 3,
+     "c": 6,
+     "dir": "up"
+    },
+    {
+     "l": "C",
+     "r": 2,
+     "c": 1,
+     "dir": "up"
+    },
+    {
+     "l": "N",
+     "r": 3,
+     "c": 4,
+     "dir": "up"
+    },
+    {
+     "l": "K",
+     "r": 1,
+     "c": 3,
+     "dir": "left"
+    },
+    {
+     "l": "O",
+     "r": 5,
+     "c": 4,
+     "dir": "up"
+    },
+    {
+     "l": "U",
+     "r": 6,
+     "c": 5,
+     "dir": "up"
+    },
+    {
+     "l": "F",
+     "r": 5,
+     "c": 6,
+     "dir": "up"
+    },
+    {
+     "l": "G",
+     "r": 3,
+     "c": 2,
+     "dir": "left"
+    },
+    {
+     "l": "T",
+     "r": 1,
+     "c": 4,
+     "dir": "left"
+    },
+    {
+     "l": "R",
+     "r": 1,
+     "c": 2,
+     "dir": "left"
+    }
+   ],
+   "tip": "Only 3 bay spots. Some first taps already lose. Think it through!"
+  },
+  {
+   "id": "ex7-ticket",
+   "suggested_level": 28,
+   "note": "New mechanic: 2-cell trucks (blockers with one letter)",
+   "word": "TICKET",
+   "grid": [
+    6,
+    6
+   ],
+   "bay": 4,
+   "par": 10,
+   "cars": [
+    {
+     "l": "C",
+     "r": 2,
+     "c": 6,
+     "dir": "right"
+    },
+    {
+     "l": "T",
+     "r": 1,
+     "c": 3,
+     "dir": "up"
+    },
+    {
+     "l": "P",
+     "r": 3,
+     "c": 2,
+     "dir": "down",
+     "len": 2
+    },
+    {
+     "l": "T",
+     "r": 3,
+     "c": 1,
+     "dir": "up"
+    },
+    {
+     "l": "N",
+     "r": 1,
+     "c": 6,
+     "dir": "up"
+    },
+    {
+     "l": "K",
+     "r": 3,
+     "c": 4,
+     "dir": "left"
+    },
+    {
+     "l": "D",
+     "r": 4,
+     "c": 3,
+     "dir": "down"
+    },
+    {
+     "l": "H",
+     "r": 4,
+     "c": 2,
+     "dir": "right",
+     "len": 2
+    },
+    {
+     "l": "M",
+     "r": 6,
+     "c": 5,
+     "dir": "right",
+     "len": 2
+    },
+    {
+     "l": "E",
+     "r": 1,
+     "c": 4,
+     "dir": "up"
+    },
+    {
+     "l": "I",
+     "r": 6,
+     "c": 3,
+     "dir": "right"
+    },
+    {
+     "l": "S",
+     "r": 1,
+     "c": 2,
+     "dir": "up"
+    }
+   ],
+   "tip": "Long trucks carry one letter but block two cells."
+  },
+  {
+   "id": "ex8-mother",
+   "suggested_level": 33,
+   "note": "New mechanic: chunk truck carrying 'TH' (fills two slots at once)",
+   "word": "MOTHER",
+   "grid": [
+    6,
+    6
+   ],
+   "bay": 4,
+   "par": 7,
+   "cars": [
+    {
+     "l": "F",
+     "r": 6,
+     "c": 4,
+     "dir": "right",
+     "len": 2
+    },
+    {
+     "l": "S",
+     "r": 4,
+     "c": 1,
+     "dir": "left"
+    },
+    {
+     "l": "E",
+     "r": 5,
+     "c": 5,
+     "dir": "right"
+    },
+    {
+     "l": "F",
+     "r": 6,
+     "c": 5,
+     "dir": "up"
+    },
+    {
+     "l": "O",
+     "r": 1,
+     "c": 3,
+     "dir": "down"
+    },
+    {
+     "l": "R",
+     "r": 3,
+     "c": 3,
+     "dir": "down"
+    },
+    {
+     "l": "M",
+     "r": 5,
+     "c": 6,
+     "dir": "right"
+    },
+    {
+     "l": "S",
+     "r": 2,
+     "c": 1,
+     "dir": "down"
+    },
+    {
+     "l": "TH",
+     "r": 2,
+     "c": 6,
+     "dir": "up",
+     "len": 2
+    }
+   ],
+   "tip": "The TH truck fills two seats at once."
+  },
+  {
+   "id": "ex9-busstop",
+   "suggested_level": 40,
+   "note": "New mechanics: two-word route (BUS, then STOP) + wildcard taxi '?' (polish: +1 free decoy A fills the empty top row)",
+   "words": [
+    "BUS",
+    "STOP"
+   ],
+   "grid": [
+    6,
+    6
+   ],
+   "bay": 3,
+   "par": 8,
+   "cars": [
+    {
+     "l": "U",
+     "r": 5,
+     "c": 5,
+     "dir": "down"
+    },
+    {
+     "l": "O",
+     "r": 5,
+     "c": 2,
+     "dir": "right"
+    },
+    {
+     "l": "M",
+     "r": 5,
+     "c": 3,
+     "dir": "down"
+    },
+    {
+     "l": "S",
+     "r": 3,
+     "c": 4,
+     "dir": "down"
+    },
+    {
+     "l": "B",
+     "r": 2,
+     "c": 2,
+     "dir": "right"
+    },
+    {
+     "l": "S",
+     "r": 4,
+     "c": 4,
+     "dir": "left"
+    },
+    {
+     "l": "C",
+     "r": 3,
+     "c": 6,
+     "dir": "right"
+    },
+    {
+     "l": "?",
+     "r": 6,
+     "c": 5,
+     "dir": "left"
+    },
+    {
+     "l": "R",
+     "r": 3,
+     "c": 1,
+     "dir": "down"
+    },
+    {
+     "l": "T",
+     "r": 4,
+     "c": 5,
+     "dir": "down"
+    },
+    {
+     "l": "P",
+     "r": 4,
+     "c": 2,
+     "dir": "down"
+    },
+    {
+     "l": "A",
+     "r": 1,
+     "c": 5,
+     "dir": "up"
+    }
+   ],
+   "tip": "Two stops: spell BUS, then STOP. The checkered ? taxi is a wildcard."
+  },
+  {
+   "id": "ex10-school",
+   "suggested_level": 48,
+   "note": "Hard 7x7: trucks, duplicate O, bay 3",
+   "word": "SCHOOL",
+   "grid": [
+    7,
+    7
+   ],
+   "bay": 3,
+   "par": 9,
+   "cars": [
+    {
+     "l": "R",
+     "r": 6,
+     "c": 1,
+     "dir": "down"
+    },
+    {
+     "l": "D",
+     "r": 1,
+     "c": 3,
+     "dir": "up",
+     "len": 2
+    },
+    {
+     "l": "O",
+     "r": 5,
+     "c": 3,
+     "dir": "down"
+    },
+    {
+     "l": "U",
+     "r": 2,
+     "c": 2,
+     "dir": "down"
+    },
+    {
+     "l": "U",
+     "r": 1,
+     "c": 2,
+     "dir": "left"
+    },
+    {
+     "l": "H",
+     "r": 7,
+     "c": 6,
+     "dir": "right"
+    },
+    {
+     "l": "O",
+     "r": 4,
+     "c": 1,
+     "dir": "left"
+    },
+    {
+     "l": "C",
+     "r": 7,
+     "c": 2,
+     "dir": "down"
+    },
+    {
+     "l": "S",
+     "r": 7,
+     "c": 1,
+     "dir": "right"
+    },
+    {
+     "l": "U",
+     "r": 2,
+     "c": 7,
+     "dir": "right"
+    },
+    {
+     "l": "N",
+     "r": 3,
+     "c": 1,
+     "dir": "up"
+    },
+    {
+     "l": "D",
+     "r": 5,
+     "c": 2,
+     "dir": "left"
+    },
+    {
+     "l": "L",
+     "r": 5,
+     "c": 5,
+     "dir": "down"
+    },
+    {
+     "l": "W",
+     "r": 7,
+     "c": 4,
+     "dir": "right",
+     "len": 2
+    },
+    {
+     "l": "T",
+     "r": 6,
+     "c": 3,
+     "dir": "left",
+     "len": 2
+    }
+   ],
+   "tip": "Final exam: 7x7 lot, two Os, 3 bay spots."
+  }
+ ]
+}
