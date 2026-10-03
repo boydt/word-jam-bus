@@ -15,14 +15,30 @@ Rules
     next slot(s) fills; otherwise it goes to the bay; bay already full -> LOSE.
   * Bay units auto-fill whenever they match the next slot(s) (longest first).
   * WIN when every slot of the target ("words" joined, or "word") is filled.
+  v4:
+  * "mode": "scramble": a letter boards at once if any seat for it is still
+    open (seats are interchangeable, so the state keeps a count per letter);
+    otherwise it is junk and parks. The bay never boards in scramble mode.
+  * Bay Word: after every exit, bay letters the word no longer needs (copies
+    beyond the remaining need of that letter) that form a word from
+    levels/baywords.json (any order) leave the bay. The check runs before
+    the bay-full check: park, clear, then lose if the bay is over capacity.
 
 Usage:
   python3 tools/wjb_solver.py levels/levels.json           # report
   python3 tools/wjb_solver.py levels/levels.json --check   # exit 1 on unsolvable / par mismatch
+  add --no-bayword to solve without the Bay Word rule
 """
 import json
+import os
 import sys
-from collections import deque
+from collections import Counter, deque
+from itertools import combinations
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+WORDS = {}
+for _w in sorted(json.load(open(os.path.join(HERE, "..", "levels", "baywords.json")))["words"]):
+    WORDS.setdefault("".join(sorted(_w.upper())), _w.upper())
 
 STEP = {"up": (-1, 0), "down": (1, 0), "left": (0, -1), "right": (0, 1)}
 
@@ -36,6 +52,8 @@ class Lot:
         self.rows, self.cols = lv["grid"]
         self.target = target_of(lv)
         self.cap = lv["bay"]
+        self.scramble = lv.get("mode") == "scramble"
+        self.use_words = "--no-bayword" not in sys.argv
         self.cars = []
         taken = set()
         for i, car in enumerate(lv["cars"]):
@@ -72,6 +90,46 @@ class Lot:
             idx += len(u)
         return idx, tuple(sorted(bay))
 
+    def remaining(self, idx):
+        """Letters still needed: route -> the tail of the target; scramble -> idx is a tuple of (letter, left)."""
+        if self.scramble:
+            return Counter(dict(idx))
+        return Counter(self.target[idx:])
+
+    def bay_words(self, idx, bay):
+        """Remove Bay Words (alphabetically first first) from the bay multiset until none is left."""
+        if not self.use_words:
+            return tuple(sorted(bay))
+        bay = list(bay)
+        while True:
+            need = self.remaining(idx)
+            free = []
+            for letter, k in Counter(u for u in bay if len(u) == 1 and u != "?").items():
+                free += [letter] * max(0, k - need[letter])
+            found = sorted(WORDS["".join(sorted(c))] for c in combinations(free, 3) if "".join(sorted(c)) in WORDS)
+            if not found:
+                return tuple(sorted(bay))
+            for ch in found[0]:
+                bay.remove(ch)
+
+    def board(self, idx, bay, u):
+        """Exit of unit u. Returns the new (idx, bay) or None for a losing move."""
+        if self.scramble:
+            left = dict(idx)
+            if left.get(u, 0) > 0:
+                left[u] -= 1
+                return tuple(sorted((k, v) for k, v in left.items() if v)), bay
+            new_bay = self.bay_words(idx, bay + (u,))
+            return None if len(new_bay) > self.cap else (idx, new_bay)
+        if u == "?" or self.target.startswith(u, idx):
+            n_idx, n_bay = self.fill_from_bay(idx + (1 if u == "?" else len(u)), bay)
+            return n_idx, self.bay_words(n_idx, n_bay)
+        new_bay = self.bay_words(idx, bay + (u,))
+        return None if len(new_bay) > self.cap else (idx, new_bay)
+
+    def won(self, idx):
+        return idx == () if self.scramble else idx >= len(self.target)
+
     def moves(self, state):
         offs, idx, bay = state
         occupied = {}
@@ -94,24 +152,21 @@ class Lot:
                     cell = (cell[0] + dr * sgn, cell[1] + dc * sgn)
                 hit_edge = not self.inside(cell)
                 if sgn == 1 and hit_edge:
-                    u = car["unit"]
                     new_offs = offs[:i] + (None,) + offs[i + 1:]
-                    if u == "?" or self.target.startswith(u, idx):
-                        n_idx, n_bay = self.fill_from_bay(idx + (1 if u == "?" else len(u)), bay)
-                        yield (i, sgn), (new_offs, n_idx, n_bay)
-                    elif len(bay) < self.cap:
-                        yield (i, sgn), (new_offs, idx, tuple(sorted(bay + (u,))))
-                    # else: losing move, never part of a solution
+                    nxt = self.board(idx, bay, car["unit"])
+                    if nxt is not None:  # None: losing move, never part of a solution
+                        yield (i, sgn), (new_offs, nxt[0], nxt[1])
                 elif dist > 0:
                     yield (i, sgn), (offs[:i] + (off + sgn * dist,) + offs[i + 1:], idx, bay)
 
     def solve(self):
-        s0 = (self.start, 0, ())
+        start_idx = tuple(sorted(Counter(self.target).items())) if self.scramble else 0
+        s0 = (self.start, start_idx, ())
         dist = {s0: 0}
         q = deque([s0])
         while q:
             s = q.popleft()
-            if s[1] >= len(self.target):
+            if self.won(s[1]):
                 return dist[s], len(dist)
             for _, t in self.moves(s):
                 if t not in dist:
@@ -132,7 +187,8 @@ def main():
             flag, ok = "  <-- UNSOLVABLE", False
         elif lv.get("par") != par:
             flag, ok = f"  <-- PAR MISMATCH (file {lv.get('par')})", False
-        print(f"[{'OK' if not flag else 'FAIL'}] {lv.get('id')}: {target_of(lv)} par={par} states={states}{flag}")
+        mode = " (scramble)" if lv.get("mode") == "scramble" else ""
+        print(f"[{'OK' if not flag else 'FAIL'}] {lv.get('id')}: {target_of(lv)}{mode} par={par} states={states}{flag}")
     if check and not ok:
         sys.exit(1)
 

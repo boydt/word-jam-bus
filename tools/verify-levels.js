@@ -28,9 +28,20 @@
  *    starts blocked; the optimal solution needs slides; reverse moves matter
  *    (forward-only is impossible or slower, except the first core level);
  *    par of each core level >= 75% of the previous core max.
+ *  - mode "scramble" (v4 breather levels; any order): solved under the
+ *    Scramble rule; single-letter cars only; word letters start blocked;
+ *    the optimal line needs slides; any-order really matters (the same lot
+ *    played in order is impossible or at least 2 moves slower); it is a
+ *    breather (par below the previous route level's par, but at least 60% of
+ *    it); at least 3 route levels sit between Scramble levels, the first one
+ *    has a tip and comes after the starter levels.
+ * Bay Word (every level): par with the Bay Word rule equals par without it,
+ * so a Bay Word is never needed for 3 stars; reachable Bay Words are listed.
+ * Boosters are never part of these proofs: every par is booster-free.
  * It reports cars, empty cells, min bay needed, reachable / dead states.
- * It also checks js/levels.js matches levels/levels.json and cross-checks par
- * with the independent Python solver tools/wjb_solver.py.
+ * It also checks js/levels.js matches levels/levels.json, js/baywords.js
+ * matches levels/baywords.json (every word 3 letters with a vowel), and
+ * cross-checks par with the independent Python solver tools/wjb_solver.py.
  * Exits 1 on any failure.
  */
 'use strict';
@@ -42,6 +53,9 @@ var E = require('../js/engine.js');
 var ROOT = path.join(__dirname, '..');
 var JSON_PATH = path.join(ROOT, 'levels', 'levels.json');
 var JS_PATH = path.join(ROOT, 'js', 'levels.js');
+var WORDS_JSON = path.join(ROOT, 'levels', 'baywords.json');
+var WORDS_JS = path.join(ROOT, 'js', 'baywords.js');
+var bayWordList = JSON.parse(fs.readFileSync(WORDS_JSON, 'utf8')).words;
 var args = process.argv.slice(2);
 var data = JSON.parse(fs.readFileSync(JSON_PATH, 'utf8'));
 var levels = Array.isArray(data) ? data : data.levels;
@@ -53,6 +67,9 @@ if (args.indexOf('--write') !== -1) {
   fs.writeFileSync(JS_PATH, '/* GENERATED from levels/levels.json by `node tools/verify-levels.js --write`. Do not edit by hand. */\n' +
     'window.WJB_LEVELS = ' + JSON.stringify(levels, null, 1) + ';\n');
   console.log('wrote ' + path.relative(ROOT, JS_PATH));
+  fs.writeFileSync(WORDS_JS, '/* GENERATED from levels/baywords.json by `node tools/verify-levels.js --write`. Do not edit by hand. */\n(function (root) {\n  var WORDS = ' +
+    JSON.stringify(bayWordList) + ';\n  if (typeof module === \'object\' && module.exports) module.exports = WORDS;\n  else root.WJB_BAYWORDS = WORDS;\n})(typeof self !== \'undefined\' ? self : this);\n');
+  console.log('wrote ' + path.relative(ROOT, WORDS_JS) + ' (restart node to use it)');
 }
 
 /** Plain BFS with move filters, for the starter checks: {fwdOnly, noSlide, noBay}. Returns {par, loseReachable}. */
@@ -92,8 +109,9 @@ levels.forEach(function (lv, n) {
   var g = null;
   try { g = E.prepare(lv); } catch (e) { problems.push(e.message); }
   var tier = lv.tier || 'core';
-  var row = { n: n + 1, id: lv.id, word: name, grid: lv.grid.join('x'), bay: lv.bay, tier: tier, teaches: lv.teaches || '' };
-  var coreIdx = tier === 'core' ? coreSeen++ : -1;
+  var scr = lv.mode === 'scramble';
+  var row = { n: n + 1, id: lv.id, word: name, grid: lv.grid.join('x'), bay: lv.bay, tier: tier, mode: scr ? 'scramble' : 'route', teaches: lv.teaches || '' };
+  var coreIdx = tier === 'core' && !scr ? coreSeen++ : -1;
   if (g) {
     var t0 = Date.now();
     var cells = g.rows * g.cols, used = g.cars.reduce(function (a, c) { return a + c.len; }, 0);
@@ -120,7 +138,20 @@ levels.forEach(function (lv, n) {
       row.slides = slides; row.reverse = rev; row.exits = exits;
       var fwd = E.solve(g, null, { forwardOnly: true });
       row.fwdOnlyPar = fwd.par === null ? 'impossible' : fwd.par;
-      if (tier === 'core') {
+      // Bay Word is a bonus, never needed for par
+      var noWord = E.solve(E.prepare(lv, { bayWords: false }));
+      row.noBayWordPar = noWord.par;
+      if (noWord.par !== sol.par) problems.push('par depends on the Bay Word rule (' + noWord.par + ' without it, ' + sol.par + ' with it)');
+      if (scr) {
+        if (tier !== 'core') problems.push('scramble levels belong to the core tier');
+        if (slides < 1) problems.push('trivial: optimal solution needs no slides');
+        var asRoute = E.solve(E.prepare(Object.assign({}, lv, { mode: 'route' })));
+        row.routePar = asRoute.par === null ? 'impossible' : asRoute.par;
+        if (asRoute.par !== null && asRoute.par < sol.par + 2) problems.push('any-order barely matters: in order the same lot takes ' + asRoute.par);
+        var junk = 0, s2 = E.initialState(g);
+        sol.path.forEach(function (m) { var r = E.step(g, s2, m.car, m.which); if (r.result === 'bay') junk++; s2 = r.state; });
+        row.junkExits = junk;
+      } else if (tier === 'core') {
         if (slides < 1) problems.push('trivial: optimal solution needs no slides');
         if (coreIdx > 0 && fwd.par !== null && fwd.par <= sol.par) problems.push('reverse moves not needed (forward-only par ' + fwd.par + ')');
       } else if (tier === 'starter') {
@@ -146,6 +177,7 @@ levels.forEach(function (lv, n) {
       row.minBay = E.minBay(g);
       var ex = E.explore(g, 1500000);
       if (ex.complete) { row.reachable = ex.reachable; row.dead = ex.deadStates; row.losingFirstMoves = ex.firstMovesDead + '/' + ex.firstMoves; }
+      row.bayWords = Object.keys(ex.bayWords || {}).sort().join(',') + (ex.complete ? '' : (Object.keys(ex.bayWords || {}).length ? ',' : '') + '(explore capped)');
       row.ms = Date.now() - t0;
       if (args.indexOf('--ascii') !== -1) {
         console.log('\n' + E.ascii(g));
@@ -156,10 +188,11 @@ levels.forEach(function (lv, n) {
   row.ok = problems.length === 0;
   if (!row.ok) failures++;
   table.push(row);
-  console.log('[' + (row.ok ? 'OK' : 'FAIL') + '] L' + row.n + ' ' + (tier === 'starter' ? '(starter: ' + row.teaches + ') ' : '') + row.word + ' ' + row.grid + ' cars ' + row.cars + ' empty ' + row.empty +
+  console.log('[' + (row.ok ? 'OK' : 'FAIL') + '] L' + row.n + ' ' + (tier === 'starter' ? '(starter: ' + row.teaches + ') ' : '') + (scr ? '(SCRAMBLE, in-order par ' + row.routePar + ', junk exits ' + row.junkExits + ') ' : '') + row.word + ' ' + row.grid + ' cars ' + row.cars + ' empty ' + row.empty +
     ' bay ' + row.bay + ' (min ' + row.minBay + ') par ' + row.par + ' [slides ' + row.slides + ', reverse ' + row.reverse + ', exits ' + row.exits +
     '] fwd-only ' + row.fwdOnlyPar + ' | reachable ' + (row.reachable || '?') + ', dead ' + (row.dead === undefined ? '?' : row.dead) +
     ', losing first moves ' + (row.losingFirstMoves || '?') + (tier === 'starter' ? ', loss possible ' + (row.canLose ? 'yes' : 'no') + ', no-slide par ' + row.noSlidePar + ', no-bay par ' + row.noBayPar : '') +
+    ' | Bay Words reachable: ' + (row.bayWords || 'none') + ', par without Bay Word ' + row.noBayWordPar +
     ' | BFS-to-win states ' + row.states + ' (' + row.ms + ' ms)');
   problems.forEach(function (p) { console.log('   PROBLEM: ' + p); });
 });
@@ -167,13 +200,13 @@ levels.forEach(function (lv, n) {
 // difficulty should rise.
 // core tier: par of each level >= 75% of the previous core max (small dips allowed)
 var maxPar = 0;
-table.filter(function (r) { return r.tier === 'core'; }).forEach(function (r) {
+table.filter(function (r) { return r.tier === 'core' && r.mode === 'route'; }).forEach(function (r) {
   if (r.par && r.par < Math.floor(maxPar * 0.75)) { failures++; console.log('[FAIL] L' + r.n + ' par ' + r.par + ' drops far below earlier par ' + maxPar); }
   maxPar = Math.max(maxPar, r.par || 0);
 });
 // starter tier: par never decreases, stays below the first core level, and the last one hands off within 2
 var starters = table.filter(function (r) { return r.tier === 'starter'; });
-var firstCore = table.filter(function (r) { return r.tier === 'core'; })[0];
+var firstCore = table.filter(function (r) { return r.tier === 'core' && r.mode === 'route'; })[0];
 starters.forEach(function (r, k) {
   if (k && r.par < starters[k - 1].par) { failures++; console.log('[FAIL] starter L' + r.n + ' par ' + r.par + ' is below the previous starter par ' + starters[k - 1].par); }
   if (firstCore && r.par >= firstCore.par) { failures++; console.log('[FAIL] starter L' + r.n + ' par ' + r.par + ' is not below the first core level par ' + firstCore.par); }
@@ -184,6 +217,32 @@ if (starters.length && firstCore) {
   else console.log('[OK] starter ramp: par ' + starters.map(function (r) { return r.par; }).join(' -> ') + ', then core L' + firstCore.n + ' par ' + firstCore.par);
 }
 if (starters.length && table.indexOf(starters[starters.length - 1]) > table.indexOf(firstCore)) { failures++; console.log('[FAIL] starter levels must come before the core levels'); }
+
+// scramble pacing: breathers after the starter ramp, >= 3 route levels between them, below the previous route par
+var lastScr = -1, scrCount = 0;
+table.forEach(function (r, k) {
+  if (r.mode !== 'scramble') return;
+  var prev = null;
+  for (var j = k - 1; j >= 0; j--) if (table[j].mode === 'route') { prev = table[j]; break; }
+  var bad = [];
+  if (!prev) bad.push('no route level before it');
+  else if (r.par >= prev.par || r.par < Math.ceil(prev.par * 0.6)) bad.push('par ' + r.par + ' is not a breather after L' + prev.n + ' par ' + prev.par + ' (want ' + Math.ceil(prev.par * 0.6) + '..' + (prev.par - 1) + ')');
+  if (starters.length && k <= table.indexOf(starters[starters.length - 1])) bad.push('comes before the end of the starter ramp');
+  if (lastScr >= 0 && k - lastScr < 4) bad.push('only ' + (k - lastScr - 1) + ' route level(s) since the last Scramble level');
+  if (scrCount === 0 && !levels[k].tip) bad.push('the first Scramble level needs a tip');
+  if (bad.length) { failures++; console.log('[FAIL] Scramble L' + r.n + ': ' + bad.join('; ')); }
+  else console.log('[OK] Scramble L' + r.n + ' ' + r.word + ' par ' + r.par + ' is a breather after L' + prev.n + ' ' + prev.word + ' par ' + prev.par + ' (in order this lot: ' + r.routePar + ')');
+  lastScr = k; scrCount++;
+});
+
+try {
+  var wsrc = fs.readFileSync(WORDS_JS, 'utf8'), wwin = {};
+  new Function('self', 'module', wsrc)(wwin, undefined);
+  var badWords = bayWordList.filter(function (w) { return !/^[A-Z]{3}$/.test(w) || !/[AEIOU]/.test(w); });
+  if (badWords.length) { failures++; console.log('[FAIL] Bay Words must be 3 capital letters with a vowel: ' + badWords.join(',')); }
+  if (JSON.stringify(wwin.WJB_BAYWORDS) !== JSON.stringify(bayWordList)) { failures++; console.log('[FAIL] js/baywords.js is out of date: run with --write'); }
+  else console.log('[OK] js/baywords.js matches levels/baywords.json (' + bayWordList.length + ' Bay Words, all 3 letters with a vowel)');
+} catch (e) { failures++; console.log('[FAIL] cannot read js/baywords.js: ' + e.message); }
 
 try {
   var src = fs.readFileSync(JS_PATH, 'utf8'), win = {};

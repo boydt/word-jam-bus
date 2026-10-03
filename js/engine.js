@@ -21,6 +21,21 @@
  *  - After every fill, bay units that match the next slot(s) board too,
  *    chaining (longest match first). Identical letters are interchangeable.
  *  - WIN when every slot of the target (all words joined) is filled.
+ *
+ * v4 additions
+ *  - mode "scramble" (level.mode): any letter the bus still needs boards at
+ *    once, into the leftmost open seat for that letter. Only decoys and extra
+ *    copies go to the bay, and the bay never boards (a junk letter can never
+ *    become needed). Scramble lots may not use "?" taxis or chunk trucks.
+ *  - Bay Word: after every exit, if three bay letters the bus will never need
+ *    (decoys, or copies beyond what the rest of the word needs) spell a word
+ *    from js/baywords.js in any order, those three leave the bay (bonus).
+ *    A wrong letter is parked first and the Bay Word check runs BEFORE the
+ *    bay-full check, so a letter that completes a Bay Word never loses.
+ *    The solver models this rule, so par / hints / dead ends include it.
+ *  - Boosters (UI-only helpers, never needed to win): tow a spare car away,
+ *    +1 bay spot for the level, nudge a car exactly one cell. They change
+ *    the state (state.cap, state.used) and every search re-runs from there.
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -30,6 +45,15 @@
 
   var DIRS = { up: [-1, 0], down: [1, 0], left: [0, -1], right: [0, 1] };
   var FWD = 0, BACK = 1;
+  var BAYWORDS = (typeof module === 'object' && module.exports) ? require('./baywords.js')
+    : (typeof self !== 'undefined' && self.WJB_BAYWORDS) || [];
+  /** sorted-letters key -> its words, alphabetical (CAT and ACT share the key ACT). */
+  var DICT = buildDict(BAYWORDS);
+  function buildDict(list) {
+    var d = new Map();
+    list.slice().sort().forEach(function (w) { w = String(w).toUpperCase(); var k = w.split('').sort().join(''); if (!d.has(k)) d.set(k, []); d.get(k).push(w); });
+    return d;
+  }
 
   function targetOf(level) {
     if (level.words && level.words.length) return level.words.join('').toUpperCase();
@@ -48,7 +72,8 @@
   }
 
   /** Build an immutable game model from a raw level. Throws if invalid. */
-  function prepare(level) {
+  function prepare(level, opts) {
+    opts = opts || {};
     var rows = level.grid[0], cols = level.grid[1];
     var target = targetOf(level);
     var errors = [];
@@ -76,17 +101,96 @@
       };
     });
     cars.forEach(function (c, i) { if (c && !c.l) errors.push('car ' + i + ' has no letter'); });
+    var mode = level.mode === 'scramble' ? 'scramble' : 'route';
+    if (level.mode && level.mode !== 'scramble' && level.mode !== 'route') errors.push('unknown mode ' + level.mode);
+    if (mode === 'scramble') {
+      if (target.length > 12) errors.push('scramble words are limited to 12 letters');
+      cars.forEach(function (c, i) { if (c && (c.l === '?' || c.l.length > 1)) errors.push('car ' + i + ': scramble levels take single-letter cars only'); });
+    }
     if (errors.length) throw new Error('Level ' + (level.id || target) + ' invalid: ' + errors.join('; '));
+    // seats of each letter, left to right (scramble boarding + need counts)
+    var seats = {};
+    for (var t = 0; t < target.length; t++) (seats[target[t]] = seats[target[t]] || []).push(t);
     return {
       level: level, rows: rows, cols: cols, target: target, words: wordsOf(level),
-      cap: level.bay, cars: cars, n: cars.length
+      cap: level.bay, cars: cars, n: cars.length, mode: mode, scramble: mode === 'scramble',
+      seats: seats, full: (1 << target.length) - 1,
+      dict: opts.bayWords === false ? null : (opts.dict ? buildDict(opts.dict) : DICT)
     };
   }
 
-  function initialState(game) {
-    return { pos: game.cars.map(function (c) { return c.start; }), idx: 0, bay: [], moves: 0 };
+  /** Remaining need per letter: route = the unfilled tail; scramble = unset seats. */
+  function needOf(game, idx, mask) {
+    var need = {}, t = game.target;
+    if (game.scramble) { for (var j = 0; j < t.length; j++) if (!(mask & (1 << j))) need[t[j]] = (need[t[j]] || 0) + 1; }
+    else for (var k = idx; k < t.length; k++) need[t[k]] = (need[t[k]] || 0) + 1;
+    return need;
   }
-  function cloneState(s) { return { pos: s.pos.slice(), idx: s.idx, bay: s.bay.slice(), moves: s.moves }; }
+  /** Indices of bay entries a Bay Word may use: single letters beyond the remaining need (earliest copies stay reserved). */
+  function eligibleBay(game, bay, idx, mask) {
+    var need = needOf(game, idx, mask), seen = {}, out = [];
+    for (var b = 0; b < bay.length; b++) {
+      var u = bay[b];
+      if (u.length !== 1 || u === '?') continue;
+      seen[u] = (seen[u] || 0) + 1;
+      if (seen[u] > (need[u] || 0)) out.push(b);
+    }
+    return out;
+  }
+  /**
+   * Bay Word sweep. Mutates state.bay; returns [{word, at:[bay indices before removal], letters}].
+   * Among several possible words the alphabetically first wins (then the lowest indices),
+   * so the result only depends on the bay multiset.
+   */
+  function sweepBay(game, state) {
+    var cleared = [];
+    if (!game.dict) return cleared;
+    while (state.bay.length >= 3) {
+      var el = eligibleBay(game, state.bay, state.idx, state.mask || 0);
+      if (el.length < 3) break;
+      var best = null;
+      for (var a = 0; a < el.length; a++) for (var b = a + 1; b < el.length; b++) for (var c = b + 1; c < el.length; c++) {
+        var k = [state.bay[el[a]], state.bay[el[b]], state.bay[el[c]]].sort().join('');
+        var ws = game.dict.get(k);
+        if (ws && (!best || ws[0] < best.key)) best = { key: ws[0], words: ws, at: [el[a], el[b], el[c]] };
+      }
+      if (!best) break;
+      best.letters = best.at.map(function (i) { return state.bay[i]; });
+      // which letters leave only depends on the multiset; the name shown follows the bay order when it is a word (C,A,T -> CAT, not ACT)
+      var asParked = best.letters.join('');
+      best.word = best.words.indexOf(asParked) !== -1 ? asParked : best.words[0];
+      delete best.words; delete best.key;
+      for (var r = 2; r >= 0; r--) state.bay.splice(best.at[r], 1);
+      cleared.push(best);
+    }
+    return cleared;
+  }
+
+  /**
+   * State: pos (axis position per car, -1 = gone), idx (seats filled; in route
+   * mode also the next seat), mask (scramble: filled seats bitmask), bay,
+   * moves, cap (bay size now; Bay +1 raises it), words (Bay Words cleared),
+   * used (boosters used this run: {tow, bay, nudge}).
+   */
+  function initialState(game) {
+    return { pos: game.cars.map(function (c) { return c.start; }), idx: 0, mask: 0, bay: [], moves: 0, cap: game.cap, words: 0, used: { tow: 0, bay: 0, nudge: 0 } };
+  }
+  function cloneState(s) {
+    var u = s.used || {};
+    return { pos: s.pos.slice(), idx: s.idx, mask: s.mask || 0, bay: s.bay.slice(), moves: s.moves, cap: s.cap, words: s.words || 0,
+      used: { tow: u.tow || 0, bay: u.bay || 0, nudge: u.nudge || 0 } };
+  }
+  function capOf(game, s) { return s && s.cap !== undefined && s.cap !== null ? s.cap : game.cap; }
+  function isWon(game, s) { return game.scramble ? (s.mask || 0) === game.full : s.idx >= game.target.length; }
+  function progOf(game, s) { return game.scramble ? (s.mask || 0) : s.idx; }
+  /** Scramble: the seat a letter would take (leftmost open seat for it), or -1 = junk. */
+  function seatFor(game, mask, u) {
+    var list = game.seats[u];
+    if (!list) return -1;
+    for (var q = 0; q < list.length; q++) if (!(mask & (1 << list[q]))) return list[q];
+    return -1;
+  }
+  function popcount(m) { var c = 0; while (m) { m &= m - 1; c++; } return c; }
 
   /** Cell index of the k-th cell (0 = lowest coordinate) of car at axis position p. */
   function cellAt(game, car, p) { return car.horiz ? car.lane * game.cols + p : p * game.cols + car.lane; }
@@ -153,7 +257,7 @@
    *   { result:'fill'|'bay', state, unit, slot, auto:[...], won, fillLetters }
    */
   function step(game, state, i, which, cap, grid) {
-    cap = cap === undefined || cap === null ? game.cap : cap;
+    cap = cap === undefined || cap === null ? capOf(game, state) : cap;
     which = which === BACK || which === 'back' ? BACK : FWD;
     if (state.pos[i] < 0) return { result: 'gone' };
     grid = grid || buildGrid(game, state.pos);
@@ -169,20 +273,77 @@
     // exit
     var u = car.l;
     s.pos[i] = -1;
-    var out = { state: s, unit: u, slot: s.idx, auto: [], which: which, dist: pr.dist };
-    if (u === '?' || game.target.substr(s.idx, u.length) === u) {
+    var out = { state: s, unit: u, slot: s.idx, auto: [], cleared: [], which: which, dist: pr.dist };
+    var seat = game.scramble ? seatFor(game, s.mask, u) : -1;
+    if (game.scramble ? seat >= 0 : (u === '?' || game.target.substr(s.idx, u.length) === u)) {
       out.result = 'fill';
-      out.fillLetters = u === '?' ? game.target[s.idx] : u;
-      s.idx += u === '?' ? 1 : u.length;
-      out.auto = autofill(game, s);
+      if (game.scramble) {
+        out.slot = seat; out.fillLetters = u;
+        s.mask |= 1 << seat; s.idx++;
+      } else {
+        out.fillLetters = u === '?' ? game.target[s.idx] : u;
+        s.idx += u === '?' ? 1 : u.length;
+        out.auto = autofill(game, s);
+      }
+      out.cleared = sweepBay(game, s);
     } else {
-      if (s.bay.length >= cap) { out.result = 'lose'; return out; }
-      out.result = 'bay';
+      // park first, clear any Bay Word, THEN check the bay size
+      out.bayIndex = s.bay.length;
       s.bay.push(u);
+      out.cleared = sweepBay(game, s);
+      if (s.bay.length > cap) { out.result = 'lose'; s.bay.pop(); return out; }
+      out.result = 'bay';
     }
-    out.won = s.idx >= game.target.length;
+    s.words += out.cleared.length;
+    out.won = isWon(game, s);
     return out;
   }
+
+  /* ---------------------------- boosters ---------------------------- */
+  /** Tow truck: only a single-letter car the bus can do without (a decoy or a spare copy). */
+  function towable(game, state, i) {
+    var car = game.cars[i];
+    if (state.pos[i] < 0 || car.l.length !== 1 || car.l === '?') return false;
+    var need = needOf(game, state.idx, state.mask || 0)[car.l] || 0;
+    if (!need) return true;
+    var supply = 0;
+    for (var j = 0; j < game.n; j++) if (j !== i && state.pos[j] >= 0 && game.cars[j].l === car.l) supply++;
+    for (var b = 0; b < state.bay.length; b++) if (state.bay[b] === car.l) supply++;
+    return supply >= need;
+  }
+  /** Apply a booster; returns the new state or null if not allowed. kind: 'tow' | 'bay' | 'nudge'. */
+  function applyBooster(game, state, kind, i, which) {
+    var s = cloneState(state);
+    if (kind === 'bay') {
+      if (s.used.bay) return null;
+      s.cap = capOf(game, state) + 1; s.used.bay++;
+      return s;
+    }
+    if (kind === 'tow') {
+      if (!towable(game, state, i)) return null;
+      s.pos[i] = -1; s.moves++; s.used.tow++;
+      return s;
+    }
+    if (kind === 'nudge') {
+      var to = nudgeTo(game, state, i, which);
+      if (to === null) return null;
+      s.pos[i] = to; s.moves++; s.used.nudge++;
+      return s;
+    }
+    return null;
+  }
+  /** Nudge: exactly one cell along the car's axis into an empty cell of the lot (never exits). */
+  function nudgeTo(game, state, i, which) {
+    var p = state.pos[i];
+    if (p < 0) return null;
+    var car = game.cars[i], sg = (which === BACK || which === 'back') ? -car.sign : car.sign;
+    var lead = sg > 0 ? p + car.len - 1 : p, x = lead + sg;
+    if (x < 0 || x >= car.span) return null;
+    var grid = buildGrid(game, state.pos);
+    if (grid[cellAt(game, car, x)] !== -1) return null;
+    return p + sg;
+  }
+  function boosted(state) { var u = state.used || {}; return (u.tow || 0) + (u.bay || 0) + (u.nudge || 0) > 0; }
 
   /* ------------------------------------------------------------------ */
   /* Solver: breadth-first search over (car positions, word index, bay). */
@@ -202,7 +363,7 @@
     if (bay.length) k += '|' + (bay.length > 1 ? bay.slice().sort().join(',') : bay[0]);
     return k;
   }
-  function stateKey(s) { return keyOf(s.pos, s.idx, s.bay); }
+  function stateKey(s) { return keyOf(s.pos, s.mask ? s.mask + 64 : s.idx, s.bay) + (s.cap !== undefined ? '#' + s.cap : ''); }
 
   /**
    * Incremental BFS. search.run(maxNewStates) -> 'win' | 'none' | 'running' | 'limit'.
@@ -215,14 +376,15 @@
    */
   function createSearch(game, from, opts) {
     opts = opts || {};
-    var n = game.n, W = game.target.length, cols = game.cols;
-    var cap = opts.cap === undefined || opts.cap === null ? game.cap : opts.cap;
+    var n = game.n, W = game.target.length, cols = game.cols, scr = game.scramble;
+    var s0 = from ? cloneState(from) : initialState(game);
+    var cap = opts.cap === undefined || opts.cap === null ? capOf(game, s0) : opts.cap;
     var maxStates = opts.maxStates || Infinity;
     var wMax = opts.forwardOnly ? 1 : 2;
-    var s0 = from ? cloneState(from) : initialState(game);
     var cars = game.cars;
     var size = 4096;
-    var posBuf = new Int8Array(size * n), idxBuf = new Uint8Array(size), bayBuf = new Uint16Array(size);
+    // prog = word index (route) or filled-seat mask (scramble)
+    var posBuf = new Int8Array(size * n), progBuf = new Uint16Array(size), bayBuf = new Uint16Array(size);
     var parent = new Int32Array(size), mv = new Int16Array(size);
     var bayIds = new Map(), bayList = [];
     function bayId(arr) {
@@ -231,24 +393,52 @@
       if (id === undefined) { id = bayList.length; bayIds.set(k, id); bayList.push(arr); }
       return id;
     }
+    // exit transitions (prog, bay, unit) -> packed result, memoised; -1 = losing move
+    var unitIds = {}, unitList = [];
+    cars.forEach(function (c) { if (unitIds[c.l] === undefined) { unitIds[c.l] = unitList.length; unitList.push(c.l); } });
+    var NU = unitList.length, exitMemo = new Map();
+    var nProgOut = 0, nBidOut = 0;
+    function exitTo(prog, bid, ui) {
+      var key = (bid * 65536 + prog) * NU + ui, hit = exitMemo.get(key);
+      if (hit === undefined) {
+        var u = unitList[ui], bay = bayList[bid];
+        var st = { idx: scr ? popcount(prog) : prog, mask: scr ? prog : 0, bay: bay.slice() };
+        var seat = scr ? seatFor(game, prog, u) : -1, lose = false;
+        if (scr ? seat >= 0 : (u === '?' || game.target.substr(prog, u.length) === u)) {
+          if (scr) { st.mask |= 1 << seat; st.idx++; }
+          else { st.idx += u === '?' ? 1 : u.length; if (st.bay.length) autofill(game, st); }
+          if (st.bay.length >= 3) sweepBay(game, st);
+        } else {
+          st.bay.push(u);
+          sweepBay(game, st);
+          if (st.bay.length > cap) lose = true;
+        }
+        hit = lose ? -1 : (scr ? st.mask : st.idx) * 65536 + bayId(st.bay.sort());
+        exitMemo.set(key, hit);
+      }
+      if (hit < 0) return false;
+      nProgOut = Math.floor(hit / 65536); nBidOut = hit % 65536;
+      return true;
+    }
+    function won(prog) { return scr ? prog === game.full : prog >= W; }
     var tbits = 13, table = new Int32Array(1 << tbits), tmask = (1 << tbits) - 1;
     var count = 0, head = 0;
-    function hashOf(pos, idx, bid) {
-      var h = (idx * 31 + bid * 1009) | 0;
+    function hashOf(pos, prog, bid) {
+      var h = (prog * 31 + bid * 1009) | 0;
       for (var i = 0; i < n; i++) h = Math.imul(h ^ (pos[i] + 2), 0x9e3779b1) | 0;
       return (h ^ (h >>> 15)) | 0;
     }
-    function same(e, pos, idx, bid) {
-      if (idxBuf[e] !== idx || bayBuf[e] !== bid) return false;
+    function same(e, pos, prog, bid) {
+      if (progBuf[e] !== prog || bayBuf[e] !== bid) return false;
       var b = e * n;
       for (var i = 0; i < n; i++) if (posBuf[b + i] !== pos[i]) return false;
       return true;
     }
-    function find(pos, idx, bid, h) { // returns slot index; table[slot] = 0 if absent
+    function find(pos, prog, bid, h) { // returns slot index; table[slot] = 0 if absent
       var slot = h & tmask;
       while (true) {
         var e = table[slot];
-        if (e === 0 || same(e - 1, pos, idx, bid)) return slot;
+        if (e === 0 || same(e - 1, pos, prog, bid)) return slot;
         slot = (slot + 1) & tmask;
       }
     }
@@ -257,7 +447,7 @@
       var tmp = new Int8Array(n);
       for (var e = 0; e < count; e++) {
         for (var i = 0; i < n; i++) tmp[i] = posBuf[e * n + i];
-        var slot = hashOf(tmp, idxBuf[e], bayBuf[e]) & tmask;
+        var slot = hashOf(tmp, progBuf[e], bayBuf[e]) & tmask;
         while (table[slot] !== 0) slot = (slot + 1) & tmask;
         table[slot] = e + 1;
       }
@@ -265,15 +455,15 @@
     function grow() {
       size *= 2;
       var p2 = new Int8Array(size * n); p2.set(posBuf); posBuf = p2;
-      var i2 = new Uint8Array(size); i2.set(idxBuf); idxBuf = i2;
+      var i2 = new Uint16Array(size); i2.set(progBuf); progBuf = i2;
       var b2 = new Uint16Array(size); b2.set(bayBuf); bayBuf = b2;
       var a2 = new Int32Array(size); a2.set(parent); parent = a2;
       var m2 = new Int16Array(size); m2.set(mv); mv = m2;
     }
-    function add(pos, idx, bid, par, move, slot) {
+    function add(pos, prog, bid, par, move, slot) {
       if (count >= size) grow();
       posBuf.set(pos, count * n);
-      idxBuf[count] = idx; bayBuf[count] = bid; parent[count] = par; mv[count] = move;
+      progBuf[count] = prog; bayBuf[count] = bid; parent[count] = par; mv[count] = move;
       table[slot] = count + 1;
       count++;
       if (count * 2 > tmask) rehash();
@@ -282,9 +472,9 @@
     var api = { status: 'running', path: null, states: 0 };
     var pos = new Int8Array(n);
     for (var z = 0; z < n; z++) pos[z] = s0.pos[z];
-    var b0 = bayId(s0.bay.slice().sort());
-    add(pos, s0.idx, b0, -1, -1, find(pos, s0.idx, b0, hashOf(pos, s0.idx, b0)));
-    if (s0.idx >= W) { api.status = 'win'; api.path = []; api.states = 1; }
+    var p0 = progOf(game, s0), b0 = bayId(s0.bay.slice().sort());
+    add(pos, p0, b0, -1, -1, find(pos, p0, b0, hashOf(pos, p0, b0)));
+    if (won(p0)) { api.status = 'win'; api.path = []; api.states = 1; }
     var grid = new Int16Array(game.rows * cols);
     function finish(at) {
       var path = [];
@@ -300,7 +490,7 @@
         if (count >= maxStates) { api.status = 'limit'; api.states = count; return 'limit'; }
         var cur = head++, base = cur * n;
         for (var a = 0; a < n; a++) pos[a] = posBuf[base + a];
-        var idx = idxBuf[cur], bid = bayBuf[cur], bay = bayList[bid];
+        var prog = progBuf[cur], bid = bayBuf[cur];
         grid.fill(-1);
         for (var g = 0; g < n; g++) {
           var pg = pos[g]; if (pg < 0) continue;
@@ -318,26 +508,19 @@
               if (grid[car.horiz ? car.lane * cols + x : x * cols + car.lane] !== -1) { blocked = true; break; }
               dist++; x += sgn;
             }
-            var nIdx = idx, nBid = bid;
+            var nProg = prog, nBid = bid;
             if (blocked || w === 1) {
               if (dist === 0) continue;               // bump
               pos[i] = p + sgn * dist;                // slide until blocked / edge
             } else {
-              var u = car.l;                          // exit through the nose
-              pos[i] = -1;
-              if (u === '?' || game.target.substr(idx, u.length) === u) {
-                var st = { idx: idx + (u === '?' ? 1 : u.length), bay: bay.slice() };
-                if (bay.length) autofill(game, st);
-                nIdx = st.idx; nBid = bayId(st.bay.sort());
-              } else {
-                if (bay.length >= cap) { pos[i] = p; continue; } // losing move: never part of a solution
-                nBid = bayId(bay.concat([u]).sort());
-              }
+              if (!exitTo(prog, bid, unitIds[car.l])) continue; // losing move: never part of a solution
+              pos[i] = -1;                            // exit through the nose
+              nProg = nProgOut; nBid = nBidOut;
             }
-            var slot = find(pos, nIdx, nBid, hashOf(pos, nIdx, nBid));
+            var slot = find(pos, nProg, nBid, hashOf(pos, nProg, nBid));
             if (table[slot] === 0) {
-              var id = add(pos, nIdx, nBid, cur, (i << 1) | w, slot);
-              if (nIdx >= W) { pos[i] = p; finish(id); api.states = count; return 'win'; }
+              var id = add(pos, nProg, nBid, cur, (i << 1) | w, slot);
+              if (won(nProg)) { pos[i] = p; finish(id); api.states = count; return 'win'; }
             }
             pos[i] = p;
           }
@@ -369,20 +552,21 @@
    */
   function explore(game, maxStates) {
     maxStates = maxStates || 3000000;
-    var n = game.n, W = game.target.length;
-    var seen = new Map(), states = [], edgesFrom = [], won = [];
+    var n = game.n;
+    var seen = new Map(), states = [], edgesFrom = [], won = [], bayWords = {};
     function push(s) { var k = stateKey(s); if (seen.has(k)) return seen.get(k); seen.set(k, states.length); states.push(s); edgesFrom.push(null); return states.length - 1; }
     push(initialState(game));
     var grid = new Int16Array(game.rows * game.cols);
     for (var h = 0; h < states.length; h++) {
-      if (states.length > maxStates) return { complete: false, reachable: states.length };
+      if (states.length > maxStates) return { complete: false, reachable: states.length, bayWords: bayWords };
       var s = states[h], out = [];
-      if (s.idx >= W) { won[h] = true; edgesFrom[h] = out; continue; }
+      if (isWon(game, s)) { won[h] = true; edgesFrom[h] = out; continue; }
       buildGrid(game, s.pos, grid);
       for (var i = 0; i < n; i++) for (var w = 0; w < 2; w++) {
         var t = step(game, s, i, w, null, grid);
         if (t.result === 'gone' || t.result === 'bump') continue;
         if (t.result === 'lose') { out.push({ car: i, which: w, to: -1 }); continue; }
+        if (t.cleared && t.cleared.length) t.cleared.forEach(function (c) { bayWords[c.word] = (bayWords[c.word] || 0) + 1; });
         out.push({ car: i, which: w, to: push(t.state) });
       }
       edgesFrom[h] = out;
@@ -396,7 +580,7 @@
     while (q.length) { var x = q.pop(); rev[x].forEach(function (p) { if (!good[p]) { good[p] = 1; q.push(p); } }); }
     var dead = 0; for (var c = 0; c < N; c++) if (!good[c]) dead++;
     var firstBad = edgesFrom[0].filter(function (e) { return e.to < 0 || !good[e.to]; }).length;
-    return { complete: true, reachable: N, deadStates: dead, firstMoves: edgesFrom[0].length, firstMovesDead: firstBad };
+    return { complete: true, reachable: N, deadStates: dead, firstMoves: edgesFrom[0].length, firstMovesDead: firstBad, bayWords: bayWords };
   }
 
   /** ASCII picture of a state (or the start). */
@@ -431,6 +615,9 @@
     DIRS: DIRS, FWD: FWD, BACK: BACK, targetOf: targetOf, prepare: prepare,
     initialState: initialState, cloneState: cloneState, buildGrid: buildGrid, probe: probe,
     step: step, createSearch: createSearch, solve: solve, explore: explore, minBay: minBay,
-    stateKey: stateKey, ascii: ascii, cellAt: cellAt, headCell: headCell
+    stateKey: stateKey, ascii: ascii, cellAt: cellAt, headCell: headCell,
+    isWon: isWon, sweepBay: sweepBay, eligibleBay: eligibleBay, needOf: needOf, seatFor: seatFor,
+    towable: towable, applyBooster: applyBooster, nudgeTo: nudgeTo, boosted: boosted, capOf: capOf,
+    BAYWORDS: BAYWORDS
   };
 });
