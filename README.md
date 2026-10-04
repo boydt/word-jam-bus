@@ -4,6 +4,8 @@ A parking-jam word puzzle for phones and desktops. Every car in a packed lot car
 
 **v4** adds three things: **Scramble stops** (levels where letters board in any order), **coins and boosters** (Tow truck, Bay +1, Nudge), and **Bay Words** (junk letters in the bay that spell a 3-letter word clear for bonus coins). The campaign grows from 20 to 23 levels; see [v4 features](#v4-features).
 
+**v6** gives the buses an old-style school-bus look (a lower hood with a bumper at the front, a tailpipe with a puff at the back), puts the boosters in an on-screen **booster bar** with a fourth booster, **Flip**, and adds a **Settings** panel (gear on the title screen) with **test / cheat options**; see [v6 changes](#v6-changes).
+
 Plain HTML, CSS and JavaScript. There is no build step and no network or CDN dependency, so it can go straight onto a static host such as GitHub Pages.
 
 Live: https://boydt.github.io/word-jam-bus/
@@ -53,7 +55,7 @@ Live: https://boydt.github.io/word-jam-bus/
 - **Dead end:** a background solver re-checks the position after every move (and after every booster). When the remaining cars can no longer finish the word, a "Dead end!" banner offers Undo, Boosters or Retry.
 - **Restart:** the circular-arrow button, or `R` on desktop.
 
-**Progress** is saved in `localStorage` under `wordJamBus.progress.v1`: `{ v: 4, unlocked, unlockedId, stars, best, sound, coins, seen }`. Stars and best moves are keyed by **level id**, so they survive re-ordering. Use **Reset progress** on the title screen to clear it.
+**Progress** is saved in `localStorage` under `wordJamBus.progress.v1`: `{ v: 4, unlocked, unlockedId, stars, best, sound, coins, seen }`. Stars and best moves are keyed by **level id**, so they survive re-ordering. Use **Settings → Reset progress** (it asks first) to clear it.
 
 **Progress migration (v4).** v4 inserted three Scramble levels at positions 12, 17 and 22, which shifts every later level. All ids are unchanged, so stars and best moves carry over by id. A v4 save also stores `unlockedId` (the id of the furthest open level), so future re-orderings can migrate by id. On load:
 - `v: 4` saves: `unlocked` is recomputed from `unlockedId`;
@@ -85,11 +87,12 @@ Live: https://boydt.github.io/word-jam-bus/
 ### Coins and boosters
 
 - **Earning.** Every seat filled is a 1-coin fare and every Bay Word is +10. Fares collect in the fare box on the coin button (`+N`) during a level and are **banked only when you win**: a loss or restart banks nothing, and Undo takes a fare back. A win **at or under par with no booster doubles the fares** (par bonus). The **first clear** of a level adds +20. Coins are saved as `progress.coins`. Example: CAT at par first time = 3 + 3 + 20 = 26 coins; replaying it at par = 6.
-- **Prices.** Tow truck **150**, Bay +1 **100**, Nudge **60**. These are deliberately expensive: a first-time clear of a whole level at par earns roughly 26-44 coins, so one booster costs a few levels of play.
+- **Prices.** Tow truck **150**, Flip **120**, Bay +1 **100**, Nudge **60**. These are deliberately expensive: a first-time clear of a whole level at par earns roughly 26-44 coins, so one booster costs a few levels of play.
 - **Tow truck.** Tap a glowing car to tow it out of the lot. Only single-letter cars the bus can do without (decoys, or spare copies where enough of that letter remain) can be towed; the towed letter never goes to the bay. Costs 1 move.
 - **Bay +1.** Adds a gold spot to the bay for the rest of the level (once per level). Costs no move.
 - **Nudge.** Tap or swipe a glowing car to move it exactly one cell forward or back into an empty cell inside the lot. It never drives a car out. Costs 1 move.
-- **Spending.** The coin button opens the Boosters sheet, a booster asks "Spend N coins on ...?" (Confirm / Cancel), and Tow and Nudge then wait for you to pick a car, with a Cancel bar in place of the footer. Coins are taken only when the booster is actually applied, so cancelling or tapping a car that can't take it costs nothing.
+- **Flip** (v6). Tap a glowing car to turn it round in place: same cells, nose the other way, so it can leave from its former tail end. Any car in the lot can flip, including long trucks, the TH chunk truck and the taxi, since they stay in their cells. Costs 1 move.
+- **Spending.** Each booster is a button in the booster bar along the bottom of the play screen, with its price. Tapping one goes straight to "Spend N coins on ...?" (Spend / Cancel), and Tow, Nudge and Flip then wait for you to pick a car, with a Cancel bar in place of the booster bar. Coins are taken only when the booster is actually applied, so cancelling or tapping a car that can't take it costs nothing.
 - **Stars and records.** Boosters are never needed: the verifier proves every level winnable at par without them. A win that used any booster earns **at most 2 stars**, gets no par bonus, and doesn't record a best-moves score. Fares and the first-clear bonus still count.
 - **Undo, hints, dead ends.** A booster is one step in the undo history: Undo reverts it and **refunds its coins** (using one of your 5 undos). Restart does not refund. After a booster, the hint and the dead-end check re-solve from the new position, so a hint is always optimal for the boosted lot, and a dead end can be rescued (for example with Bay +1) or created (a Tow or Nudge can block a lane). In that case the dead-end banner appears as usual and Undo gets your coins back.
 
@@ -101,6 +104,32 @@ Live: https://boydt.github.io/word-jam-bus/
 - **Before the lose check.** The check runs right after a letter parks and **before** the bay-full check. A letter that completes a word therefore never loses, even into a full 3-spot bay: the bay just clears. A 3-spot bay that fills up with a word empties completely.
 - **Why every listed word has a vowel (A E I O U).** With Y-only words such as DRY, BUS+STOP could be won in 17 moves instead of 30 by clearing the bay. With the vowel rule, no in-order level can form a Bay Word at all, and every existing par is unchanged. Bay Words can be formed on JUNGLE (FOR) and DRAGONS (HEY).
 - **Solver.** The rule is part of `js/engine.js` and `tools/wjb_solver.py`, so par, hints and dead-end detection all account for it. The verifier also solves each level with the Bay Word rule turned off and requires the same par, so a Bay Word is never needed for 3 stars. "Winnable" and "can't be lost" claims are made with the rule on, which is how the game plays.
+
+## v6 changes
+
+### School-bus art
+Every bus (the play bus, the purple Scramble bus, the title WORD bus, the win-card bus and the Scramble tip bus) has a **lower, shorter hood block** sticking out at the front with a headlight, a windshield above it and a dark **bumper**, and a **tailpipe** with two small puffs at the back (they hold still with `prefers-reduced-motion`). The front is on the right, the direction the bus drives off after a win, so it always moves hood-first. The hood is the bus colour (purple on Scramble), the bus reserves room for the hood and tailpipe, and the seat size is worked out with that room included, so a 7-letter word still fits at 375 px.
+
+### Booster bar
+The footer has the level tip on top and a bar below it: the coin balance (with the `+N` fare box), **Tow 150, Bay +1 100, Nudge 60, Flip 120** and **Hint**. Every button is at least 44 px, and the bar never covers the lot, the bay or the tip (checked at 390x844, 375x667 and 1280x800).
+- A price turns **red** when you can't afford it; tapping it then just says "Need N coins" and nothing opens.
+- **Bay +1** greys out and reads **Used** once used this level. Tow, Nudge or Flip grey out if no car can take them.
+- Under **Unlimited coins** every booster reads **Free** and the balance shows **∞**.
+- The dead-end banner's **Boosters** button closes the banner and highlights the bar.
+
+**Flip price.** Flip is priced at **120**, between Nudge (60) and Tow (150). It is stronger than Nudge because it opens a whole new exit lane rather than shifting a car by one cell. It is weaker than Tow because the flipped car still sits in the lot, its letter still has to board or park in the bay, and the new lane may be blocked too. In the engine a flip returns a new game model with that one car reversed (positions are stored as each car's lowest cell, so the state doesn't change), and the undo history keeps the matching model, so the hint and dead-end search plan with the new direction and Undo turns the car back.
+
+### Settings and test / cheat options
+The gear on the title screen opens **Settings**: Sound and How to play, a clearly marked **Test / cheat options** section, and a separate **Reset progress** with its own confirm step. The toggles are a list (`TEST_TOGGLES` in `js/game.js`), so new ones only need an entry there:
+- **Unlock all levels:** any level can be picked; levels opened only by this toggle get a dashed red outline.
+- **Unlimited coins:** boosters are free and the coin counters show **∞**.
+- **Unlimited hints** / **Unlimited undos:** the button never runs out and its badge shows **∞**.
+
+The toggles are saved under `wordJamBus.test.v1`, apart from the real save, which they never write. While any is on, a red **TEST MODE** tag shows on the title and in the play HUD, and **Turn all test options off** clears them all. The rule is: **nothing a cheat makes possible is saved.**
+- A level that is open **only** because of Unlock all is played off the record: no stars, best score, unlock, coins or "tip seen" flag. Wins on levels you had really unlocked count as normal.
+- With Unlimited coins on, the real balance is never spent and earned fares are **not banked** (the win card says so). A win that used a free booster is not saved. A booster-free win on a really-unlocked level still saves its stars and unlock.
+- With Unlimited hints or undos on, a win that used more than the normal 3 hints or 5 undos is not saved. An Undo that reverts a booster bought with real coins still refunds it.
+- Cheats can only be changed on the title screen, so each level takes a snapshot of them when it starts. Turning one off gives the normal fresh 5 undos / 3 hints (and real coin rules) from the next level start. Your real unlocks, stars and coins are exactly as they were, because they were never touched.
 
 ## Levels
 
@@ -281,7 +310,8 @@ node tests/file-url.js            # opens index.html via file:// and wins level 
 - Bay Word on level 17: three junk letters clear, +10 in the fare box, "Bay Word 10" on the win card, coins banked;
 - all 23 levels won through the UI at par with 3 stars and no boosters, on the phone (taps + swipes) and on desktop (clicks + drags);
 - saved-progress migration with seeded `localStorage`: v3 saves (partial, through BUS, all 20, starters only), a v2 save, a v4 save with coins, and reloading a migrated save;
-- 375x667: levels 17, 22 and 23 and the shop fit; desktop right-click reverse, `R` restart and a click nudge;
+- 375x667: levels 17, 22 and 23, the booster bar and the confirm sheet fit; desktop right-click reverse, `R` restart and a click nudge;
+- v6: bus hood/bumper/tailpipe on every bus and inside the screen on every layout check, the bus driving off hood-first; booster bar prices, red prices when poor, Bay +1 "Used", 44 px targets, clear of the lot/bay/tip at 390x844, 375x667 and desktop; Flip (pick mode, a car that then leaves from its former tail end, dead-end + optimal hint after it, Undo turns it back and refunds 120, a Flip win capped at 2 stars); Settings with 4 test toggles (saved apart from the real save, which stays byte-identical; Unlock all with test-opened levels off the record; Unlimited coins free boosters, no banking, ∞; Unlimited hints/undos ∞ badges, extra use keeps a win off the record, a booster refund still works, normal counts back after turning off; TEST MODE tag; Reset with confirm);
 - no console errors, page errors or failed requests.
 
 It saves screenshots to `screenshots/` (`v4-*.png`; the `v2-*` and `v3-*` files are from earlier rounds).
@@ -305,7 +335,7 @@ tools/starter-lab.js     beginner-level generator/filter (dev)
 tools/scramble-lab.js    Scramble lot generator (dev)
 tools/scramble-improve.js Scramble lot hill-climber (dev)
 tests/rules.js           Node rule/solver tests incl. JS-vs-Python fuzz
-tests/e2e.js             Playwright play-test (phone + desktop)
+tests/e2e.js             Playwright play-test (phone + desktop): levels, Scramble, coins, booster bar, Flip, settings/cheats, bus art
 tests/file-url.js        file:// smoke test
 screenshots/             test screenshots
 ```

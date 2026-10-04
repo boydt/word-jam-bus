@@ -488,12 +488,12 @@ async function fitCheck(page, label) {
   check(/Spend 120 coins on Flip\?/.test(await p.textContent('#confirm-title')), 'Flip confirm: "Spend 120 coins on Flip?"');
   await tapEl(p, T, '#btn-confirm'); await p.waitForTimeout(300);
   const flipPick = await p.evaluate(() => ({ glow: document.querySelectorAll('.car.can-boost').length, cars: [...document.querySelectorAll('.car')].filter(e => e.style.display !== 'none').length, bar: document.getElementById('boost-bar').classList.contains('show') }));
-  check(flipPick.bar && flipPick.glow === flipPick.cars && (await S(p)).coins === 1000, 'flip pick mode: every car in the lot glows (trucks too), Cancel bar shown, nothing charged yet');
+  check(flipPick.bar && flipPick.glow === flipPick.cars && (await S(p)).coins === fb.coins, 'flip pick mode: every car in the lot glows (trucks too), Cancel bar shown, nothing charged yet');
   await shot(p, 'v6-flip-pick.png');
   await inputMove(p, T, fx.car, 0, 'tap'); await p.waitForTimeout(650); await settle(p);
   let fa = await S(p);
   const fdir = await p.evaluate(id => ({ game: window.WJB.session.game.cars[id].dir, el: document.querySelector('.car[data-id="' + id + '"]').getAttribute('data-dir') }), fx.car);
-  check(fdir.game === fx.to && fdir.el === fx.to && fa.coins === 880 && fa.moves === fb.moves + 1 && fa.used.flip === 1 && fa.pos[fx.car] === fb.pos[fx.car],
+  check(fdir.game === fx.to && fdir.el === fx.to && fa.coins === fb.coins - 120 && fa.moves === fb.moves + 1 && fa.used.flip === 1 && fa.pos[fx.car] === fb.pos[fx.car],
     'Flip: car ' + fx.car + ' now faces ' + fx.to + ' (was ' + fx.dir + '), same cells, 120 coins, +1 move');
   await shot(p, 'v6-flip-done.png');
   await p.waitForFunction(() => !window.WJB.searching(), null, { timeout: 20000 }).catch(() => {});
@@ -514,7 +514,7 @@ async function fitCheck(page, label) {
   await tapEl(p, T, '#btn-undo'); await settle(p);
   fa = await S(p);
   const fu = await p.evaluate(id => ({ game: window.WJB.session.game.cars[id].dir, el: document.querySelector('.car[data-id="' + id + '"]').getAttribute('data-dir') }), fx.car);
-  check(fu.game === fx.dir && fu.el === fx.dir && fa.coins === 1000 && fa.used.flip === 0 && fa.pos[fx.car] === fb.pos[fx.car] && fa.moves === fb.moves, 'Undo x2: the car is back and faces ' + fx.dir + ' again; Flip\'s 120 coins refunded (1000)');
+  check(fu.game === fx.dir && fu.el === fx.dir && fa.coins === fb.coins && fa.used.flip === 0 && fa.pos[fx.car] === fb.pos[fx.car] && fa.moves === fb.moves, 'Undo x2: the car is back and faces ' + fx.dir + ' again; Flip\'s 120 coins refunded (' + fa.coins + ')');
   // a win that used Flip is capped at 2 stars
   await openLevel(p, 11);
   await buy(p, T, 'flip');
@@ -725,7 +725,7 @@ async function fitCheck(page, label) {
   await tapEl(sp, ST, '#bst-flip'); await sp.waitForSelector('#ov-shop.show'); await sp.waitForTimeout(300);
   check(await sp.evaluate(() => { const r = document.querySelector('.shop-card').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }), '375x667: booster confirm sheet fits on screen');
   await tapEl(sp, ST, '#btn-confirm'); await sp.waitForTimeout(300);
-  check(await sp.evaluate(() => { const b = document.getElementById('btn-boost-cancel').getBoundingClientRect(); return b.height >= 40 && b.bottom <= innerHeight; }), '375x667: pick-a-car Cancel bar replaces the booster bar');
+  check(await sp.evaluate(() => { const b = document.getElementById('btn-boost-cancel').getBoundingClientRect(); return b.height >= 44 && b.bottom <= innerHeight; }), "375x667: pick-a-car Cancel bar replaces the booster bar (Cancel >= 44px)");
   await tapEl(sp, ST, '#btn-boost-cancel'); await sp.waitForTimeout(250);
   check(await sp.locator('#boost-bar.show').count() === 0 && (await S(sp)).coins === 400, 'Cancel leaves pick mode with no charge');
   await seeded(sp, v4save({}));
