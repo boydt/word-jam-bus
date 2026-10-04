@@ -6,6 +6,7 @@
  *   node tools/verify-levels.js --write    also regenerate js/levels.js from it
  *   node tools/verify-levels.js --ascii    print each lot and an optimal solution
  *   node tools/verify-levels.js --no-py    skip the Python cross-check
+ *   node tools/verify-levels.js --districts  only the city-map checks (fast)
  *
  * Every level (any tier):
  *  - valid layout (in grid, no overlaps, every car has a letter), unique id;
@@ -45,6 +46,14 @@
  * so a Bay Word is never needed for 3 stars; reachable Bay Words are listed.
  * Boosters are never part of these proofs: every par is booster-free.
  * It reports cars, empty cells, min bay needed, reachable / dead states.
+ * City map (v8, levels/districts.json): every level sits in exactly one
+ *    district, in levels.json order; each district has >= 3 stops and ends
+ *    in its boss (the hardest par in the district, ties allowed); the
+ *    mechanic it "teaches" debuts inside it (basics = level 1, trucks = the
+ *    first long truck, scramble = the first Scramble level, specials = the
+ *    first chunk truck and the first wildcard taxi, keys = every padlock
+ *    level); chests give known boosters (1-3 each), coins >= 0 and a known
+ *    paint. --districts runs only these checks (fast, no solving).
  * It also checks js/levels.js matches levels/levels.json, js/baywords.js
  * matches levels/baywords.json (every word 3 letters with a vowel), and
  * cross-checks par with the independent Python solver tools/wjb_solver.py.
@@ -61,6 +70,9 @@ var JSON_PATH = path.join(ROOT, 'levels', 'levels.json');
 var JS_PATH = path.join(ROOT, 'js', 'levels.js');
 var WORDS_JSON = path.join(ROOT, 'levels', 'baywords.json');
 var WORDS_JS = path.join(ROOT, 'js', 'baywords.js');
+var DIST_JSON = path.join(ROOT, 'levels', 'districts.json');
+var map = JSON.parse(fs.readFileSync(DIST_JSON, 'utf8'));
+var mapData = { paints: map.paints, districts: map.districts };
 var bayWordList = JSON.parse(fs.readFileSync(WORDS_JSON, 'utf8')).words;
 var args = process.argv.slice(2);
 var data = JSON.parse(fs.readFileSync(JSON_PATH, 'utf8'));
@@ -71,7 +83,8 @@ var table = [];
 
 if (args.indexOf('--write') !== -1) {
   fs.writeFileSync(JS_PATH, '/* GENERATED from levels/levels.json by `node tools/verify-levels.js --write`. Do not edit by hand. */\n' +
-    'window.WJB_LEVELS = ' + JSON.stringify(levels, null, 1) + ';\n');
+    'window.WJB_LEVELS = ' + JSON.stringify(levels, null, 1) + ';\n' +
+    '/* GENERATED from levels/districts.json (v8 city map). */\nwindow.WJB_MAP = ' + JSON.stringify(mapData, null, 1) + ';\n');
   console.log('wrote ' + path.relative(ROOT, JS_PATH));
   fs.writeFileSync(WORDS_JS, '/* GENERATED from levels/baywords.json by `node tools/verify-levels.js --write`. Do not edit by hand. */\n(function (root) {\n  var WORDS = ' +
     JSON.stringify(bayWordList) + ';\n  if (typeof module === \'object\' && module.exports) module.exports = WORDS;\n  else root.WJB_BAYWORDS = WORDS;\n})(typeof self !== \'undefined\' ? self : this);\n');
@@ -105,6 +118,68 @@ function restricted(g, opts, full) {
   return { par: par, loseReachable: lose, complete: seen.size < 2000000 };
 }
 function worse(p, par) { return p === null || p > par; }
+
+/* ---------------- v8 city map: districts ---------------- */
+function checkDistricts() {
+  var bad = [], ids = levels.map(function (l) { return l.id; }), flat = [];
+  var paintIds = (map.paints || []).map(function (p) { return p.id; });
+  if (paintIds.indexOf('classic') === -1) bad.push('paints need "classic" (owned from the start)');
+  (map.paints || []).forEach(function (p) { if (!/^#[0-9a-f]{6}$/i.test(p.body) || !/^#[0-9a-f]{6}$/i.test(p.dark) || !p.name) bad.push('paint ' + p.id + ' needs a name and #rrggbb body/dark'); });
+  var seenD = {};
+  map.districts.forEach(function (d, k) {
+    var where = 'district ' + (k + 1) + ' ' + d.id;
+    if (seenD[d.id]) bad.push(where + ': duplicate id'); seenD[d.id] = true;
+    if (!d.name || !d.theme || !d.intro) bad.push(where + ': needs name, theme and intro');
+    if (!d.levels || d.levels.length < 3) bad.push(where + ': needs at least 3 stops');
+    d.levels.forEach(function (id) { if (ids.indexOf(id) === -1) bad.push(where + ': unknown level ' + id); flat.push(id); });
+    if (d.boss !== d.levels[d.levels.length - 1]) bad.push(where + ': the boss must be its last stop');
+    var pars = d.levels.map(function (id) { var l = levels[ids.indexOf(id)]; return l ? l.par : 0; });
+    var bossPar = pars[pars.length - 1], maxP = Math.max.apply(null, pars);
+    if (bossPar < maxP) bad.push(where + ': boss par ' + bossPar + ' is below the district max ' + maxP);
+    var c = d.chest || {};
+    if (!(c.coins >= 0)) bad.push(where + ': chest coins must be >= 0');
+    Object.keys(c.boosters || {}).forEach(function (b) { if (['tow', 'bay', 'nudge', 'flip'].indexOf(b) === -1 || !(c.boosters[b] >= 1 && c.boosters[b] <= 3)) bad.push(where + ': chest booster ' + b + ' x' + c.boosters[b]); });
+    if (c.paint && paintIds.indexOf(c.paint) === -1) bad.push(where + ': unknown paint ' + c.paint);
+    if (!c.coins && !Object.keys(c.boosters || {}).length && !c.paint) bad.push(where + ': empty chest');
+  });
+  if (JSON.stringify(flat) !== JSON.stringify(ids)) bad.push('districts must list every level exactly once, in levels.json order');
+  // the mechanic each district teaches debuts inside it
+  var distOf = {}; map.districts.forEach(function (d) { d.levels.forEach(function (id) { distOf[id] = d; }); });
+  function firstWhere(fn) { for (var i = 0; i < levels.length; i++) if (fn(levels[i])) return levels[i]; return null; }
+  var debut = {
+    basics: [levels[0]],
+    trucks: [firstWhere(function (l) { return l.cars.some(function (c) { return c.len > 1; }); })],
+    scramble: [firstWhere(function (l) { return l.mode === 'scramble'; })],
+    specials: [firstWhere(function (l) { return l.cars.some(function (c) { return c.l.length > 1; }); }), firstWhere(function (l) { return l.cars.some(function (c) { return c.l === '?'; }); })],
+    keys: levels.filter(function (l) { return l.cars.some(function (c) { return c.lock; }); })
+  };
+  map.districts.forEach(function (d) {
+    var need = debut[d.teaches];
+    if (!need) { bad.push(d.id + ': unknown mechanic "' + d.teaches + '"'); return; }
+    need.forEach(function (l) { if (!l || distOf[l.id] !== d) bad.push(d.id + ' teaches ' + d.teaches + ', but ' + (l ? l.id + ' (where it debuts) is in ' + distOf[l.id].id : 'no level uses it')); });
+  });
+  if (bad.length) { failures += bad.length; bad.forEach(function (b) { console.log('[FAIL] map: ' + b); }); }
+  else map.districts.forEach(function (d, k) {
+    var c = d.chest, parts = [c.coins + ' coins'].concat(Object.keys(c.boosters || {}).map(function (b) { return b + ' x' + c.boosters[b]; })).concat(c.paint ? ['paint ' + c.paint] : []);
+    console.log('[OK] district ' + (k + 1) + ' ' + d.name + ' (' + d.theme + '): stops ' + (ids.indexOf(d.levels[0]) + 1) + '-' + (ids.indexOf(d.boss) + 1) + ', teaches ' + d.teaches + ', boss ' + d.boss + ' par ' + levels[ids.indexOf(d.boss)].par + ', chest ' + parts.join(', '));
+  });
+}
+checkDistricts();
+function checkSync() {
+  try {
+    var src = fs.readFileSync(JS_PATH, 'utf8'), win = {};
+    new Function('window', src)(win);
+    if (JSON.stringify(win.WJB_LEVELS) !== JSON.stringify(levels)) { failures++; console.log('[FAIL] js/levels.js is out of date: run with --write'); }
+    else console.log('[OK] js/levels.js matches levels/levels.json');
+    if (JSON.stringify(win.WJB_MAP) !== JSON.stringify(mapData)) { failures++; console.log('[FAIL] js/levels.js map data is out of date (levels/districts.json): run with --write'); }
+    else console.log('[OK] js/levels.js matches levels/districts.json');
+  } catch (e) { failures++; console.log('[FAIL] cannot read js/levels.js: ' + e.message); }
+}
+if (args.indexOf('--districts') !== -1) {
+  checkSync();
+  console.log(failures ? '\n' + failures + ' problem(s) found' : '\nCity map OK (' + map.districts.length + ' districts, ' + levels.length + ' stops).');
+  process.exit(failures ? 1 : 0);
+}
 
 var seenIds = {};
 var firstLockSeen = false;
@@ -264,12 +339,7 @@ try {
   else console.log('[OK] js/baywords.js matches levels/baywords.json (' + bayWordList.length + ' Bay Words, all 3 letters with a vowel)');
 } catch (e) { failures++; console.log('[FAIL] cannot read js/baywords.js: ' + e.message); }
 
-try {
-  var src = fs.readFileSync(JS_PATH, 'utf8'), win = {};
-  new Function('window', src)(win);
-  if (JSON.stringify(win.WJB_LEVELS) !== JSON.stringify(levels)) { failures++; console.log('[FAIL] js/levels.js is out of date: run with --write'); }
-  else console.log('[OK] js/levels.js matches levels/levels.json');
-} catch (e) { failures++; console.log('[FAIL] cannot read js/levels.js: ' + e.message); }
+checkSync();
 
 if (args.indexOf('--no-py') === -1) {
   var py = cp.spawnSync('python3', [path.join(__dirname, 'wjb_solver.py'), JSON_PATH, '--check'], { encoding: 'utf8', maxBuffer: 1 << 24 });
