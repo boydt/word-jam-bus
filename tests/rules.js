@@ -177,5 +177,30 @@ if (process.argv.indexOf('--no-py') === -1) {
   if (!agree) lots.forEach((lv, i) => { if (parsePar(lines[i]) !== lv.par) console.log('    ' + lv.id + ' js ' + lv.par + ' / ' + lines[i]); });
 } else console.log('  (skipped)');
 
+console.log('# v8 city map data (levels/districts.json)');
+{
+  const root = path.join(__dirname, '..'), LV = JSON.parse(fs.readFileSync(path.join(root, 'levels', 'levels.json'), 'utf8')).levels;
+  const MAP = JSON.parse(fs.readFileSync(path.join(root, 'levels', 'districts.json'), 'utf8')), D = MAP.districts;
+  const order = [].concat(...D.map(d => d.levels));
+  check(order.length === LV.length && order.every((id, i) => id === LV[i].id), 'the ' + D.length + ' districts list all ' + LV.length + ' levels once, in levels.json order (ids unchanged)');
+  check(D.every(d => d.levels[d.levels.length - 1] === d.boss && d.levels.length >= 3), 'every district ends in its boss lot and has 3+ stops');
+  const at = id => LV.find(l => l.id === id), maxPar = d => Math.max(...d.levels.map(id => at(id).par));
+  check(D.every(d => at(d.boss).par === maxPar(d)), 'each boss is the hardest lot of its district (pars ' + D.map(d => at(d.boss).par).join(', ') + ')');
+  const firstOf = pred => LV.findIndex(pred), inD = (d, i) => d.levels.includes(LV[i].id);
+  const debut = { basics: () => 0, trucks: () => firstOf(l => l.cars.some(c => c.len === 3 || (c.l && c.l.length === 1 && c.len > 2))), scramble: () => firstOf(l => l.mode === 'scramble'),
+    specials: () => firstOf(l => l.cars.some(c => c.l === '?')), keys: () => firstOf(l => l.cars.some(c => c.lock)) };
+  check(D.every(d => debut[d.teaches] && inD(d, debut[d.teaches]())), 'each district debuts its mechanic (' + D.map(d => d.name + ': ' + d.teaches).join(', ') + ')');
+  check(LV.every((l, i) => !l.cars.some(c => c.lock) || inD(D[D.length - 1], i)), 'every padlock level sits in the last district (Downtown keys)');
+  const kinds = ['tow', 'bay', 'nudge', 'flip'], PA = {};
+  MAP.paints.forEach(p => { PA[p.id] = p; });
+  check(D.every(d => d.chest && d.chest.coins > 0 && Object.keys(d.chest.boosters || {}).every(k => kinds.includes(k) && d.chest.boosters[k] >= 1 && d.chest.boosters[k] <= 3) && (!d.chest.paint || PA[d.chest.paint])), 'every chest: coins > 0, 1-3 of known boosters, a known paint');
+  const coins = D.map(d => d.chest.coins);
+  check(coins.every((c, i) => !i || c >= coins[i - 1]), 'chest coins grow district by district (' + coins.join(' < ') + ')');
+  check(PA.classic && MAP.paints.every(p => /^#[0-9a-f]{6}$/i.test(p.body) && /^#[0-9a-f]{6}$/i.test(p.dark)) && D.filter(d => d.chest.paint).length === MAP.paints.length - 1, 'paints: School Yellow from the start, each other paint from one chest (' + MAP.paints.map(p => p.name).join(', ') + ')');
+  const js = fs.readFileSync(path.join(root, 'js', 'levels.js'), 'utf8');
+  let synced = false; try { const w = {}; new Function('window', js)(w); synced = JSON.stringify(w.WJB_MAP.districts) === JSON.stringify(D) && JSON.stringify(w.WJB_MAP.paints) === JSON.stringify(MAP.paints); } catch (e) { synced = false; }
+  check(synced, 'js/levels.js carries the same map data (WJB_MAP)');
+}
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

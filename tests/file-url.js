@@ -11,7 +11,11 @@ const { chromium } = require('playwright');
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto('file://' + path.join(__dirname, '..', 'index.html'));
-  await page.click('#btn-play');
+  await page.click('#btn-play');                    // v8: Play opens the city map...
+  await page.waitForSelector('#screen-map.active');
+  if (await page.locator('.lvl.stop').count() !== 28) errors.push('map does not list 28 stops');
+  await page.click('#btn-map-play');                // ...and "Play stop 1" starts level 1
+  await page.waitForSelector('#screen-game.active');
   await page.waitForTimeout(700);
   for (const m of await page.evaluate(() => window.WJB.solution())) {
     await page.locator('.car[data-id="' + m.car + '"]').click(m.which === 1 ? { button: 'right' } : {});
@@ -20,6 +24,6 @@ const { chromium } = require('playwright');
   }
   await page.waitForSelector('#ov-win.show', { timeout: 4000 });
   await browser.close();
-  console.log(errors.length ? 'FAIL file:// errors: ' + errors.join('; ') : 'PASS file:// opens and level 1 is winnable, no errors');
+  console.log(errors.length ? 'FAIL file:// errors: ' + errors.join('; ') : 'PASS file:// opens and the city map opens, level 1 is winnable, no errors');
   process.exit(errors.length ? 1 : 0);
 })().catch(e => { console.error('FAIL', e.message); process.exit(1); });

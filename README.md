@@ -6,6 +6,8 @@ A parking-jam word puzzle for phones and desktops. Every car in a packed lot car
 
 **v6** gives the buses an old-style school-bus look (a lower hood with a bumper at the front, a tailpipe with a puff at the back), puts the boosters in an on-screen **booster bar** with a fourth booster, **Flip**, and adds a **Settings** panel (gear on the title screen) with **test / cheat options**; see [v6 changes](#v6-changes).
 
+**v7** adds keys and padlocked cars (Downtown, levels 24-28). **v8** replaces the level select with a **city route map**: five themed districts the bus drives through, a treasure **chest** at the end of each one, a **free-booster inventory** and **bus paints**; see [v8: the city route map](#v8-the-city-route-map).
+
 Plain HTML, CSS and JavaScript. There is no build step and no network or CDN dependency, so it can go straight onto a static host such as GitHub Pages.
 
 Live: https://boydt.github.io/word-jam-bus/
@@ -171,6 +173,59 @@ They are appended after level 23, so every older level keeps its number, id, lay
 
 Level JSON: `{"l": "S", "r": 3, "c": 2, "dir": "down", "key": "blue", "lock": "gold"}`.
 
+## v8: the city route map
+
+**Play / Continue** on the title screen opens the map (the level select). The bus drives along a winding road from district to district. Each stop is a level, and each district ends in a boss lot and a treasure chest. Everything is drawn with CSS and inline SVG, with no image files.
+
+| # | District | Theme (palette, landmarks, road) | Stops | Teaches | Boss lot | Chest |
+|---|---|---|---|---|---|---|
+| 1 | School Street | green lawns; schoolhouse, crossing sign, traffic light, pencil; grey asphalt with white dashes | 1-6 | driving basics (exit, slide, reverse, the bay) | 6 MILK (par 6) | 100 coins, Nudge ×1, Tow ×1 |
+| 2 | Maple Suburbs | striped lawns; houses, maple trees, picket fence, mailbox; asphalt with a yellow centre line | 7-11 | long trucks | 11 BUS (par 10) | 150 coins, Bay +1 ×1, Flip ×1, **Maple Red** paint |
+| 3 | Sunny Beach | sand between sea strips; palms, parasols, lifeguard tower, sandcastle, sun; a wooden boardwalk | 12-16 | Scramble stops | 16 GARDEN (par 24) | 200 coins, Nudge ×2, Bay +1 ×1, **Surf Teal** paint |
+| 4 | Harbor Docks | quay between water; lighthouse, crane, containers, sailboat, anchor; cobblestones | 17-23 | Bay Words, chunk trucks, the wildcard taxi | 23 SCHOOL (par 36) | 250 coins, Tow ×1, Flip ×1, Bay +1 ×1 |
+| 5 | Downtown | night sky with stars; towers, city hall, street lamps, neon sign, keys; dark asphalt with neon kerbs | 24-28 | keys and padlocks | 28 SQUARE (par 33) | 400 coins, Tow ×2, Flip ×2, **Midnight Neon** paint |
+
+The level order and ids are unchanged (the 28 levels were already in this order), so saves keep working. The data is in `levels/districts.json`, which `tools/verify-levels.js --write` copies into `js/levels.js` as `window.WJB_MAP`.
+
+- **The map:** a vertical, scrolling map, centred and wider (up to 820 px) on desktop. Each district has a sticky header with its number, name, "New: <mechanic>", a progress bar, stars (for example 7/15) and a chest chip (Boss chest / Open! / Opened). Stops show their stars, and are styled as current (a pulsing ring), done, locked (padlock), boss (bigger, gold, BOSS tag) and test-opened (dashed red). Scramble stops show a shuffle badge and key levels a key badge. A locked district sits under a fog behind a closed gate with a padlock. The map scrolls to the current stop when it opens.
+- **The bus:** a top-down bus (in your chosen paint) parks just before the stop it is at. When you return to the map it drives along the road from the last stop played to the next one. After a win, **Next stop** drives on to the next stop and starts it. Tap any open stop and the bus drives there, then the level starts; tap it again to skip the drive. The camera follows the bus on long drives. The bus is moved only with `transform` (translate + rotate) in `requestAnimationFrame`, with an ease-in-out, a little bob and exhaust puffs. The first time the bus enters a district, its gate barrier lifts.
+- **Play-screen tint:** each level's play screen gets a soft tint for its district (warm for School Street, sea and sand for Sunny Beach, deep blue for Harbor Docks, night purple for Downtown).
+- **Reduced motion:** the bus jumps straight to the stop. There is no pulsing, bobbing, rattling, confetti or spinning rays, and the chest opens at once.
+
+### Finishing a district
+
+A district is **finished when its boss lot (its last stop) is won** for real (not with Unlock all). Stops open one at a time, so winning the boss also means every stop before it has been won. Finishing a district does two things:
+- it opens the next district, using the same unlock rule as before (the next level opens), and its gate lifts the first time the bus drives through;
+- its chest becomes **ready**.
+
+Opening the chest is never needed to go on. A ready chest is waiting for you, never a lock.
+
+### Chests
+
+- After a boss win the button reads **Open the chest!**. The bus drives to the chest and it pops up. Tap the chest (or **Open!**): it rattles, the lid flies open, light rays spin, confetti bursts and the rewards pop in one by one. Then **Collect**: the bus drives through the gate into the next district.
+- A ready chest can also be opened later, by tapping it on the map, by its header chip, or with the map's **Chest to open!** button. The title screen reminds you too.
+- Each chest is **claimed once**. The claim happens and is saved the moment it starts opening, so reloading mid-animation can't claim it twice. Tapping an opened chest just shows "Already opened". A locked chest says which boss to beat and what is inside.
+- **Rewards:** coins, free boosters (into the inventory), and in three chests a **bus paint**. A new paint is put on the bus straight away, and you can change paints in **Settings → Bus paint**.
+
+### Free-booster inventory
+
+- `progress.inv` holds counts of Tow, Bay +1, Nudge and Flip won from chests. In the booster bar a booster you hold shows a green **count badge** and **Free**. The confirm sheet says "Use a free Nudge? (1 left)".
+- Free boosters are **used before coins**. When the count runs out, the booster goes back to its coin price.
+- They follow the same rules as bought boosters: one of each kind per level, a win with any booster is **capped at 2 stars** (no par bonus or best score), and they are **never required** (every level is still winnable at par with none). **Undo** of a booster move gives back what it cost: coins if it was bought, or **the free booster back into the inventory** ("Undo · free Nudge back"). Restart refunds nothing, the same as for coins.
+- The game records how each booster use was paid for (`free` under Unlimited coins, `inv`, or `coins`), so Undo refunds the right thing.
+
+### Cheats on the map
+
+- **Unlock all levels:** every district and stop opens, test-opened stops get a dashed red outline, the gates are up, and the bus can drive anywhere. Nothing about it is saved: the bus's spot and gate flags are saved only for really-open stops with no test option on.
+- **Any test option on** (Unlock all, Unlimited coins, hints or undos): a chest opens only as a **TEST MODE preview**, with a red frame and ribbon. It shows its rewards, but nothing is granted or saved and the chest is not marked claimed. A boss won only because of Unlock all doesn't make its chest ready ("Boss lot beaten (test mode: chest not unlocked)"). Under Unlimited coins, boosters are free and the inventory isn't touched.
+- Turn the options off and the real progress returns exactly: real stops, locked districts and chests, real coins and inventory, and the bus at its real stop. The tests check that the real save is byte-identical under cheats.
+
+### Saves and migration
+
+The save format is still `v: 4`, with new fields added: `inv`, `chests` (opened chests by district id), `paints`, `paint` and `busAt` (where the bus is parked; cosmetic). Older saves (v2, v3 and v4) load with defaults: nothing in the inventory, no chests opened, School Yellow paint. They land on the right district and stop, because the bus starts at the Continue stop.
+
+For districts an older save has already finished, the chests are **claimable, one time each**, rather than auto-awarded, so players still get the chest-opening moment. The title says "N chests to open on the map!". The map shows the chests as ready, with a **N chests to open!** button that opens them one after another (the bus doesn't need to drive back). **Reset progress** clears the inventory, chests, paints and bus spot too.
+
 ## Levels
 
 There are 28 levels: the 23 below plus the 5 Downtown key levels (24-28, see v7). The first 23 are **10 starter levels** that teach one idea at a time, then the **10 v2 main levels** (unchanged) with **3 Scramble breathers** inserted at 12, 17 and 22.
@@ -304,6 +359,7 @@ After editing `levels/levels.json`, run:
 node tools/verify-levels.js --write   # verify + regenerate js/levels.js and js/baywords.js
 node tools/verify-levels.js --ascii   # verify + print each lot and an optimal solution
 node tools/verify-levels.js --no-py   # skip the (slower) Python cross-check
+node tools/verify-levels.js --districts   # only the city map data (levels/districts.json), in under a second
 ```
 
 For **every** level the verifier checks:
@@ -317,7 +373,8 @@ The design checks depend on the level's `tier`:
 - **`core`** in-order levels (default; 11-23 except the Scramble levels): every car carrying a word letter starts blocked; the optimal line needs slides; driving forward only is impossible or slower (except the first core level); par never falls below 75% of an earlier core level's.
 - **`starter`** (levels 1-10): the mechanic named in `teaches` must really be needed: `exit` = the best line is taps only; `slide` = it can't be won as fast without partial slides, and needs no reverse and no bay; `reverse` = it can't be won as fast driving forward only, and needs no bay; `bay` = it can't be won as fast without parking a letter; `trucks` = has a long truck; `bay-limit` = a loss is reachable. `"safe": true` means no losing move exists anywhere. Every starter level needs a tip, starter par never goes down, stays below the first core level's par, and the last starter is within 2 of it.
 - `js/levels.js` is in sync with the JSON, and `js/baywords.js` with `levels/baywords.json` (all 3 letters, each with a vowel);
-- the Python solver (`python3 tools/wjb_solver.py levels/levels.json --check`) agrees on every par.
+- the Python solver (`python3 tools/wjb_solver.py levels/levels.json --check`) agrees on every par;
+- v8 map data (`levels/districts.json`): every level is in exactly one district, in levels.json order; each district has 3+ stops and ends with its boss; the boss has the highest par in its district; each district debuts its mechanic (basics = level 1, trucks = the first long truck, scramble = the first Scramble stop, specials = the first chunk truck and wildcard taxi, keys = every padlock level); chest boosters are known kinds ×1-3; paints are known with valid colours; and `js/levels.js` carries the same data.
 
 It also reports the minimum bay needed, how many positions are reachable and how many of those are dead ends, and how many first moves already lose. It exits with code 1 if anything fails.
 
@@ -339,11 +396,23 @@ npx playwright install chromium   # once
 node tests/rules.js               # rule + solver unit tests (no browser)
 python3 -m http.server 8765 &     # from this folder
 node tests/e2e.js                 # phone 390x844 touch, 375x667 check, desktop 1280x800 mouse
-node tests/file-url.js            # opens index.html via file:// and wins level 1
+node tests/map-e2e.js             # v8 city map: phone 390x844 touch, 375x667, desktop 1280x800, reduced motion
+node tests/file-url.js            # opens index.html via file://, opens the map and wins level 1
 ```
 
+`tests/map-e2e.js` covers the map:
+- rendering: 5 themed districts, 28 stops, 5 chests; Scramble, key and BOSS markers; 44 px targets; no sideways overflow; the sticky header; the current stop in view;
+- tapping a stop to play it; a locked stop can't be tapped;
+- the bus: driving after **Next stop** (mid-drive check) and parking at the right stop, which then starts; driving from the last stop played to the current one via the HUD map button, ending within 2 px of its spot; transform-only movement; a tap that drives back, with a second tap skipping;
+- the boss: "Open the chest!", the bus driving to the chest, closed, opening and open states, the claim saved once (coins and inventory), rewards shown, Collect, the gate lifting and the bus parking at the next district's first stop; an opened chest not paying twice (also after a reload); a locked district and a locked chest;
+- the inventory: badges, "Free", the confirm text, used before coins, Undo refunding it to the inventory, a free Tow win capped at 2 stars, coin prices back when empty;
+- migration: a save that beat 1-11 gets two claimable catch-up chests (paint unlocked and worn, Settings paint picker); v2, v3 and all-28 saves land on the right stop;
+- cheats: Unlock all opens everything and the bus drives to stop 26; chest previews under Unlock all and under Unlimited coins; a boss won while test-opened gives no chest; the real save stays byte-identical; real progress returns when cheats are off;
+- `#map` deep link, reduced motion (the bus jumps, the chest opens at once with no confetti or rays), the 375x667 chest card fit, and desktop centring (820 px);
+- the v8 screenshots, and no console errors.
+
 `tests/e2e.js` moves cars only with real input: touch taps and touch swipes (CDP touch events) on a 390x844 phone with mobile emulation, and mouse clicks, drags and right-clicks at 1280x800. It covers:
-- the level select: 28 levels, Scramble levels marked, fits without scrolling on 390x844, 375x667 and desktop;
+- the level select, which is now the city map: 28 stops, Scramble levels marked, Play goes to the map and then "Play stop 1", 44 px stops, no sideways overflow at 390x844, 375x667 and desktop;
 - numbered seats with exactly one glowing next seat that advances, and the fare box (+1, Undo back to +0);
 - coins: 26 for a first par clear of CAT, saved across reload, +6 on replay, no par bonus over par, nothing banked on a loss;
 - Scramble on level 12: the one-time tip card (and not on a second visit), the start banner, purple bus and badge, no seat numbers, out-of-order boarding, only junk to the bay, win at par with 3 stars;
@@ -356,12 +425,12 @@ node tests/file-url.js            # opens index.html via file:// and wins level 
 - v6: bus hood/bumper/tailpipe on every bus and inside the screen on every layout check, the bus driving off hood-first; booster bar prices, red prices when poor, Bay +1 "Used", 44 px targets, clear of the lot/bay/tip at 390x844, 375x667 and desktop; Flip (pick mode, a car that then leaves from its former tail end, dead-end + optimal hint after it, Undo turns it back and refunds 120, a Flip win capped at 2 stars); Settings with 4 test toggles (saved apart from the real save, which stays byte-identical; Unlock all with test-opened levels off the record; Unlimited coins free boosters, no banking, ∞; Unlimited hints/undos ∞ badges, extra use keeps a win off the record, a booster refund still works, normal counts back after turning off; TEST MODE tag; Reset with confirm);
 - no console errors, page errors or failed requests.
 
-It saves screenshots to `screenshots/` (`v7-*.png` for keys, `v4-*.png`; the `v2-*` and `v3-*` files are from earlier rounds).
+It saves screenshots to `screenshots/` (`v8-*.png` for the city map from `tests/map-e2e.js`, `v7-*.png` for keys, `v4-*.png`; the `v2-*` and `v3-*` files are from earlier rounds).
 
 ## Files
 
 ```
-index.html               game page (title/level select, game screen, overlays)
+index.html               game page (title, city map, game screen, overlays incl. the chest)
 css/style.css            all visuals (cars are pure CSS, no image assets)
 js/engine.js             rules (in-order, Scramble, Bay Word, boosters) + BFS solver (shared by game and Node verifier)
 js/baywords.js           GENERATED from levels/baywords.json (Bay Word list)
@@ -369,6 +438,7 @@ js/levels.js             GENERATED from levels/levels.json
 js/game.js               UI, animation, touch/mouse input, sound (WebAudio), saving
 levels/levels.json       level data (source of truth)
 levels/baywords.json     321 three-letter Bay Words (each has a vowel)
+levels/districts.json    v8 city map: districts (stops, theme, mechanic, boss, chest) and bus paints
 tools/verify-levels.js   Node level verifier
 tools/wjb_solver.py      independent Python reference solver (cross-check)
 tools/level-lab.js       dense-lot generator (dev)
@@ -379,6 +449,7 @@ tools/scramble-improve.js Scramble lot hill-climber (dev)
 tests/rules.js           Node rule/solver tests incl. JS-vs-Python fuzz
 tests/e2e.js             Playwright play-test (phone + desktop): levels, Scramble, coins, booster bar, Flip, settings/cheats, bus art
 tests/flip-orient.js     Playwright check that a flipped car is DRAWN facing its new way (phone + desktop; pass a URL to check the live site)
+tests/map-e2e.js         Playwright play-test of the v8 city map (bus, districts, chests, inventory, cheats, migration)
 tests/file-url.js        file:// smoke test
 screenshots/             test screenshots
 ```

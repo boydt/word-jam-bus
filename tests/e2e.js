@@ -7,7 +7,8 @@
  *   node tests/e2e.js
  * Uses REAL input only to move cars: touch taps + touch swipes (CDP touch
  * events) at phone size 390x844 with mobile emulation, mouse clicks / drags /
- * right-clicks at desktop 1280x800, plus a layout check at 375x667. The page's
+ * right-clicks at desktop 1280x800, plus a layout check at 375x667. v8: Play opens the
+ * city map (the level select; tests/map-e2e.js covers the map itself). The page's
  * engine is only *read* to pick which car to move and to check results; boosters
  * are bought and used through the real buttons and car taps/swipes.
  */
@@ -293,14 +294,17 @@ const findFlipExit = page => page.evaluate(() => {
   }
   return null;
 });
-async function fitCheck(page, label) {
+/** v8: the level select is the city map (tests/map-e2e.js covers it in depth): stops >= 44px, no sideways
+ *  overflow, a district header at the top, Play button on screen, current stop in view. */
+async function mapCheck(page) {
   return page.evaluate(() => {
-    const r = [...document.querySelectorAll('.lvl')].map(b => b.getBoundingClientRect());
-    const foot = [...document.querySelectorAll('#btn-settings')].map(b => b.getBoundingClientRect());
-    return { fits: r.every(b => b.top >= 0 && b.bottom <= innerHeight && b.left >= 0 && b.right <= innerWidth), footFits: foot.every(b => b.bottom <= innerHeight),
-      rows: new Set(r.map(b => Math.round(b.top))).size, minW: Math.min(...r.map(b => b.width)), minH: Math.min(...r.map(b => b.height)),
-      scroll: document.getElementById('screen-title').scrollHeight <= innerHeight + 1 };
-  });
+    const R = e => e.getBoundingClientRect(), sc = document.getElementById('map-scroll'), sr = R(sc);
+    const stops = [...document.querySelectorAll('.lvl.stop')].map(R), cur = document.querySelector('.lvl.stop.current'), head = document.querySelector('.d-head');
+    const play = R(document.getElementById('btn-map-play'));
+    return { n: stops.length, minW: Math.min(...stops.map(b => b.width)), minH: Math.min(...stops.map(b => b.height)),
+      noH: sc.scrollWidth <= sc.clientWidth + 1 && document.documentElement.scrollWidth <= innerWidth + 1, head: !!head && R(head).top <= sr.top + 2,
+      play: play.height >= 44 && play.bottom <= innerHeight + 1, cur: !!cur && R(cur).top >= sr.top && R(cur).bottom <= sr.bottom };
+  }).then(r => Object.assign(r, { ok: r.n > 0 && r.minH >= 44 && r.noH && r.head && r.play && r.cur }));
 }
 
 (async () => {
@@ -321,14 +325,15 @@ async function fitCheck(page, label) {
   check(same(t.open, [1]), 'fresh save: only level 1 unlocked');
   check(same(await p.evaluate(() => [...document.querySelectorAll('.lvl.scr')].map(b => +b.getAttribute('data-level'))), SCR) &&
     await p.locator('.lvl.scr .lvl-scr').count() === SCR.length, 'level select marks the Scramble levels ' + SCR.join(', ') + ' with a shuffle icon');
-  let sel = await fitCheck(p);
-  check(sel.fits && sel.footFits && sel.scroll && sel.minH >= 44, 'level select: all ' + NLEV + ' buttons + footer fit on 390x844 without scrolling (' + sel.rows + ' rows, buttons ' + Math.round(sel.minW) + 'x' + Math.round(sel.minH) + 'px)');
   check((await p.textContent('#title-coins')).trim() === '0' && t.stored.coins === 0 && t.stored.v === 4, 'fresh save: coin counter 0, stored as v4');
   check(await p.evaluate(() => getComputedStyle(document.getElementById('lot')).touchAction) === 'none', 'lot has touch-action:none (swipes never scroll/zoom)');
 
   // --- coins: fares banked on a win, doubled at par, +20 first clear; saved ---
-  await tapEl(p, T, '#btn-play'); await p.waitForSelector('#screen-game.active'); await p.waitForTimeout(700);
-  check((await p.textContent('#hud-level')).trim() === 'Level 1 of ' + NLEV, 'Play opens "Level 1 of ' + NLEV + '"');
+  await tapEl(p, T, '#btn-play'); await p.waitForSelector('#screen-map.active'); await p.waitForTimeout(500);
+  let sel = await mapCheck(p);
+  check(sel.ok, 'Play opens the city map: ' + sel.n + ' stops (>= 44px: ' + Math.round(sel.minW) + 'x' + Math.round(sel.minH) + '), no sideways overflow, district header at the top, stop 1 in view');
+  await tapEl(p, T, '#btn-map-play'); await p.waitForSelector('#screen-game.active'); await p.waitForTimeout(700);
+  check((await p.textContent('#hud-level')).trim() === 'Level 1 of ' + NLEV, 'map "Play stop 1" opens "Level 1 of ' + NLEV + '"');
   check(await p.locator('#word .tile .seat-n').count() === 3 && (await p.locator('#word .tile.next').count()) === 1 &&
     await p.locator('#word .tile[data-slot="0"].next').count() === 1, 'in-order level: seats numbered 1-3, seat 1 glows as next');
   await layoutOk(p, 'phone L1');
@@ -812,7 +817,6 @@ async function fitCheck(page, label) {
   await winAll(p, T, 'phone');
   t = await seeded(p, await p.evaluate(() => JSON.parse(localStorage.getItem('wordJamBus.progress.v1'))));
   check(t.open.length === NLEV && t.stars.every(s => s === '\u2605\u2605\u2605'), 'after winning all ' + NLEV + ': everything open with 3 stars, coins ' + t.stored.coins);
-  await shot(p, 'v4-12-phone-level-select.png');
 
   /* ----------------------- PROGRESS MIGRATION ----------------------- */
   console.log('\n# Saved-progress migration (seeded localStorage)');
@@ -871,11 +875,12 @@ async function fitCheck(page, label) {
   await tapEl(p, T, '#btn-settings-close'); await p.waitForTimeout(250);
   t = await p.evaluate(() => ({ open: [...document.querySelectorAll('.lvl')].filter(b => !b.disabled).length, cheat: [...document.querySelectorAll('.lvl.cheat')].map(b => +b.getAttribute('data-level')), coins: document.getElementById('title-coins').textContent }));
   check(t.open === NLEV && same(t.cheat, range(4, NLEV)) && t.coins === '\u221e' && await p.locator('#screen-title .test-badge').isVisible(), 'unlock all: all ' + NLEV + ' open (4-' + NLEV + ' marked as test-opened), coins show \u221e, TEST MODE tag on the title');
-  sel = await fitCheck(p);
-  check(sel.fits && sel.scroll, 'level select with unlock-all still fits without scrolling');
-  await shot(p, 'v6-level-select-unlock-all.png');
-  // a test-opened level: playable, but off the record
-  await tapEl(p, T, '.lvl[data-level="12"]'); await p.waitForTimeout(800);
+  await tapEl(p, T, '#btn-play'); await p.waitForSelector('#screen-map.active'); await p.waitForTimeout(400);
+  sel = await mapCheck(p);
+  check(sel.ok && await p.locator('.lvl.stop:not([disabled])').count() === NLEV, 'city map with unlock-all: all ' + NLEV + ' stops open, still fits sideways');
+  // a test-opened level: playable, but off the record (the bus drives there first)
+  await p.locator('.lvl[data-level="12"]').scrollIntoViewIfNeeded();
+  await tapEl(p, T, '.lvl[data-level="12"]'); await p.waitForSelector('#screen-game.active', { timeout: 5000 }); await p.waitForTimeout(500);
   check(await p.locator('#ov-coach.show').count() === 1 && await p.locator('.hud-mid .test-badge').isVisible(), 'test-opened level 12 starts (Scramble tip shows); TEST MODE tag in the HUD');
   await tapEl(p, T, '#btn-coach'); await p.waitForTimeout(300);
   await playPath(p, T, await p.evaluate(() => window.WJB.solution()));
@@ -974,9 +979,9 @@ async function fitCheck(page, label) {
   watch(sp, 'small');
   const ST = { touch: true, cdp: await small.newCDPSession(sp) };
   await seeded(sp, v4save({ coins: 400, stars: starsFor(v3ids.slice(0, 12)) }));
-  sel = await fitCheck(sp);
-  check(sel.fits && sel.footFits && sel.scroll && sel.minH >= 40, '375x667: all ' + NLEV + ' level buttons + footer fit without scrolling (' + sel.rows + ' rows, buttons ' + Math.round(sel.minW) + 'x' + Math.round(sel.minH) + 'px)');
-  await shot(sp, 'v4-14-small-phone-375x667-level-select.png');
+  await tapEl(sp, ST, '#btn-play'); await sp.waitForSelector('#screen-map.active'); await sp.waitForTimeout(500);
+  sel = await mapCheck(sp);
+  check(sel.ok, '375x667: city map stops >= 44px (' + Math.round(sel.minW) + 'x' + Math.round(sel.minH) + '), no sideways overflow, header + Play on screen, current stop in view');
   await seeded(sp, v4save({ coins: 400, stars: starsFor(v3ids.slice(0, 12)), unlocked: NLEV - 1, unlockedId: LAST_ID }));
   for (const n of [17, 22, 23].concat(KEYS)) {
     await openLevel(sp, n);
@@ -1005,9 +1010,10 @@ async function fitCheck(page, label) {
   watch(d, 'desktop');
   const M = { touch: false };
   t = await seeded(d, null);
-  sel = await fitCheck(d);
-  check(sel.fits && sel.scroll && t.open.length === 1, 'desktop level select shows all ' + NLEV + ' levels without scrolling');
-  await d.click('#btn-play'); await d.waitForTimeout(750);
+  await d.click('#btn-play'); await d.waitForSelector('#screen-map.active'); await d.waitForTimeout(400);
+  sel = await mapCheck(d);
+  check(sel.ok && t.open.length === 1, 'desktop city map: ' + sel.n + ' stops, only stop 1 open, header + Play on screen');
+  await d.click('#btn-map-play'); await d.waitForSelector('#screen-game.active'); await d.waitForTimeout(750);
   await layoutOk(d, 'desktop L1');
   await openLevel(d, 3);
   c = await findCar(d, 1, 'slide');
@@ -1032,7 +1038,7 @@ async function fitCheck(page, label) {
   console.log('\n# Desktop: all ' + NLEV + ' levels with clicks + mouse drags, no boosters');
   await winAll(d, M, 'desktop');
   t = await seeded(d, await d.evaluate(() => JSON.parse(localStorage.getItem('wordJamBus.progress.v1'))));
-  await shot(d, 'v4-15-desktop-level-select.png');
+  check(same(t.open, range(1, NLEV)) && t.stars.every(x => x === '\u2605\u2605\u2605'), 'desktop: after winning all ' + NLEV + ' every stop is open with 3 stars');
   await openLevel(d, 22);
   const sol22 = await d.evaluate(() => window.WJB.solution());
   for (const m of sol22.slice(0, 6)) { await inputMove(d, M, m.car, m.which, m.which === 1 ? 'drag' : 'click'); await settle(d); }
