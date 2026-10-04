@@ -148,7 +148,7 @@
   var DIST_OF = [];
   DISTRICTS.forEach(function (d, k) { d.k = k; d.first = indexOfId(d.levels[0]); d.last = indexOfId(d.boss); for (var i = d.first; i <= d.last; i++) DIST_OF[i] = k; });
   for (var dl = 0; dl < LEVELS.length; dl++) if (DIST_OF[dl] === undefined) DIST_OF[dl] = DISTRICTS.length - 1;
-  var MECH = { basics: 'Driving basics', trucks: 'Long trucks', scramble: 'Scramble stops', specials: 'Bay Words, chunk trucks, wildcard taxi', keys: 'Keys and padlocks' };
+  var MECH = { basics: 'Driving basics', trucks: 'Long trucks', scramble: 'Scramble stops', specials: 'Bay Words, chunks, taxi', keys: 'Keys and padlocks' };
 
   function applyPaint() {
     var p = PAINTS[progress.paint] || PAINTS.classic, r = document.documentElement.style;
@@ -416,6 +416,7 @@
   function placeBus(n, quiet) {
     if (n === null || n === undefined) return;
     M.busLen = parkLen(n); drawBus(M.busLen, 1);
+    $('map-bus').classList.remove('driving');   // a drive cut short (screen left mid-way) must not keep bobbing
     if (quiet) { M.busNode = n; $('map-bus').setAttribute('data-at', nodeKey(n)); } else setBusNode(n);
     markHere();
   }
