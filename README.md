@@ -133,9 +133,47 @@ The toggles are saved under `wordJamBus.test.v1`, apart from the real save, whic
 - With Unlimited hints or undos on, a win that used more than the normal 3 hints or 5 undos is not saved. An Undo that reverts a booster bought with real coins still refunds it.
 - Cheats can only be changed on the title screen, so each level takes a snapshot of them when it starts. Turning one off gives the normal fresh 5 undos / 3 hints (and real coin rules) from the next level start. Your real unlocks, stars and coins are exactly as they were, because they were never touched.
 
+## v7: keys and padlocked cars (Downtown, levels 24-28)
+
+### Rules
+- A car can carry a **key** (a key badge, top-left) and/or a **padlock** (top-right). A padlocked car **can't move at all**: no slide, no reverse, no exit. It opens when the **key car of its colour has left the lot** (driven out, into the bus or the bay).
+- **One key opens every padlock of its colour**, for good. There is one key car per colour.
+- **Chains:** a key car can itself be padlocked by another colour (the boss: the blue key car is padlocked gold). A key car is never locked by its own colour and chains never loop; `E.prepare` rejects such levels.
+- Tapping or swiping a padlocked car **costs no move**: its padlock wiggles, the matching key car lights up and bounces, and a toast says which car to free ("Locked! Drive the gold circle key car (G) out first"). When the key car exits, every padlock of that colour pops open (shackle lifts, ring flash, "Unlocked!" with a chime) and the car loses its locked look.
+- **Undo** of the key car's exit brings the car back and the padlocks snap shut again. The lock state is not stored anywhere: it is worked out from whether the key car is still in the lot, so Undo, Restart, hints and the solver can never disagree about it.
+- **Colour-blind safe:** each colour also has its own shape, drawn as the bow of the key and on the face of the padlock: **gold = circle** (#e69f00), **blue = triangle** (#0072b2), **pink = square** (#cc79a7) (Okabe-Ito colours). The toast and the car's screen-reader label name colour and shape. A locked car is also desaturated and hatched, so "locked" never depends on colour.
+
+### Boosters and padlocks
+- **Tow** refuses padlocked cars (it is locked to the ground) **and key cars**: towing a key car would open its padlocks for 150 coins without solving anything, which would make every key level a coin purchase. The key car still has to drive out.
+- **Nudge** and **Flip** refuse padlocked cars (they can't move). They **can** be used on a key car: it still has to drive out to open its padlocks, so it gives nothing away.
+- **Bay +1** is unaffected.
+- In pick-a-car mode the refused cars are greyed out; tapping one shows why and charges nothing. Undo of a booster restores the lot, so padlocks are always right afterwards.
+- Hints and the dead-end check use the same engine, so they plan around padlocks (a locked car is simply never moved until its key is gone).
+
+### The Downtown levels
+They are appended after level 23, so every older level keeps its number, id, layout and par. Stage 2's city map can make them one district: debut, practice, two colours, a Scramble breather, then a boss.
+
+| # | id | Word | Grid | Bay | Par | Par ignoring padlocks | Keys and padlocks |
+|---|---|---|---|---|---|---|---|
+| 24 | dt1-bank | BANK | 6x6 | 3 | 14 | 10 | gold key on a decoy G, one padlocked decoy M. One-line tip introduces keys |
+| 25 | dt2-hotel | HOTEL | 6x6 | 3 | 20 | 10 | gold key on the L, padlocks on H and on a decoy (one key, two locks) |
+| 26 | dt3-market | MARKET | 6x6 | 3 | 22 | 10 | gold (circle) and blue (triangle): two keys on decoys, one padlocked decoy each |
+| 27 | sc4-subway | SUBWAY (Scramble) | 6x6 | 3 | 17 | 12 | gold key on a decoy F, two padlocked decoys (R, D), any boarding order; impossible in order |
+| 28 | dt4-square | SQUARE | 6x6 | 3 | 33 | 14 | **boss chain:** gold key on a decoy K; the blue key car is S (the first letter) and is itself padlocked gold; also A padlocked gold, E and a decoy Y padlocked blue (par 19 if S weren't padlocked) |
+
+**Save migration.** Saves still migrate by id. A save whose furthest open level was already won (for example someone who finished SCHOOL when it was the last level) now opens the next level, so they land on level 24.
+
+### Verifier and lab
+- Every level with padlocks is also solved with padlocks ignored, and par must be at least **2 moves lower** that way, so the keys really matter (see the table). The first padlock level must have `teaches: "keys"` and a tip mentioning keys. The verifier prints a `KEYS` line per key level.
+- The 75% par ramp restarts at a core level that debuts a mechanic (`teaches`), so the gentle key debut after SCHOOL is allowed.
+- `tools/wjb_solver.py` implements padlocks independently; `tests/rules.js` has a keys section (locked bumps, one key many locks, chains, validation, booster refusals, Bay +1) and the JS/Python fuzz now includes lots with padlocks and chains.
+- `tools/level-lab.js`: `--keys gold:1,blue:2` (one key car per colour + that many padlocks), `--chain 1`, `--gain N` (padlocks must add N moves), `--locktries`, `--scramble 1`, `--lockfirst 1` / `--basestates`. Lab lots must now also have the same par with Bay Words off (two early key candidates only worked by clearing the bay with a Bay Word, which the verifier rejects). Padlocks go on cars the lock-free optimum moves early and keys on cars it moves late. `tools/level-improve.js --locks` also moves key badges and padlocks while hill-climbing (that is how the boss was made, from a lab lot with a chain: par 21 to 33).
+
+Level JSON: `{"l": "S", "r": 3, "c": 2, "dir": "down", "key": "blue", "lock": "gold"}`.
+
 ## Levels
 
-There are 23 levels: **10 starter levels** that teach one idea at a time, then the **10 v2 main levels** (unchanged) with **3 Scramble breathers** inserted at 12, 17 and 22.
+There are 28 levels: the 23 below plus the 5 Downtown key levels (24-28, see v7). The first 23 are **10 starter levels** that teach one idea at a time, then the **10 v2 main levels** (unchanged) with **3 Scramble breathers** inserted at 12, 17 and 22.
 
 | # | id | Word | Mode | Par |
 |---|---|---|---|---|
@@ -245,6 +283,7 @@ The source of truth is `levels/levels.json` (`{ "format": "...", "levels": [ ...
 | `cars[].r`, `cars[].c` | The car's **front (head)** cell, 1-indexed. `r1` is the top row and `c1` the left column |
 | `cars[].dir` | `up`, `down`, `left` or `right` (the way the nose points, i.e. the exit direction) |
 | `cars[].len` | Optional length in cells (default 1). The body extends **behind** the head |
+| `cars[].key`, `cars[].lock` | Optional (v7): `gold`, `blue` or `pink`. `key` = this car's exit opens every padlock of that colour; `lock` = the car can't move until that colour's key car is gone |
 
 ## Solver
 
@@ -304,19 +343,20 @@ node tests/file-url.js            # opens index.html via file:// and wins level 
 ```
 
 `tests/e2e.js` moves cars only with real input: touch taps and touch swipes (CDP touch events) on a 390x844 phone with mobile emulation, and mouse clicks, drags and right-clicks at 1280x800. It covers:
-- the level select: 23 levels, Scramble levels marked, fits without scrolling on 390x844, 375x667 and desktop;
+- the level select: 28 levels, Scramble levels marked, fits without scrolling on 390x844, 375x667 and desktop;
 - numbered seats with exactly one glowing next seat that advances, and the fare box (+1, Undo back to +0);
 - coins: 26 for a first par clear of CAT, saved across reload, +6 on replay, no par bonus over par, nothing banked on a loss;
 - Scramble on level 12: the one-time tip card (and not on a second visit), the start banner, purple bus and badge, no seat numbers, out-of-order boarding, only junk to the bay, win at par with 3 stars;
 - boosters (with seeded coins): shop prices, confirm, Cancel spends nothing; Tow refused on a needed car at no charge, Tow of a decoy (150, +1 move), dead-end re-check and an optimal hint after it, Undo refunds; Bay +1 (4 spots that really hold 4 letters), Undo refunds; Nudge exactly one cell, Undo refunds; a booster win capped at 2 stars with no par bonus or best score; a loss after a booster keeps the coins spent; a dead end rescued from the dead-end banner's Boosters button;
 - Bay Word on level 17: three junk letters clear, +10 in the fare box, "Bay Word 10" on the win card, coins banked;
-- all 23 levels won through the UI at par with 3 stars and no boosters, on the phone (taps + swipes) and on desktop (clicks + drags);
+- v7 keys: badges with the right shape, the first-key tip, a padlocked car tapped and swiped (wiggle, key car call-out, toast, no move), the unlock animation when the key car exits, Undo re-locking, an optimal hint, Tow refusing padlocked and key cars, Nudge/Flip refusing padlocked cars (all greyed in pick mode, no coins charged), Flip on a key car, Bay +1 unaffected, the later key levels and the chain, a desktop click on a padlocked car;
+- all 28 levels won through the UI at par with 3 stars and no boosters, on the phone (taps + swipes) and on desktop (clicks + drags);
 - saved-progress migration with seeded `localStorage`: v3 saves (partial, through BUS, all 20, starters only), a v2 save, a v4 save with coins, and reloading a migrated save;
 - 375x667: levels 17, 22 and 23, the booster bar and the confirm sheet fit; desktop right-click reverse, `R` restart and a click nudge;
 - v6: bus hood/bumper/tailpipe on every bus and inside the screen on every layout check, the bus driving off hood-first; booster bar prices, red prices when poor, Bay +1 "Used", 44 px targets, clear of the lot/bay/tip at 390x844, 375x667 and desktop; Flip (pick mode, a car that then leaves from its former tail end, dead-end + optimal hint after it, Undo turns it back and refunds 120, a Flip win capped at 2 stars); Settings with 4 test toggles (saved apart from the real save, which stays byte-identical; Unlock all with test-opened levels off the record; Unlimited coins free boosters, no banking, ∞; Unlimited hints/undos ∞ badges, extra use keeps a win off the record, a booster refund still works, normal counts back after turning off; TEST MODE tag; Reset with confirm);
 - no console errors, page errors or failed requests.
 
-It saves screenshots to `screenshots/` (`v4-*.png`; the `v2-*` and `v3-*` files are from earlier rounds).
+It saves screenshots to `screenshots/` (`v7-*.png` for keys, `v4-*.png`; the `v2-*` and `v3-*` files are from earlier rounds).
 
 ## Files
 

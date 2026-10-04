@@ -2582,117 +2582,139 @@ window.WJB_LEVELS = [
    6
   ],
   "bay": 3,
-  "par": 24,
+  "par": 22,
   "tip": "Two colours, two keys: match the shapes (circle opens circle, triangle opens triangle).",
   "cars": [
    {
-    "l": "W",
+    "l": "D",
+    "r": 2,
+    "c": 3,
+    "dir": "right",
+    "len": 3
+   },
+   {
+    "l": "H",
     "r": 1,
     "c": 6,
-    "dir": "up",
-    "len": 3
-   },
-   {
-    "l": "E",
-    "r": 4,
-    "c": 2,
-    "dir": "left",
-    "len": 3
-   },
-   {
-    "l": "U",
-    "r": 1,
-    "c": 5,
-    "dir": "up",
-    "len": 2
-   },
-   {
-    "l": "A",
-    "r": 1,
-    "c": 2,
-    "dir": "right",
-    "len": 2
-   },
-   {
-    "l": "G",
-    "r": 6,
-    "c": 3,
-    "dir": "down",
-    "len": 2,
-    "key": "gold"
-   },
-   {
-    "l": "U",
-    "r": 3,
-    "c": 3,
-    "dir": "down",
-    "len": 3
-   },
-   {
-    "l": "M",
-    "r": 3,
-    "c": 1,
     "dir": "right"
-   },
-   {
-    "l": "F",
-    "r": 4,
-    "c": 6,
-    "dir": "right",
-    "len": 2,
-    "lock": "gold"
-   },
-   {
-    "l": "K",
-    "r": 1,
-    "c": 4,
-    "dir": "down",
-    "lock": "blue"
    },
    {
     "l": "T",
-    "r": 2,
+    "r": 3,
     "c": 2,
     "dir": "up",
     "len": 2
-   },
-   {
-    "l": "G",
-    "r": 4,
-    "c": 1,
-    "dir": "up"
-   },
-   {
-    "l": "M",
-    "r": 6,
-    "c": 2,
-    "dir": "up"
-   },
-   {
-    "l": "Y",
-    "r": 2,
-    "c": 1,
-    "dir": "right"
-   },
-   {
-    "l": "M",
-    "r": 3,
-    "c": 5,
-    "dir": "up"
-   },
-   {
-    "l": "R",
-    "r": 3,
-    "c": 4,
-    "dir": "down"
    },
    {
     "l": "N",
     "r": 5,
+    "c": 6,
+    "dir": "left"
+   },
+   {
+    "l": "D",
+    "r": 5,
     "c": 1,
-    "dir": "up",
+    "dir": "left",
     "len": 2,
+    "lock": "gold"
+   },
+   {
+    "l": "F",
+    "r": 1,
+    "c": 2,
+    "dir": "up"
+   },
+   {
+    "l": "E",
+    "r": 4,
+    "c": 6,
+    "dir": "up"
+   },
+   {
+    "l": "A",
+    "r": 5,
+    "c": 4,
+    "dir": "left",
+    "len": 2
+   },
+   {
+    "l": "D",
+    "r": 6,
+    "c": 6,
+    "dir": "left"
+   },
+   {
+    "l": "K",
+    "r": 4,
+    "c": 3,
+    "dir": "down"
+   },
+   {
+    "l": "M",
+    "r": 3,
+    "c": 4,
+    "dir": "down",
+    "len": 2
+   },
+   {
+    "l": "B",
+    "r": 3,
+    "c": 5,
+    "dir": "down",
+    "key": "gold"
+   },
+   {
+    "l": "W",
+    "r": 1,
+    "c": 5,
+    "dir": "down"
+   },
+   {
+    "l": "D",
+    "r": 6,
+    "c": 5,
+    "dir": "left",
     "key": "blue"
+   },
+   {
+    "l": "D",
+    "r": 6,
+    "c": 1,
+    "dir": "down",
+    "lock": "blue"
+   },
+   {
+    "l": "R",
+    "r": 2,
+    "c": 6,
+    "dir": "up",
+    "len": 2
+   },
+   {
+    "l": "K",
+    "r": 2,
+    "c": 5,
+    "dir": "right"
+   },
+   {
+    "l": "B",
+    "r": 5,
+    "c": 3,
+    "dir": "up"
+   },
+   {
+    "l": "T",
+    "r": 6,
+    "c": 3,
+    "dir": "left",
+    "len": 2
+   },
+   {
+    "l": "M",
+    "r": 1,
+    "c": 3,
+    "dir": "down"
    }
   ]
  },
@@ -2706,81 +2728,199 @@ window.WJB_LEVELS = [
    6
   ],
   "bay": 3,
-  "par": 18,
+  "par": 17,
   "tip": "Scramble stop with a padlock: any order again, but the key still comes first.",
   "cars": [
    {
-    "l": "H",
-    "r": 2,
-    "c": 1,
-    "dir": "up",
-    "len": 2
-   },
-   {
-    "l": "K",
-    "r": 6,
-    "c": 3,
-    "dir": "down",
-    "len": 2
-   },
-   {
     "l": "A",
-    "r": 4,
+    "r": 5,
     "c": 4,
-    "dir": "down"
-   },
-   {
-    "l": "G",
-    "r": 1,
-    "c": 6,
-    "dir": "right",
-    "len": 3,
-    "lock": "gold"
-   },
-   {
-    "l": "B",
-    "r": 2,
-    "c": 4,
-    "dir": "up",
-    "lock": "gold"
-   },
-   {
-    "l": "U",
-    "r": 3,
-    "c": 6,
     "dir": "down",
-    "len": 2
+    "len": 3
    },
    {
-    "l": "Y",
+    "l": "T",
     "r": 1,
     "c": 3,
     "dir": "right"
    },
    {
-    "l": "F",
-    "r": 1,
-    "c": 2,
-    "dir": "left"
+    "l": "R",
+    "r": 6,
+    "c": 5,
+    "dir": "down",
+    "lock": "gold"
    },
    {
     "l": "U",
+    "r": 2,
+    "c": 4,
+    "dir": "down"
+   },
+   {
+    "l": "R",
     "r": 5,
-    "c": 1,
-    "dir": "up"
+    "c": 3,
+    "dir": "left"
    },
    {
     "l": "S",
+    "r": 6,
+    "c": 3,
+    "dir": "left"
+   },
+   {
+    "l": "Y",
+    "r": 4,
+    "c": 2,
+    "dir": "down",
+    "len": 3
+   },
+   {
+    "l": "T",
+    "r": 6,
+    "c": 2,
+    "dir": "right",
+    "len": 2
+   },
+   {
+    "l": "S",
+    "r": 4,
+    "c": 6,
+    "dir": "down"
+   },
+   {
+    "l": "N",
+    "r": 1,
+    "c": 6,
+    "dir": "left"
+   },
+   {
+    "l": "D",
+    "r": 5,
+    "c": 6,
+    "dir": "right",
+    "len": 2,
+    "lock": "gold"
+   },
+   {
+    "l": "Y",
+    "r": 6,
+    "c": 4,
+    "dir": "right"
+   },
+   {
+    "l": "H",
+    "r": 1,
+    "c": 1,
+    "dir": "down"
+   },
+   {
+    "l": "A",
+    "r": 3,
+    "c": 1,
+    "dir": "right"
+   },
+   {
+    "l": "B",
+    "r": 1,
+    "c": 5,
+    "dir": "down"
+   },
+   {
+    "l": "M",
     "r": 2,
     "c": 5,
+    "dir": "left",
+    "len": 2
+   },
+   {
+    "l": "F",
+    "r": 3,
+    "c": 3,
+    "dir": "up",
+    "len": 2,
+    "key": "gold"
+   },
+   {
+    "l": "B",
+    "r": 2,
+    "c": 1,
+    "dir": "down"
+   },
+   {
+    "l": "W",
+    "r": 1,
+    "c": 2,
+    "dir": "down"
+   },
+   {
+    "l": "T",
+    "r": 2,
+    "c": 3,
+    "dir": "right"
+   }
+  ]
+ },
+ {
+  "id": "dt4-square",
+  "suggested_level": 28,
+  "word": "SQUARE",
+  "grid": [
+   6,
+   6
+  ],
+  "bay": 3,
+  "par": 33,
+  "tip": "Boss lot! A key car can be padlocked too: open the chain one key at a time.",
+  "cars": [
+   {
+    "l": "D",
+    "r": 2,
+    "c": 4,
+    "dir": "up"
+   },
+   {
+    "l": "A",
+    "r": 5,
+    "c": 5,
+    "dir": "down",
+    "lock": "gold"
+   },
+   {
+    "l": "U",
+    "r": 1,
+    "c": 6,
+    "dir": "left"
+   },
+   {
+    "l": "S",
+    "r": 3,
+    "c": 2,
+    "dir": "down",
+    "len": 2,
+    "key": "blue",
+    "lock": "gold"
+   },
+   {
+    "l": "E",
+    "r": 1,
+    "c": 3,
+    "dir": "up",
+    "lock": "blue"
+   },
+   {
+    "l": "R",
+    "r": 5,
+    "c": 4,
     "dir": "up",
     "len": 2
    },
    {
-    "l": "R",
-    "r": 4,
-    "c": 1,
-    "dir": "left"
+    "l": "N",
+    "r": 6,
+    "c": 3,
+    "dir": "down"
    },
    {
     "l": "D",
@@ -2790,50 +2930,66 @@ window.WJB_LEVELS = [
     "len": 2
    },
    {
-    "l": "T",
+    "l": "Y",
     "r": 5,
-    "c": 2,
-    "dir": "down",
-    "len": 2,
-    "key": "gold"
+    "c": 1,
+    "dir": "left",
+    "lock": "blue"
    },
    {
-    "l": "R",
-    "r": 2,
-    "c": 3,
-    "dir": "right"
-   },
-   {
-    "l": "W",
+    "l": "G",
     "r": 3,
     "c": 4,
-    "dir": "up"
+    "dir": "left",
+    "len": 3
    },
    {
-    "l": "T",
-    "r": 6,
-    "c": 2,
+    "l": "A",
+    "r": 4,
+    "c": 4,
     "dir": "right",
+    "len": 3
+   },
+   {
+    "l": "Q",
+    "r": 5,
+    "c": 6,
+    "dir": "up",
+    "len": 2
+   },
+   {
+    "l": "M",
+    "r": 1,
+    "c": 5,
+    "dir": "up",
+    "len": 2
+   },
+   {
+    "l": "Y",
+    "r": 5,
+    "c": 2,
+    "dir": "left",
     "len": 2
    },
    {
     "l": "K",
     "r": 2,
-    "c": 2,
-    "dir": "right"
+    "c": 6,
+    "dir": "right",
+    "key": "gold"
    },
    {
-    "l": "A",
+    "l": "R",
     "r": 4,
-    "c": 3,
-    "dir": "left"
-   },
-   {
-    "l": "F",
-    "r": 6,
-    "c": 4,
+    "c": 1,
     "dir": "down",
     "len": 2
+   },
+   {
+    "l": "Q",
+    "r": 2,
+    "c": 3,
+    "dir": "down"
    }
   ]
  }

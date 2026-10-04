@@ -146,6 +146,7 @@ function metrics(lv) {
   if (free > 0) { why.free++; return null; }
   var sol = E.solve(g, null, { maxStates: maxStates });
   if (sol.par === null) { why[sol.status]++; return null; }
+  if (E.solve(E.prepare(lv, { bayWords: false }), null, { maxStates: maxStates }).par !== sol.par) { why.bayword = (why.bayword || 0) + 1; return null; } // a Bay Word must never be needed
   var st = E.initialState(g), slides = 0, rev = 0, exits = 0;
   sol.path.forEach(function (m) {
     var r = E.step(g, st, m.car, m.which);
