@@ -1,6 +1,6 @@
 {
   "name": "word-jam-bus",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "Word Jam Bus (working title): HTML5 parking-jam spelling puzzle prototype. No build step; open index.html.",
   "scripts": {
@@ -8,7 +8,8 @@
     "serve": "python3 -m http.server 8765",
     "test:e2e": "node tests/e2e.js",
     "test:file": "node tests/file-url.js",
-    "test": "node tools/verify-levels.js && node tests/e2e.js && node tests/file-url.js"
+    "test:rules": "node tests/rules.js",
+    "test": "node tools/verify-levels.js && node tests/rules.js && node tests/e2e.js && node tests/file-url.js"
   },
   "devDependencies": {
     "playwright": "1.63.0"
