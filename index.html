@@ -27,16 +27,32 @@
       <p class="subtitle">Unjam the lot. Spell the word.</p>
       <div class="title-row"><div class="coin-pill title-coins" aria-label="Coins"><i class="coin"></i><b id="title-coins">0</b></div><span class="test-badge" aria-label="Test mode is on">TEST MODE</span></div>
       <button id="btn-play" class="btn btn-big btn-go">Play</button>
-      <h2 class="levels-h">Levels</h2>
-      <div id="level-grid" class="level-grid"></div>
+      <div id="title-route" class="title-route" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- v8 city route map (the level select): districts, stops, the bus, chests -->
+  <section id="screen-map" class="screen" aria-label="City map">
+    <header class="map-top">
+      <button id="btn-map-home" class="icon-btn" aria-label="Title screen"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-6h4v6"/></svg></button>
+      <div class="map-title"><b>Word Jam City</b><small id="map-sub"></small></div>
+      <span class="test-badge" aria-label="Test mode is on">TEST MODE</span>
+      <div class="coin-pill map-coins" aria-label="Coins"><i class="coin"></i><b id="map-coins">0</b></div>
+    </header>
+    <div id="map-scroll" class="map-scroll">
+      <div id="map-world" class="map-world"><div id="level-grid" class="map-sections"></div></div>
+    </div>
+    <div class="map-foot">
+      <button id="btn-map-chest" class="btn btn-chest-cta" hidden></button>
+      <button id="btn-map-play" class="btn btn-big btn-go">Play</button>
     </div>
   </section>
 
   <!-- Game -->
   <section id="screen-game" class="screen" aria-label="Game">
     <header class="hud">
-      <button id="btn-menu" class="icon-btn" aria-label="Levels">
-        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      <button id="btn-menu" class="icon-btn" aria-label="City map">
+        <svg viewBox="0 0 24 24"><path d="M9 4L3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5z"/><path d="M9 4v13.5M15 6.5V20"/></svg>
       </button>
       <div class="hud-mid">
         <div id="hud-level" class="hud-level">Level 1</div>
@@ -76,7 +92,7 @@
       <div id="tip" class="tip"></div>
       <div id="foot-bar" class="foot-bar">
         <div id="coin-box" class="coin-box" aria-label="Coins"><i class="coin"></i><b id="coin-count">0</b><span id="purse" class="purse">+0</span></div>
-        <div id="booster-bar" class="booster-bar" role="toolbar" aria-label="Boosters"><button id="bst-tow" class="bst" data-kind="tow"><svg viewBox="0 0 24 24"><path d="M4 16V9.5L7.5 6H13v10"/><path d="M13 10h4l3 3v3h-7"/><circle cx="7.5" cy="17.5" r="2"/><circle cx="16.5" cy="17.5" r="2"/><path d="M4 9.5h4.5V6"/><path d="M2 4l5 5"/></svg><span class="bst-name">Tow</span><small class="bst-price"></small></button><button id="bst-bay" class="bst" data-kind="bay"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="12" height="12" rx="2.5" stroke-dasharray="3 2.4"/><path d="M19 4v6M16 7h6"/></svg><span class="bst-name">Bay +1</span><small class="bst-price"></small></button><button id="bst-nudge" class="bst" data-kind="nudge"><svg viewBox="0 0 24 24"><rect x="3" y="8" width="8" height="8" rx="2"/><path d="M14 12h7M18 9l3 3-3 3"/></svg><span class="bst-name">Nudge</span><small class="bst-price"></small></button><button id="bst-flip" class="bst" data-kind="flip"><svg viewBox="0 0 24 24"><path d="M5 9.5A7.5 7.5 0 0 1 18.4 7"/><path d="M19 3v4.4h-4.4"/><path d="M19 14.5A7.5 7.5 0 0 1 5.6 17"/><path d="M5 21v-4.4h4.4"/></svg><span class="bst-name">Flip</span><small class="bst-price"></small></button></div>
+        <div id="booster-bar" class="booster-bar" role="toolbar" aria-label="Boosters"><button id="bst-tow" class="bst" data-kind="tow"><svg viewBox="0 0 24 24"><path d="M4 16V9.5L7.5 6H13v10"/><path d="M13 10h4l3 3v3h-7"/><circle cx="7.5" cy="17.5" r="2"/><circle cx="16.5" cy="17.5" r="2"/><path d="M4 9.5h4.5V6"/><path d="M2 4l5 5"/></svg><span class="bst-name">Tow</span><small class="bst-price"></small><span class="inv-badge" hidden></span></button><button id="bst-bay" class="bst" data-kind="bay"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="12" height="12" rx="2.5" stroke-dasharray="3 2.4"/><path d="M19 4v6M16 7h6"/></svg><span class="bst-name">Bay +1</span><small class="bst-price"></small><span class="inv-badge" hidden></span></button><button id="bst-nudge" class="bst" data-kind="nudge"><svg viewBox="0 0 24 24"><rect x="3" y="8" width="8" height="8" rx="2"/><path d="M14 12h7M18 9l3 3-3 3"/></svg><span class="bst-name">Nudge</span><small class="bst-price"></small><span class="inv-badge" hidden></span></button><button id="bst-flip" class="bst" data-kind="flip"><svg viewBox="0 0 24 24"><path d="M5 9.5A7.5 7.5 0 0 1 18.4 7"/><path d="M19 3v4.4h-4.4"/><path d="M19 14.5A7.5 7.5 0 0 1 5.6 17"/><path d="M5 21v-4.4h4.4"/></svg><span class="bst-name">Flip</span><small class="bst-price"></small><span class="inv-badge" hidden></span></button></div>
         <button id="btn-hint" class="bst btn-hint" aria-label="Hint"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg><span class="bst-name">Hint</span><span id="hint-count" class="badge">3</span></button>
         <div id="boost-bar" class="boost-bar" role="status"><span id="boost-text"></span><button id="btn-boost-cancel" class="btn btn-small">Cancel</button></div>
       </div>
@@ -106,10 +122,11 @@
       <div id="win-stars" class="stars"></div>
       <p id="win-detail" class="detail"></p>
       <p id="win-coins" class="win-coins"></p>
-      <button id="btn-next" class="btn btn-big btn-go">Next level</button>
+      <p id="win-district" class="win-district"></p>
+      <button id="btn-next" class="btn btn-big btn-go">Next stop</button>
       <div class="row">
         <button id="btn-replay" class="btn btn-ghost">Replay</button>
-        <button id="btn-win-menu" class="btn btn-ghost">Levels</button>
+        <button id="btn-win-menu" class="btn btn-ghost">Map</button>
       </div>
     </div>
   </div>
@@ -120,7 +137,7 @@
         <div id="confirm-icon" class="confirm-icon" aria-hidden="true"></div>
         <h3 id="confirm-title">Spend?</h3>
         <p id="confirm-detail" class="detail"></p>
-        <p class="shop-note">Every level can be won at par without boosters. A level won with a booster earns at most 2&#9733;. Undo gives the coins back.</p>
+        <p class="shop-note">Every level can be won at par without boosters. A level won with a booster earns at most 2&#9733;. Undo gives it back (coins or the free booster).</p>
         <div class="row"><button id="btn-confirm-cancel" class="btn btn-ghost">Cancel</button><button id="btn-confirm" class="btn btn-go">Spend</button></div>
       </div>
     </div>
@@ -131,6 +148,7 @@
       <div class="set-head"><h2 id="settings-h">Settings</h2><button id="btn-settings-close" class="btn btn-small btn-ghost">Done</button></div>
       <div class="set-sec">
         <div class="set-row"><span class="set-label"><b>Sound</b></span><label class="switch"><input type="checkbox" id="set-sound" role="switch" aria-label="Sound"><i></i></label><button id="btn-howto" class="btn btn-small btn-ghost">How to play</button></div>
+        <div class="set-row set-paint"><span class="set-label"><b>Bus paint</b><small>More paints come from district chests.</small></span><div id="paint-row" class="paint-row" role="radiogroup" aria-label="Bus paint"></div></div>
       </div>
       <div class="set-sec set-test">
         <h3>Test / cheat options</h3>
@@ -141,6 +159,28 @@
       <div class="set-sec set-danger">
         <div class="set-row"><span class="set-label"><b>Reset progress</b><small>Clears all stars, unlocks and coins.</small></span><button id="btn-reset" class="btn btn-small btn-danger">Reset</button></div>
         <div id="reset-confirm" class="reset-confirm"><p>Reset <b>all</b> progress and coins? This can't be undone.</p><div class="row"><button id="btn-reset-cancel" class="btn btn-small btn-ghost">Cancel</button><button id="btn-reset-yes" class="btn btn-small btn-danger">Yes, reset</button></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- v8 district chest -->
+  <div id="ov-chest" class="overlay chest-ov" aria-hidden="true">
+    <div class="chest-card" role="dialog" aria-labelledby="chest-h">
+      <div class="chest-rays" aria-hidden="true"></div>
+      <h2 id="chest-h">Chest</h2>
+      <p id="chest-sub" class="detail"></p>
+      <button id="chest-big" class="chest-big" aria-label="Open the chest">
+        <span class="cb-glow" aria-hidden="true"></span>
+        <span class="cb-lid" aria-hidden="true"><i class="cb-band"></i></span>
+        <span class="cb-box" aria-hidden="true"><i class="cb-band"></i><i class="cb-lock"></i></span>
+      </button>
+      <div id="chest-confetti" class="chest-confetti" aria-hidden="true"></div>
+      <div id="chest-rewards" class="chest-rewards" aria-live="polite"></div>
+      <p id="chest-note" class="chest-note"></p>
+      <div class="row chest-btns">
+        <button id="btn-chest-later" class="btn btn-ghost">Later</button>
+        <button id="btn-chest-open" class="btn btn-big btn-go">Open!</button>
+        <button id="btn-chest-collect" class="btn btn-big btn-go">Collect</button>
       </div>
     </div>
   </div>
@@ -164,6 +204,7 @@
         <div><span class="dot scr-dot">&#8644;</span><span><b>Scramble</b> stops (purple bus): letters board in any order.</span></div>
         <div><span class="dot">W</span><span><b>Bay Word:</b> three wrong letters in the bay that spell a word (any order) leave for 10 bonus coins.</span></div>
         <div><span class="dot"><i class="coin"></i></span><span>Finish a level to bank its fares (1 coin per letter, doubled at par). Spend coins on boosters, but you never need them.</span></div>
+        <div><span class="dot">&#9873;</span><span><b>City map:</b> each district of stops ends in a <b>boss lot</b>. Beat it to open the next district and its <b>treasure chest</b> (coins, free boosters, bus paints).</span></div>
       </div>
       <button id="btn-howto-close" class="btn btn-go">OK</button>
     </div>
@@ -175,7 +216,7 @@
       <p id="lose-detail" class="detail"></p>
       <button id="btn-retry" class="btn btn-big btn-go">Retry</button>
       <div class="row">
-        <button id="btn-lose-menu" class="btn btn-ghost">Levels</button>
+        <button id="btn-lose-menu" class="btn btn-ghost">Map</button>
       </div>
     </div>
   </div>
