@@ -47,6 +47,31 @@
   var progress = loadProgress();
   saveProgress(); // persist a migrated save right away
 
+  /* ---------------- test / cheat options ---------------- */
+  // Stored apart from the real save (wordJamBus.test.v1), so the real save is never
+  // rewritten by a cheat. Add a toggle here and it shows up in Settings.
+  // Rules: anything a cheat makes possible is not saved:
+  //  - unlockAll: every level can be picked; a level that is open ONLY because of the
+  //    cheat is played "off the record" (no stars, best, unlock or coins are saved).
+  //    Wins on levels you had really unlocked count normally.
+  //  - unlimitedCoins: boosters cost nothing and never touch the real balance; fares
+  //    earned meanwhile are not banked; a win that used a free booster is not saved.
+  var TEST_KEY = 'wordJamBus.test.v1';
+  var TEST_TOGGLES = [
+    { key: 'unlockAll', label: 'Unlock all levels', desc: 'Pick any level from the level select, whatever its lock. Levels opened only by this are played off the record.' },
+    { key: 'unlimitedCoins', label: 'Unlimited coins', desc: 'Every booster is free (\u221e). Your real coins are not spent, and coins earned meanwhile are not banked.' }
+  ];
+  function loadTest() {
+    var p = null, t = {};
+    try { p = JSON.parse(localStorage.getItem(TEST_KEY)); } catch (e) { p = null; }
+    TEST_TOGGLES.forEach(function (o) { t[o.key] = !!(p && p[o.key]); });
+    return t;
+  }
+  var test = loadTest();
+  function saveTest() { try { localStorage.setItem(TEST_KEY, JSON.stringify(test)); } catch (e) { /* private mode */ } }
+  function testOn() { return TEST_TOGGLES.some(function (o) { return test[o.key]; }); }
+  function renderTestMode() { document.body.classList.toggle('test-mode', testOn()); }
+
   /* ---------------- coins + boosters ---------------- */
   // Fares: 1 coin per seat filled and 10 per Bay Word, banked when the level is
   // won (the fare box is part of the game state, so Undo keeps it honest).
@@ -56,8 +81,10 @@
   var BOOSTERS = {
     tow: { price: 150, name: 'Tow truck', desc: 'Tow away one car the bus can do without (a wrong letter or a spare copy).', how: 'Tap a glowing car to tow it away.' },
     bay: { price: 100, name: 'Bay +1', desc: 'One extra holding-bay spot for the rest of this level.', how: '' },
-    nudge: { price: 60, name: 'Nudge', desc: 'Move one car exactly one cell, then it stays put.', how: 'Tap a car to inch it forward, or swipe it back one cell.' }
+    nudge: { price: 60, name: 'Nudge', desc: 'Move one car exactly one cell, then it stays put.', how: 'Tap a car to inch it forward, or swipe it back one cell.' },
+    flip: { price: 120, name: 'Flip', desc: 'Turn one car around in place, so its nose points the other way and it can leave from the other end.', how: 'Tap a glowing car to turn it around.' }
   };
+  var BOOSTER_ORDER = ['tow', 'bay', 'nudge', 'flip'];
   function purseOf(st) { return (st.idx || 0) * FARE + (st.words || 0) * BAYWORD_COINS; }
   function spentOf(st) { var u = st.used || {}, t = 0; Object.keys(BOOSTERS).forEach(function (k) { t += (u[k] || 0) * BOOSTERS[k].price; }); return t; }
 
@@ -101,7 +128,7 @@
     $(id).classList.toggle('show', on);
     $(id).setAttribute('aria-hidden', on ? 'false' : 'true');
   }
-  function hideOverlays() { ['ov-win', 'ov-lose', 'ov-shop', 'ov-coach', 'ov-howto'].forEach(function (id) { overlay(id, false); }); $('deadend').classList.remove('show'); }
+  function hideOverlays() { ['ov-win', 'ov-lose', 'ov-shop', 'ov-coach', 'ov-howto', 'ov-settings'].forEach(function (id) { overlay(id, false); }); $('deadend').classList.remove('show'); }
 
   function starText(n) { return '\u2605\u2605\u2605'.slice(0, n) + '\u2606\u2606\u2606'.slice(0, 3 - n); }
   // Crisp SVG stars (same shape on the level select and the win card): solid gold
@@ -115,34 +142,35 @@
     grid.innerHTML = '';
     LEVELS.forEach(function (lv, i) {
       var b = document.createElement('button');
-      var locked = !isUnlocked(i);
+      var locked = !isUnlocked(i), cheatOpen = !locked && !realUnlocked(i);
       var stars = progress.stars[lv.id] || 0;
       var scr = lv.mode === 'scramble';
-      b.className = 'lvl' + (locked ? ' locked' : '') + (stars ? ' done' : '') + (i === firstUnsolved() ? ' current' : '') + (scr ? ' scr' : '');
+      b.className = 'lvl' + (locked ? ' locked' : '') + (stars ? ' done' : '') + (i === firstUnsolved() ? ' current' : '') + (scr ? ' scr' : '') + (cheatOpen ? ' cheat' : '');
       b.setAttribute('data-level', i + 1);
       b.innerHTML = '<span>' + (locked ? '\uD83D\uDD12' : (i + 1)) + '</span>' + (locked ? '<small class="lvl-stars"></small>' : '<small class="lvl-stars" data-stars="' + stars + '">' + starIcons(stars) + '</small>') + (scr ? SHUFFLE_SVG.replace('<svg', '<svg class="lvl-scr"') : '');
-      b.setAttribute('aria-label', 'Level ' + (i + 1) + (scr ? ' (Scramble: any order)' : '') + (locked ? ' (locked)' : ', ' + stars + ' of 3 stars'));
+      b.setAttribute('aria-label', 'Level ' + (i + 1) + (scr ? ' (Scramble: any order)' : '') + (locked ? ' (locked)' : ', ' + stars + ' of 3 stars') + (cheatOpen ? ', opened by test mode' : ''));
       if (locked) b.disabled = true;
       b.addEventListener('click', function () { Sound.unlock(); startLevel(i); });
       grid.appendChild(b);
     });
-    $('btn-sound').textContent = 'Sound: ' + (progress.sound ? 'on' : 'off');
     $('btn-play').textContent = Object.keys(progress.stars).length ? 'Continue' : 'Play';
-    $('title-coins').textContent = progress.coins;
+    $('title-coins').textContent = test.unlimitedCoins ? '\u221e' : progress.coins;
+    renderTestMode();
   }
   var SHUFFLE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h3.5c2 0 3 1 4.2 2.6l2.6 4.8C14.5 16 15.5 17 17.5 17H21"/><path d="M3 17h3.5c2 0 3-1 4.2-2.6"/><path d="M13.3 9.6C14.5 8 15.5 7 17.5 7H21"/><path d="M18 4l3 3-3 3"/><path d="M18 14l3 3-3 3"/></svg>';
   /** A level is open if it is within the unlock frontier or it (or any later level) was ever completed. */
-  function isUnlocked(i) {
+  function realUnlocked(i) {
     if (i <= progress.unlocked) return true;
     for (var j = i; j < LEVELS.length; j++) if (progress.stars[LEVELS[j].id]) return true;
     return false;
   }
+  function isUnlocked(i) { return realUnlocked(i) || !!test.unlockAll; }
   /** Where "Play/Continue" goes: the first unsolved open level after the furthest completed one. */
   function firstUnsolved() {
     var last = -1, i;
     for (i = 0; i < LEVELS.length; i++) if (progress.stars[LEVELS[i].id]) last = i;
-    for (i = last + 1; i < LEVELS.length; i++) if (isUnlocked(i) && !progress.stars[LEVELS[i].id]) return i;
-    for (i = 0; i < LEVELS.length; i++) if (isUnlocked(i) && !progress.stars[LEVELS[i].id]) return i;
+    for (i = last + 1; i < LEVELS.length; i++) if (realUnlocked(i) && !progress.stars[LEVELS[i].id]) return i;
+    for (i = 0; i < LEVELS.length; i++) if (realUnlocked(i) && !progress.stars[LEVELS[i].id]) return i;
     return progress.unlocked;
   }
 
@@ -160,8 +188,11 @@
       ended: false, dead: false, token: (cur ? cur.token + 1 : 1),
       chain: Promise.resolve(), disp: { idx: 0, mask: 0, bay: [], wild: {}, words: 0 }, carEls: [],
       plan: null, planOptimal: false, search: null, serial: 0, pendingHint: false,
-      scramble: game.scramble, boostMode: null
+      scramble: game.scramble, boostMode: null, gameHist: [],
+      cheatOnly: !!test.unlockAll && !realUnlocked(index),   // open only because of "Unlock all"
+      free: !!test.unlimitedCoins                            // boosters free, fares not banked
     };
+    renderTestMode();
     $('bus').classList.toggle('scr', game.scramble);
     $('screen-game').classList.toggle('scr', game.scramble);
     $('bay-name').textContent = game.scramble ? 'Junk bay' : 'Holding bay';
@@ -293,7 +324,8 @@
     // word tiles
     var appW = Math.min(document.getElementById('app').clientWidth, 620);
     var n = g.target.length, gaps = g.words.length - 1;
-    tileSize = Math.max(26, Math.min(46, Math.floor((appW - 60 - 5 * (n - 1) - gaps * 30) / n)));
+    tileSize = Math.max(26, Math.min(46, Math.floor((appW - 90 - 5 * (n - 1) - gaps * 30) / n))); // 90 = bus padding + hood + tailpipe
+    $('bus').style.setProperty('--bs', Math.max(.6, Math.min(1, tileSize / 44)).toFixed(3));
     document.documentElement.style.setProperty('--tile', tileSize + 'px');
     slotSize = Math.max(30, Math.min(48, Math.floor((appW - 60) / Math.max(g.cap, 1)) - 6));
     document.documentElement.style.setProperty('--slot', slotSize + 'px');
@@ -364,11 +396,24 @@
     renderCoins();
   }
   function renderCoins() {
-    $('coin-count').textContent = progress.coins;
+    var free = cur ? cur.free : !!test.unlimitedCoins;
+    $('coin-count').textContent = free ? '\u221e' : progress.coins;
+    $('coin-box').classList.toggle('free', free);
     var d = cur ? cur.disp : null, purse = d ? (scrCount(d) * FARE + (d.words || 0) * BAYWORD_COINS) : 0;
     $('purse').textContent = '+' + purse;
-    $('purse').classList.toggle('show', purse > 0 && !!cur && !cur.banked);
-    $('btn-shop').disabled = !cur || cur.ended;
+    $('purse').classList.toggle('show', purse > 0 && !!cur && !cur.banked && !free);
+    renderBoosters();
+  }
+  /** Booster bar: price, "Free" (unlimited coins), red price when you can't afford it, greyed when it can't be used. */
+  function renderBoosters() {
+    BOOSTER_ORDER.forEach(function (k) {
+      var btn = $('bst-' + k), b = BOOSTERS[k], why = cur ? boosterBlock(k) : 'Level over', poor = !why && cur && !cur.free && progress.coins < b.price;
+      btn.classList.toggle('off', !!why);
+      btn.classList.toggle('poor', !!poor);
+      btn.disabled = !cur || cur.ended;
+      btn.querySelector('.bst-price').innerHTML = why === 'Used' ? 'Used' : cur && cur.free ? 'Free' : '<i class="coin"></i>' + b.price;
+      btn.setAttribute('aria-label', b.name + ': ' + (why === 'Used' ? 'used this level' : cur && cur.free ? 'free (test mode)' : b.price + ' coins' + (poor ? ', not enough coins' : '')) + (why && why !== 'Used' ? ' (' + why + ')' : ''));
+    });
   }
   function scrCount(d) { if (!cur.game.scramble) return d.idx; var c = 0, m = d.mask; while (m) { m &= m - 1; c++; } return c; }
 
@@ -454,7 +499,7 @@
     clearHint();
     advancePlan(i, which);
     if (res.result === 'slide') {
-      cur.history.push(cur.state);
+      pushHist();
       cur.state = res.state;
       Sound.slide();
       placeCar(i);
@@ -486,7 +531,7 @@
       });
       return;
     }
-    cur.history.push(cur.state);
+    pushHist();
     cur.state = res.state;
     $('deadend').classList.remove('show');
     renderHud();
@@ -557,7 +602,7 @@
     Sound.word(); buzz([20, 30, 20]);
     toast(cw.word + '! Bay Word +' + BAYWORD_COINS, 1400);
     return wait(650).then(function () {
-      var coinBtn = $('btn-shop');
+      var coinBtn = $('coin-box');
       var trips = els.map(function (e, k) { return e ? fly(cw.letters[k], rectCenter(e), coinBtn, 420) : Promise.resolve(); });
       cw.at.slice().sort(function (x, y) { return y - x; }).forEach(function (i) { cur.disp.bay.splice(i, 1); });
       cur.disp.words = (cur.disp.words || 0) + 1;
@@ -566,7 +611,7 @@
       return Promise.all(trips);
     }).then(function () {
       $('bay-zone').classList.remove('bayword');
-      coinPop($('btn-shop'), '+' + BAYWORD_COINS);
+      coinPop($('coin-box'), '+' + BAYWORD_COINS);
       Sound.coin();
       renderHud();
     });
@@ -628,12 +673,18 @@
     var parBonus = !assisted && par !== undefined && moves <= par ? fares : 0;
     var first = progress.stars[lv.id] ? 0 : FIRST_CLEAR;
     var earned = fares + parBonus + words + first;
-    progress.coins += earned;
+    // Test mode: a level opened only by "Unlock all", or won with a free booster, is off
+    // the record; with "Unlimited coins" on, fares are not banked.
+    var saveable = !cur.cheatOnly && !(cur.free && assisted);
+    var bank = saveable && !cur.free;
     cur.banked = true;
-    progress.stars[lv.id] = Math.max(progress.stars[lv.id] || 0, stars);
-    if (!assisted && (!progress.best[lv.id] || moves < progress.best[lv.id])) progress.best[lv.id] = moves;
-    progress.unlocked = Math.max(progress.unlocked, Math.min(cur.index + 1, LEVELS.length - 1));
-    saveProgress();
+    if (saveable) {
+      if (bank) progress.coins += earned;
+      progress.stars[lv.id] = Math.max(progress.stars[lv.id] || 0, stars);
+      if (!assisted && (!progress.best[lv.id] || moves < progress.best[lv.id])) progress.best[lv.id] = moves;
+      progress.unlocked = Math.max(progress.unlocked, Math.min(cur.index + 1, LEVELS.length - 1));
+      saveProgress();
+    }
     renderCoins();
     Sound.win(); buzz([20, 30, 20]);
     $('bus').classList.add('drive-off');
@@ -642,13 +693,16 @@
       $('win-stars').innerHTML = starIcons(stars);
       $('win-stars').setAttribute('aria-label', stars + ' of 3 stars');
       $('win-stars').setAttribute('data-stars', stars);
-      $('win-detail').textContent = 'Moves ' + moves + ' \u00b7 Par ' + par + (assisted ? ' \u00b7 Booster used (max 2\u2605)' : stars === 3 ? ' \u00b7 Perfect route!' : stars === 2 ? ' \u00b7 Close to par!' : ' \u00b7 Try for fewer moves.');
+      $('win-detail').textContent = 'Moves ' + moves + ' \u00b7 Par ' + par + (assisted ? ' \u00b7 Booster used (max 2\u2605)' : stars === 3 ? ' \u00b7 Perfect route!' : stars === 2 ? ' \u00b7 Close to par!' : ' \u00b7 Try for fewer moves.') +
+        (saveable ? '' : ' \u00b7 TEST MODE: not saved');
       var parts = ['fares ' + fares];
       if (parBonus) parts.push('par bonus ' + parBonus);
       if (words) parts.push('Bay Word ' + words);
       if (first) parts.push('first clear ' + first);
-      $('win-coins').innerHTML = '<b>+' + earned + '</b> coins <small>(' + parts.join(' + ') + ')</small>';
-      $('win-coins').setAttribute('data-earned', earned);
+      if (bank) $('win-coins').innerHTML = '<b>+' + earned + '</b> coins <small>(' + parts.join(' + ') + ')</small>';
+      else $('win-coins').innerHTML = '<b>+0</b> coins <small>(test mode: ' + earned + ' not banked)</small>';
+      $('win-coins').setAttribute('data-earned', bank ? earned : 0);
+      $('win-coins').classList.toggle('test', !bank);
       var last = cur.index >= LEVELS.length - 1;
       $('btn-next').textContent = last ? 'All levels done!' : 'Next level';
       overlay('ov-win', true);
@@ -662,9 +716,11 @@
     cancelSearch();
     cur.chain = Promise.resolve();
     $('fly-layer').innerHTML = '';
-    var prev = cur.history.pop();
-    var refund = spentOf(cur.state) - spentOf(prev);   // undoing a booster gives its coins back
+    var prev = cur.history.pop(), prevGame = cur.gameHist.pop() || cur.game;
+    var refund = cur.free ? 0 : spentOf(cur.state) - spentOf(prev);   // undoing a booster gives its coins back (free ones cost nothing)
     if (refund > 0) { progress.coins += refund; saveProgress(); }
+    var unflip = prevGame !== cur.game;   // undoing a Flip: the car faces its old way again
+    cur.game = prevGame;
     setBoostMode(null);
     var revived = [];
     prev.pos.forEach(function (p, i) { if (p >= 0 && cur.state.pos[i] < 0) revived.push(i); });
@@ -674,10 +730,10 @@
     $('deadend').classList.remove('show');
     clearHint();
     syncDisplay();
-    if (revived.length) { buildLot(); layout(); }
+    if (revived.length || unflip) { buildLot(); layout(); }
     else cur.game.cars.forEach(function (c, i) { placeCar(i); }); // animated slide back
     renderHud();
-    toast(refund > 0 ? 'Undo · ' + refund + ' coins back' : 'Undo');
+    toast(refund > 0 ? 'Undo \u00b7 ' + refund + ' coins back' : 'Undo');
     afterMove();
   }
 
@@ -714,38 +770,30 @@
   }
 
   /* ---------------- boosters: shop, confirm, pick a car, apply ---------------- */
-  function boosterBlock(kind) { // why a booster can't be bought right now ('' = it can)
+  function boosterBlock(kind) { // why a booster can't be used right now ('' = it can; coins are checked separately)
     if (!cur || cur.ended) return 'Level over';
-    if (kind === 'bay' && cur.state.used.bay) return 'Used';
-    if (kind === 'tow' && !cur.game.cars.some(function (c, i) { return E.towable(cur.game, cur.state, i); })) return 'No spare car';
-    if (kind === 'nudge' && !cur.game.cars.some(function (c, i) { return E.nudgeTo(cur.game, cur.state, i, FWD) !== null || E.nudgeTo(cur.game, cur.state, i, BACK) !== null; })) return 'No room';
-    if (progress.coins < BOOSTERS[kind].price) return 'Need ' + BOOSTERS[kind].price;
+    var g = cur.game, st = cur.state;
+    if (kind === 'bay' && st.used.bay) return 'Used';
+    if (kind === 'tow' && !g.cars.some(function (c, i) { return E.towable(g, st, i); })) return 'No spare car';
+    if (kind === 'nudge' && !g.cars.some(function (c, i) { return E.nudgeTo(g, st, i, FWD) !== null || E.nudgeTo(g, st, i, BACK) !== null; })) return 'No room';
+    if (kind === 'flip' && !g.cars.some(function (c, i) { return E.flippable(g, st, i); })) return 'No car';
     return '';
   }
-  function openShop() {
+  function closeShop() { overlay('ov-shop', false); }
+  /** Booster bar tap: straight to the confirm-before-spend sheet. */
+  function askBuy(kind) {
     if (!cur || cur.ended) return;
     setBoostMode(null);
     clearHint();
-    $('shop-balance').textContent = progress.coins;
-    $('shop-confirm').classList.remove('show');
-    $('shop-list').classList.remove('hide');
-    Object.keys(BOOSTERS).forEach(function (k) {
-      var why = boosterBlock(k), btn = $('buy-' + k);
-      btn.disabled = !!why;
-      btn.innerHTML = why ? why : '<i class="coin"></i>' + BOOSTERS[k].price;
-    });
-    overlay('ov-shop', true);
-  }
-  function closeShop() { overlay('ov-shop', false); }
-  function askBuy(kind) {
-    if (boosterBlock(kind)) return;
-    var b = BOOSTERS[kind];
-    $('confirm-title').textContent = 'Spend ' + b.price + ' coins on ' + b.name + '?';
-    $('confirm-detail').textContent = (b.how ? b.how + ' ' : '') + 'This level can then earn at most 2\u2605. Undo gives the coins back.';
-    $('btn-confirm').innerHTML = 'Spend <i class="coin"></i>' + b.price;
+    var b = BOOSTERS[kind], why = boosterBlock(kind);
+    if (why) { toast(why === 'Used' ? b.name + ' is used up for this level' : b.name + ': ' + why.toLowerCase() + ' right now', 1400); Sound.bump(); return; }
+    if (!cur.free && progress.coins < b.price) { toast('Need ' + b.price + ' coins for ' + b.name + ' (you have ' + progress.coins + ')', 1600); Sound.bump(); return; }
+    $('confirm-icon').innerHTML = $('bst-' + kind).querySelector('svg').outerHTML;
+    $('confirm-title').textContent = cur.free ? 'Use ' + b.name + ' for free?' : 'Spend ' + b.price + ' coins on ' + b.name + '?';
+    $('confirm-detail').textContent = b.desc + (b.how ? ' ' + b.how : '') + (cur.free ? ' (Test mode: unlimited coins.)' : '');
+    $('btn-confirm').innerHTML = cur.free ? 'Use free' : 'Spend <i class="coin"></i>' + b.price;
     $('btn-confirm').setAttribute('data-kind', kind);
-    $('shop-list').classList.add('hide');
-    $('shop-confirm').classList.add('show');
+    overlay('ov-shop', true);
   }
   function confirmBuy() {
     var kind = $('btn-confirm').getAttribute('data-kind');
@@ -763,28 +811,33 @@
     if (kind) $('boost-text').textContent = BOOSTERS[kind].name + ': ' + BOOSTERS[kind].how;
     (cur.carEls || []).forEach(function (el, i) {
       var ok = kind === 'tow' ? E.towable(cur.game, cur.state, i)
+        : kind === 'flip' ? E.flippable(cur.game, cur.state, i)
         : kind === 'nudge' ? (E.nudgeTo(cur.game, cur.state, i, FWD) !== null || E.nudgeTo(cur.game, cur.state, i, BACK) !== null) : false;
       el.classList.toggle('can-boost', !!kind && ok);
       el.classList.toggle('no-boost', !!kind && !ok);
     });
   }
+  function pushHist() { cur.history.push(cur.state); cur.gameHist.push(cur.game); }
   function applyBoost(kind, i, which) {
     if (!cur || cur.ended) return false;
     var b = BOOSTERS[kind], ns = E.applyBooster(cur.game, cur.state, kind, i, which);
     if (!ns) {
       if (i !== undefined && cur.carEls[i]) { var el0 = cur.carEls[i]; el0.classList.remove('bump-' + cur.game.cars[i].dir); void el0.offsetWidth; el0.classList.add('bump-' + cur.game.cars[i].dir); setTimeout(function () { el0.classList.remove('bump-' + cur.game.cars[i].dir); }, 420); }
-      toast(kind === 'tow' ? 'The bus still needs that letter' : 'No room to nudge that way', 1200);
+      toast(kind === 'tow' ? 'The bus still needs that letter' : kind === 'flip' ? 'That car can\'t flip' : 'No room to nudge that way', 1200);
       Sound.bump();
       return false;
     }
-    if (progress.coins < b.price) { toast('Not enough coins'); setBoostMode(null); return false; }
-    progress.coins -= b.price;
-    saveProgress();
+    if (!cur.free) {   // unlimited coins (test mode): free, the real balance is never touched
+      if (progress.coins < b.price) { toast('Not enough coins'); setBoostMode(null); return false; }
+      progress.coins -= b.price;
+      saveProgress();
+    }
     clearHint();
     cur.plan = null; cur.planOptimal = false; cur.pendingHint = false;
     $('btn-hint').classList.remove('thinking');
-    cur.history.push(cur.state);
+    pushHist();
     cur.state = ns;
+    if (kind === 'flip') cur.game = E.flipCar(cur.game, i);   // hint + dead-end search use the new direction
     cur.dead = false;
     $('deadend').classList.remove('show');
     setBoostMode(null);
@@ -794,6 +847,13 @@
       Sound.exit();
       setTimeout(function () { el.style.display = 'none'; el.classList.remove('towed'); }, 520);
       toast('Towed away!');
+    } else if (kind === 'flip') {
+      var fe = cur.carEls[i], fc = cur.game.cars[i];
+      fe.setAttribute('data-dir', fc.dir);
+      fe.setAttribute('aria-label', (fc.l === '?' ? 'wildcard taxi' : 'car ' + fc.l) + ' facing ' + fc.dir);
+      fe.classList.remove('flipping'); void fe.offsetWidth; fe.classList.add('flipping');
+      setTimeout(function () { fe.classList.remove('flipping'); }, 600);
+      Sound.slide(); toast('Flipped! Now facing ' + fc.dir);
     } else if (kind === 'nudge') {
       placeCar(i); Sound.slide(); toast('Nudged 1 cell');
     } else {
@@ -870,7 +930,7 @@
     e.preventDefault();
     var id = +el.getAttribute('data-id');
     var back = e.pointerType === 'mouse' && (e.button === 2 || e.shiftKey);
-    if (cur.boostMode === 'tow') { drag = { id: id, x: e.clientX, y: e.clientY, pid: e.pointerId, which: FWD, swiped: false, cancel: false, boost: 'tow' }; el.classList.add('pressed'); return; }
+    if (cur.boostMode === 'tow' || cur.boostMode === 'flip') { drag = { id: id, x: e.clientX, y: e.clientY, pid: e.pointerId, which: FWD, swiped: false, cancel: false, boost: cur.boostMode, tapOnly: true }; el.classList.add('pressed'); return; }
     drag = { id: id, x: e.clientX, y: e.clientY, pid: e.pointerId, which: back ? BACK : FWD, swiped: false, cancel: false, forced: back, boost: cur.boostMode };
     try { lotEl.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
     clearHint();
@@ -878,7 +938,7 @@
     showGhost(id, drag.which, false, drag.boost);
   });
   lotEl.addEventListener('pointermove', function (e) {
-    if (!drag || e.pointerId !== drag.pid || drag.boost === 'tow') return;
+    if (!drag || e.pointerId !== drag.pid || drag.tapOnly) return;
     var car = cur.game.cars[drag.id];
     var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     var along = car.horiz ? dx : dy, perp = car.horiz ? dy : dx;
@@ -910,14 +970,16 @@
   $('btn-restart').addEventListener('click', function () { if (cur) startLevel(cur.index); });
   $('btn-undo').addEventListener('click', undo);
   $('btn-hint').addEventListener('click', hint);
-  $('btn-shop').addEventListener('click', function () { Sound.unlock(); openShop(); });
-  $('btn-dead-shop').addEventListener('click', function () { openShop(); });
-  $('btn-shop-close').addEventListener('click', closeShop);
-  Object.keys(BOOSTERS).forEach(function (k) { $('buy-' + k).addEventListener('click', function () { askBuy(k); }); });
+  BOOSTER_ORDER.forEach(function (k) { $('bst-' + k).addEventListener('click', function () { Sound.unlock(); askBuy(k); }); });
+  $('btn-dead-shop').addEventListener('click', function () {   // show the booster bar under the dead-end banner
+    $('deadend').classList.remove('show');
+    var bar = $('booster-bar'); bar.classList.remove('attention'); void bar.offsetWidth; bar.classList.add('attention');
+    setTimeout(function () { bar.classList.remove('attention'); }, 1600);
+  });
   $('btn-confirm').addEventListener('click', confirmBuy);
-  $('btn-confirm-cancel').addEventListener('click', function () { $('shop-confirm').classList.remove('show'); $('shop-list').classList.remove('hide'); });
+  $('btn-confirm-cancel').addEventListener('click', function () { closeShop(); toast('No coins spent'); });
   $('btn-boost-cancel').addEventListener('click', function () { setBoostMode(null); toast('No coins spent'); });
-  $('btn-coach').addEventListener('click', function () { progress.seen.scramble = true; saveProgress(); overlay('ov-coach', false); if (cur && cur.scramble) showBanner(); });
+  $('btn-coach').addEventListener('click', function () { if (!(cur && cur.cheatOnly)) { progress.seen.scramble = true; saveProgress(); } overlay('ov-coach', false); if (cur && cur.scramble) showBanner(); });
   $('btn-howto').addEventListener('click', function () { overlay('ov-howto', true); });
   $('btn-howto-close').addEventListener('click', function () { overlay('ov-howto', false); });
   $('btn-dead-undo').addEventListener('click', function () {
@@ -933,15 +995,38 @@
   ['btn-win-menu', 'btn-lose-menu'].forEach(function (id) {
     $(id).addEventListener('click', function () { hideOverlays(); renderLevelGrid(); show('screen-title'); });
   });
-  $('btn-sound').addEventListener('click', function () { progress.sound = !progress.sound; saveProgress(); Sound.unlock(); renderLevelGrid(); });
-  $('btn-reset').addEventListener('click', function () {
-    if (!window.confirm('Reset all level progress?')) return;
+  /* ---------------- settings ---------------- */
+  function renderSettings() {
+    $('set-sound').checked = !!progress.sound;
+    var box = $('test-toggles');
+    if (!box.firstChild) {
+      TEST_TOGGLES.forEach(function (o) {
+        var row = document.createElement('div');
+        row.className = 'set-row';
+        row.innerHTML = '<span class="set-label"><b>' + o.label + '</b><small>' + o.desc + '</small></span><label class="switch"><input type="checkbox" role="switch" id="test-' + o.key + '" aria-label="' + o.label + '"><i></i></label>';
+        box.appendChild(row);
+        row.querySelector('input').addEventListener('change', function (e) { test[o.key] = e.target.checked; saveTest(); renderSettings(); renderLevelGrid(); });
+      });
+    }
+    TEST_TOGGLES.forEach(function (o) { $('test-' + o.key).checked = !!test[o.key]; });
+    $('btn-test-off').disabled = !testOn();
+    $('ov-settings').classList.toggle('test-on', testOn());
+    renderTestMode();
+  }
+  function openSettings() { $('reset-confirm').classList.remove('show'); renderSettings(); overlay('ov-settings', true); }
+  $('btn-settings').addEventListener('click', function () { Sound.unlock(); openSettings(); });
+  $('btn-settings-close').addEventListener('click', function () { overlay('ov-settings', false); renderLevelGrid(); });
+  $('set-sound').addEventListener('change', function (e) { progress.sound = e.target.checked; saveProgress(); Sound.unlock(); });
+  $('btn-test-off').addEventListener('click', function () { TEST_TOGGLES.forEach(function (o) { test[o.key] = false; }); saveTest(); renderSettings(); renderLevelGrid(); });
+  $('btn-reset').addEventListener('click', function () { $('reset-confirm').classList.add('show'); });
+  $('btn-reset-cancel').addEventListener('click', function () { $('reset-confirm').classList.remove('show'); });
+  $('btn-reset-yes').addEventListener('click', function () {
     progress = { v: PROGRESS_VERSION, unlocked: 0, stars: {}, best: {}, sound: progress.sound, coins: 0, seen: {} };
-    saveProgress(); renderLevelGrid();
+    saveProgress(); $('reset-confirm').classList.remove('show'); renderLevelGrid(); toast('Progress reset');
   });
   document.addEventListener('keydown', function (e) {
     if (!cur || !$('screen-game').classList.contains('active')) return;
-    if (e.key === 'Escape') { if (cur.boostMode) setBoostMode(null); closeShop(); return; }
+    if (e.key === 'Escape') { if (cur.boostMode) setBoostMode(null); else if ($('ov-shop').classList.contains('show')) toast('No coins spent'); closeShop(); return; }
     if ($('ov-shop').classList.contains('show') || $('ov-coach').classList.contains('show')) return;
     if (e.key === 'r' || e.key === 'R') startLevel(cur.index);
     else if (e.key === 'u' || e.key === 'U' || ((e.ctrlKey || e.metaKey) && e.key === 'z')) undo();
@@ -962,6 +1047,7 @@
     /** optimal remaining moves from the current state: [{car, which: 0 fwd | 1 back}] */
     solution: function () { return cur ? E.solve(cur.game, cur.state).path : null; },
     boosters: BOOSTERS,
+    get test() { return test; },
     idle: function () { return cur ? cur.chain : Promise.resolve(); },
     searching: function () { return !!(cur && cur.search); }
   };

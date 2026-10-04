@@ -15,24 +15,20 @@
 
   <!-- Title / level select -->
   <section id="screen-title" class="screen active" aria-label="Title">
+    <button id="btn-settings" class="icon-btn btn-settings" aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/><circle cx="12" cy="12" r="6.6"/></svg></button>
     <div class="title-wrap">
       <div class="logo" aria-hidden="true">
         <div class="logo-bus">
           <span>W</span><span>O</span><span>R</span><span>D</span>
-          <i class="wheel w1"></i><i class="wheel w2"></i>
+          <i class="hood" aria-hidden="true"><i class="bumper"></i></i><i class="pipe" aria-hidden="true"><i class="puff"></i><i class="puff p2"></i></i><i class="wheel w1"></i><i class="wheel w2"></i>
         </div>
       </div>
       <h1 class="title">Word Jam <b>Bus</b></h1>
       <p class="subtitle">Unjam the lot. Spell the word.</p>
-      <div class="coin-pill title-coins" aria-label="Coins"><i class="coin"></i><b id="title-coins">0</b></div>
+      <div class="title-row"><div class="coin-pill title-coins" aria-label="Coins"><i class="coin"></i><b id="title-coins">0</b></div><span class="test-badge" aria-label="Test mode is on">TEST MODE</span></div>
       <button id="btn-play" class="btn btn-big btn-go">Play</button>
       <h2 class="levels-h">Levels</h2>
       <div id="level-grid" class="level-grid"></div>
-      <div class="title-foot">
-        <button id="btn-howto" class="btn btn-small btn-ghost">How to play</button>
-        <button id="btn-sound" class="btn btn-small btn-ghost" aria-label="Toggle sound">Sound: on</button>
-        <button id="btn-reset" class="btn btn-small btn-ghost">Reset</button>
-      </div>
     </div>
   </section>
 
@@ -45,6 +41,7 @@
       <div class="hud-mid">
         <div id="hud-level" class="hud-level">Level 1</div>
         <div class="hud-moves">Moves <b id="hud-moves">0</b> <span class="par">/ Par <span id="hud-par">0</span></span></div>
+        <span class="test-badge" aria-label="Test mode is on">TEST MODE</span>
       </div>
       <button id="btn-undo" class="icon-btn" aria-label="Undo">
         <svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>
@@ -60,7 +57,7 @@
       <div id="bus" class="bus">
         <div id="word" class="word"></div>
         <span class="shuffle-badge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7h3.5c2 0 3 1 4.2 2.6l2.6 4.8C14.5 16 15.5 17 17.5 17H21"/><path d="M3 17h3.5c2 0 3-1 4.2-2.6"/><path d="M13.3 9.6C14.5 8 15.5 7 17.5 7H21"/><path d="M18 4l3 3-3 3"/><path d="M18 14l3 3-3 3"/></svg></span>
-        <i class="wheel w1"></i><i class="wheel w2"></i>
+        <i class="hood" aria-hidden="true"><i class="bumper"></i></i><i class="pipe" aria-hidden="true"><i class="puff"></i><i class="puff p2"></i></i><i class="wheel w1"></i><i class="wheel w2"></i>
       </div>
     </div>
 
@@ -77,9 +74,12 @@
 
     <footer class="foot">
       <div id="tip" class="tip"></div>
-      <div id="boost-bar" class="boost-bar" role="status"><span id="boost-text"></span><button id="btn-boost-cancel" class="btn btn-small">Cancel</button></div>
-      <button id="btn-shop" class="btn btn-small btn-shop" aria-label="Coins and boosters"><span class="coin-line"><i class="coin"></i><b id="coin-count">0</b></span><small>Boosters</small><span id="purse" class="purse">+0</span></button>
-      <button id="btn-hint" class="btn btn-small btn-hint">Hint <span id="hint-count" class="badge">3</span></button>
+      <div id="foot-bar" class="foot-bar">
+        <div id="coin-box" class="coin-box" aria-label="Coins"><i class="coin"></i><b id="coin-count">0</b><span id="purse" class="purse">+0</span></div>
+        <div id="booster-bar" class="booster-bar" role="toolbar" aria-label="Boosters"><button id="bst-tow" class="bst" data-kind="tow"><svg viewBox="0 0 24 24"><path d="M4 16V9.5L7.5 6H13v10"/><path d="M13 10h4l3 3v3h-7"/><circle cx="7.5" cy="17.5" r="2"/><circle cx="16.5" cy="17.5" r="2"/><path d="M4 9.5h4.5V6"/><path d="M2 4l5 5"/></svg><span class="bst-name">Tow</span><small class="bst-price"></small></button><button id="bst-bay" class="bst" data-kind="bay"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="12" height="12" rx="2.5" stroke-dasharray="3 2.4"/><path d="M19 4v6M16 7h6"/></svg><span class="bst-name">Bay +1</span><small class="bst-price"></small></button><button id="bst-nudge" class="bst" data-kind="nudge"><svg viewBox="0 0 24 24"><rect x="3" y="8" width="8" height="8" rx="2"/><path d="M14 12h7M18 9l3 3-3 3"/></svg><span class="bst-name">Nudge</span><small class="bst-price"></small></button><button id="bst-flip" class="bst" data-kind="flip"><svg viewBox="0 0 24 24"><path d="M5 9.5A7.5 7.5 0 0 1 18.4 7"/><path d="M19 3v4.4h-4.4"/><path d="M19 14.5A7.5 7.5 0 0 1 5.6 17"/><path d="M5 21v-4.4h4.4"/></svg><span class="bst-name">Flip</span><small class="bst-price"></small></button></div>
+        <button id="btn-hint" class="bst btn-hint" aria-label="Hint"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg><span class="bst-name">Hint</span><span id="hint-count" class="badge">3</span></button>
+        <div id="boost-bar" class="boost-bar" role="status"><span id="boost-text"></span><button id="btn-boost-cancel" class="btn btn-small">Cancel</button></div>
+      </div>
     </footer>
 
     <div id="deadend" class="deadend" aria-hidden="true">
@@ -99,7 +99,7 @@
   <div id="ov-win" class="overlay" aria-hidden="true">
     <div class="card">
       <div class="card-emoji" aria-hidden="true">
-        <div class="mini-bus"><i class="wheel w1"></i><i class="wheel w2"></i></div>
+        <div class="mini-bus"><i class="hood" aria-hidden="true"><i class="bumper"></i></i><i class="pipe" aria-hidden="true"><i class="puff"></i><i class="puff p2"></i></i><i class="wheel w1"></i><i class="wheel w2"></i></div>
       </div>
       <h2>Level complete!</h2>
       <div id="win-word" class="win-word"></div>
@@ -116,25 +116,39 @@
 
   <div id="ov-shop" class="overlay sheet" aria-hidden="true">
     <div class="card shop-card">
-      <div class="shop-head"><h2>Boosters</h2><div class="coin-pill"><i class="coin"></i><b id="shop-balance">0</b></div></div>
-      <div id="shop-list" class="shop-list">
-        <div class="shop-item"><div class="bi bi-tow" aria-hidden="true"></div><div class="bt"><b>Tow truck</b><span>Tow away a car the bus can do without (a wrong letter or a spare copy). +1 move.</span></div><button id="buy-tow" class="btn btn-small btn-buy"></button></div>
-        <div class="shop-item"><div class="bi bi-bay" aria-hidden="true">+1</div><div class="bt"><b>Bay +1</b><span>One extra holding-bay spot for the rest of this level.</span></div><button id="buy-bay" class="btn btn-small btn-buy"></button></div>
-        <div class="shop-item"><div class="bi bi-nudge" aria-hidden="true"></div><div class="bt"><b>Nudge</b><span>Move one car exactly one cell (forward or back). +1 move.</span></div><button id="buy-nudge" class="btn btn-small btn-buy"></button></div>
-        <p class="shop-note">Every level can be won at par without boosters. A level won with a booster earns at most 2&#9733;.</p>
-      </div>
-      <div id="shop-confirm" class="shop-confirm">
+      <div id="shop-confirm" class="shop-confirm show">
+        <div id="confirm-icon" class="confirm-icon" aria-hidden="true"></div>
         <h3 id="confirm-title">Spend?</h3>
         <p id="confirm-detail" class="detail"></p>
+        <p class="shop-note">Every level can be won at par without boosters. A level won with a booster earns at most 2&#9733;. Undo gives the coins back.</p>
         <div class="row"><button id="btn-confirm-cancel" class="btn btn-ghost">Cancel</button><button id="btn-confirm" class="btn btn-go">Spend</button></div>
       </div>
-      <button id="btn-shop-close" class="btn btn-ghost btn-small">Close</button>
+    </div>
+  </div>
+
+  <div id="ov-settings" class="overlay sheet" aria-hidden="true">
+    <div class="card settings-card" role="dialog" aria-labelledby="settings-h">
+      <div class="set-head"><h2 id="settings-h">Settings</h2><button id="btn-settings-close" class="btn btn-small btn-ghost">Done</button></div>
+      <div class="set-sec">
+        <div class="set-row"><span class="set-label"><b>Sound</b></span><label class="switch"><input type="checkbox" id="set-sound" role="switch"><i></i></label></div>
+        <div class="set-row"><span class="set-label"><b>How to play</b></span><button id="btn-howto" class="btn btn-small btn-ghost">Open</button></div>
+      </div>
+      <div class="set-sec set-test">
+        <h3>Test / cheat options</h3>
+        <p class="set-note">For testing only. While any of these is on, a <b>TEST MODE</b> tag shows, and nothing they make possible is saved: your real unlocks, stars and coins come back exactly when you turn them off.</p>
+        <div id="test-toggles"></div>
+        <button id="btn-test-off" class="btn btn-small btn-ghost">Turn all test options off</button>
+      </div>
+      <div class="set-sec set-danger">
+        <div class="set-row"><span class="set-label"><b>Reset progress</b><small>Clears all stars, unlocks and coins.</small></span><button id="btn-reset" class="btn btn-small btn-danger">Reset</button></div>
+        <div id="reset-confirm" class="reset-confirm"><p>Reset <b>all</b> progress and coins? This can't be undone.</p><div class="row"><button id="btn-reset-cancel" class="btn btn-small btn-ghost">Cancel</button><button id="btn-reset-yes" class="btn btn-small btn-danger">Yes, reset</button></div></div>
+      </div>
     </div>
   </div>
 
   <div id="ov-coach" class="overlay" aria-hidden="true">
     <div class="card coach-card">
-      <div class="coach-bus"><div id="coach-word" class="coach-word"></div><span class="shuffle-badge"><svg viewBox="0 0 24 24"><path d="M3 7h3.5c2 0 3 1 4.2 2.6l2.6 4.8C14.5 16 15.5 17 17.5 17H21"/><path d="M3 17h3.5c2 0 3-1 4.2-2.6"/><path d="M13.3 9.6C14.5 8 15.5 7 17.5 7H21"/><path d="M18 4l3 3-3 3"/><path d="M18 14l3 3-3 3"/></svg></span></div>
+      <div class="coach-bus"><div id="coach-word" class="coach-word"></div><i class="hood" aria-hidden="true"><i class="bumper"></i></i><i class="pipe" aria-hidden="true"><i class="puff"></i><i class="puff p2"></i></i><span class="shuffle-badge"><svg viewBox="0 0 24 24"><path d="M3 7h3.5c2 0 3 1 4.2 2.6l2.6 4.8C14.5 16 15.5 17 17.5 17H21"/><path d="M3 17h3.5c2 0 3-1 4.2-2.6"/><path d="M13.3 9.6C14.5 8 15.5 7 17.5 7H21"/><path d="M18 4l3 3-3 3"/><path d="M18 14l3 3-3 3"/></svg></span></div>
       <h2>Scramble stop!</h2>
       <p class="detail"><b>Any order!</b> On the purple bus every letter the word needs boards right away, into any open seat. Only wrong letters and extra copies wait in the junk bay.</p>
       <button id="btn-coach" class="btn btn-big btn-go">Got it</button>
