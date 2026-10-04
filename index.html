@@ -24,17 +24,14 @@
       </div>
       <h1 class="title">Word Jam <b>Bus</b></h1>
       <p class="subtitle">Unjam the lot. Spell the word.</p>
+      <div class="coin-pill title-coins" aria-label="Coins"><i class="coin"></i><b id="title-coins">0</b></div>
       <button id="btn-play" class="btn btn-big btn-go">Play</button>
-      <div class="howto">
-        <div><span class="dot">1</span><span><b>Tap</b> a car to drive it forward. <b>Swipe</b> it along its lane to slide it either way. Cars slide until they hit something.</span></div>
-        <div><span class="dot">2</span><span>A car leaves the lot only nose-first, when the lane ahead is clear. Letters board the bus in word order; wrong letters wait in the holding bay.</span></div>
-        <div><span class="dot">3</span><span>If a car leaves while the bay is full, the level fails.</span></div>
-      </div>
       <h2 class="levels-h">Levels</h2>
       <div id="level-grid" class="level-grid"></div>
       <div class="title-foot">
+        <button id="btn-howto" class="btn btn-small btn-ghost">How to play</button>
         <button id="btn-sound" class="btn btn-small btn-ghost" aria-label="Toggle sound">Sound: on</button>
-        <button id="btn-reset" class="btn btn-small btn-ghost">Reset progress</button>
+        <button id="btn-reset" class="btn btn-small btn-ghost">Reset</button>
       </div>
     </div>
   </section>
@@ -62,22 +59,26 @@
     <div id="bus-zone" class="bus-zone">
       <div id="bus" class="bus">
         <div id="word" class="word"></div>
+        <span class="shuffle-badge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7h3.5c2 0 3 1 4.2 2.6l2.6 4.8C14.5 16 15.5 17 17.5 17H21"/><path d="M3 17h3.5c2 0 3-1 4.2-2.6"/><path d="M13.3 9.6C14.5 8 15.5 7 17.5 7H21"/><path d="M18 4l3 3-3 3"/><path d="M18 14l3 3-3 3"/></svg></span>
         <i class="wheel w1"></i><i class="wheel w2"></i>
       </div>
     </div>
 
     <div id="lot-wrap" class="lot-wrap">
       <div id="lot" class="lot"></div>
+      <div id="banner" class="banner" aria-live="polite"></div>
+      <div id="boost-bar" class="boost-bar" role="status"><span id="boost-text"></span><button id="btn-boost-cancel" class="btn btn-small">Cancel</button></div>
     </div>
 
     <div id="bay-zone" class="bay-zone">
-      <div class="bay-label">Holding bay <span id="bay-count"></span></div>
+      <div class="bay-label"><span id="bay-name">Holding bay</span> <span id="bay-count"></span></div>
       <div id="bay" class="bay"></div>
     </div>
     </main>
 
     <footer class="foot">
       <div id="tip" class="tip"></div>
+      <button id="btn-shop" class="btn btn-small btn-shop" aria-label="Coins and boosters"><span class="coin-line"><i class="coin"></i><b id="coin-count">0</b></span><small>Boosters</small><span id="purse" class="purse">+0</span></button>
       <button id="btn-hint" class="btn btn-small btn-hint">Hint <span id="hint-count" class="badge">3</span></button>
     </footer>
 
@@ -85,6 +86,7 @@
       <div><b>Dead end!</b> These cars can't finish the word now.</div>
       <div class="row">
         <button id="btn-dead-undo" class="btn btn-small">Undo</button>
+        <button id="btn-dead-shop" class="btn btn-small btn-shop-s">Boosters</button>
         <button id="btn-dead-retry" class="btn btn-small btn-go">Retry</button>
       </div>
     </div>
@@ -103,11 +105,54 @@
       <div id="win-word" class="win-word"></div>
       <div id="win-stars" class="stars"></div>
       <p id="win-detail" class="detail"></p>
+      <p id="win-coins" class="win-coins"></p>
       <button id="btn-next" class="btn btn-big btn-go">Next level</button>
       <div class="row">
         <button id="btn-replay" class="btn btn-ghost">Replay</button>
         <button id="btn-win-menu" class="btn btn-ghost">Levels</button>
       </div>
+    </div>
+  </div>
+
+  <div id="ov-shop" class="overlay sheet" aria-hidden="true">
+    <div class="card shop-card">
+      <div class="shop-head"><h2>Boosters</h2><div class="coin-pill"><i class="coin"></i><b id="shop-balance">0</b></div></div>
+      <div id="shop-list" class="shop-list">
+        <div class="shop-item"><div class="bi bi-tow" aria-hidden="true"></div><div class="bt"><b>Tow truck</b><span>Tow away a car the bus can do without (a wrong letter or a spare copy). +1 move.</span></div><button id="buy-tow" class="btn btn-small btn-buy"></button></div>
+        <div class="shop-item"><div class="bi bi-bay" aria-hidden="true">+1</div><div class="bt"><b>Bay +1</b><span>One extra holding-bay spot for the rest of this level.</span></div><button id="buy-bay" class="btn btn-small btn-buy"></button></div>
+        <div class="shop-item"><div class="bi bi-nudge" aria-hidden="true"></div><div class="bt"><b>Nudge</b><span>Move one car exactly one cell (forward or back). +1 move.</span></div><button id="buy-nudge" class="btn btn-small btn-buy"></button></div>
+        <p class="shop-note">Every level can be won at par without boosters. A level won with a booster earns at most 2&#9733;.</p>
+      </div>
+      <div id="shop-confirm" class="shop-confirm">
+        <h3 id="confirm-title">Spend?</h3>
+        <p id="confirm-detail" class="detail"></p>
+        <div class="row"><button id="btn-confirm-cancel" class="btn btn-ghost">Cancel</button><button id="btn-confirm" class="btn btn-go">Spend</button></div>
+      </div>
+      <button id="btn-shop-close" class="btn btn-ghost btn-small">Close</button>
+    </div>
+  </div>
+
+  <div id="ov-coach" class="overlay" aria-hidden="true">
+    <div class="card coach-card">
+      <div class="coach-bus"><div id="coach-word" class="coach-word"></div><span class="shuffle-badge"><svg viewBox="0 0 24 24"><path d="M3 7h3.5c2 0 3 1 4.2 2.6l2.6 4.8C14.5 16 15.5 17 17.5 17H21"/><path d="M3 17h3.5c2 0 3-1 4.2-2.6"/><path d="M13.3 9.6C14.5 8 15.5 7 17.5 7H21"/><path d="M18 4l3 3-3 3"/><path d="M18 14l3 3-3 3"/></svg></span></div>
+      <h2>Scramble stop!</h2>
+      <p class="detail"><b>Any order!</b> On the purple bus every letter the word needs boards right away, into any open seat. Only wrong letters and extra copies wait in the junk bay.</p>
+      <button id="btn-coach" class="btn btn-big btn-go">Got it</button>
+    </div>
+  </div>
+
+  <div id="ov-howto" class="overlay" aria-hidden="true">
+    <div class="card howto-card">
+      <h2>How to play</h2>
+      <div class="howto">
+        <div><span class="dot">1</span><span><b>Tap</b> a car to drive it forward. <b>Swipe</b> it along its lane to slide it either way. Cars slide until they hit something.</span></div>
+        <div><span class="dot">2</span><span>A car leaves only nose-first, when the lane ahead is clear. Letters board the yellow bus in word order (seat 1, 2, 3...); wrong letters wait in the holding bay.</span></div>
+        <div><span class="dot">3</span><span>If a car leaves while the bay is full, the level fails.</span></div>
+        <div><span class="dot scr-dot">&#8644;</span><span><b>Scramble</b> stops (purple bus): letters board in any order.</span></div>
+        <div><span class="dot">W</span><span><b>Bay Word:</b> three wrong letters in the bay that spell a word (any order) leave for 10 bonus coins.</span></div>
+        <div><span class="dot"><i class="coin"></i></span><span>Finish a level to bank its fares (1 coin per letter, doubled at par). Spend coins on boosters, but you never need them.</span></div>
+      </div>
+      <button id="btn-howto-close" class="btn btn-go">OK</button>
     </div>
   </div>
 
@@ -123,6 +168,7 @@
   </div>
 </div>
 
+<script src="js/baywords.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/levels.js"></script>
 <script src="js/game.js"></script>
