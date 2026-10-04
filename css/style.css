@@ -87,7 +87,15 @@ button { font: inherit; color: inherit; touch-action: manipulation; cursor: poin
   position: relative; aspect-ratio: 5 / 4; border: 0; border-radius: 14px; background: #fff; font-weight: 900; font-size: 20px;
   box-shadow: 0 4px 0 rgba(0, 0, 0, .15); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
 }
-.lvl small { font-size: 10px; letter-spacing: 1px; color: #f0a800; }
+.lvl > span { line-height: 1; }
+/* Level-select stars: 16px SVGs (were 10px glyphs). Earned = solid gold with a darker
+   edge and a 1px drop shadow; not earned = a dim gray outline, so 1/2/3 read at a glance. */
+.lvl small.lvl-stars { display: flex; gap: 1px; height: 16px; line-height: 0; }
+.lvl .st { width: 16px; height: 16px; flex: 0 0 auto; overflow: visible; }
+.st path { stroke-linejoin: round; }
+.st.on path { fill: #ffc21a; stroke: #b86e00; stroke-width: 1.7; }
+.st.on { filter: drop-shadow(0 1px 0 rgba(120, 70, 0, .35)); }
+.st.off path { fill: rgba(31, 42, 68, .07); stroke: rgba(31, 42, 68, .32); stroke-width: 1.7; }
 .lvl.locked { background: rgba(255, 255, 255, .45); color: rgba(31, 42, 68, .45); }
 .lvl.current { outline: 3px solid var(--bus); }
 .lvl.done { background: #eafff2; }
@@ -244,15 +252,18 @@ button { font: inherit; color: inherit; touch-action: manipulation; cursor: poin
 .card h2 { margin: 0; font-size: 28px; }
 #ov-lose .card h2 { color: var(--red); }
 .detail { margin: 0; font-size: 15px; color: #49526a; line-height: 1.35; }
-.stars { display: flex; gap: 8px; font-size: 44px; line-height: 1; }
-.stars span { color: #dfe3ea; }
-.stars span.on { color: #ffc21a; text-shadow: 0 3px 0 #e39b00; animation: pop .4s ease-out backwards; }
-.stars span.on:nth-child(2) { animation-delay: .15s; } .stars span.on:nth-child(3) { animation-delay: .3s; }
+.stars { display: flex; gap: 6px; justify-content: center; line-height: 0; }
+.stars .st { width: 48px; height: 48px; overflow: visible; }
+.stars .st path { stroke-width: 1.4; }
+.stars .st.on { filter: drop-shadow(0 3px 0 #e39b00); animation: pop .4s ease-out backwards; }
+.stars .st.on:nth-child(2) { animation-delay: .15s; } .stars .st.on:nth-child(3) { animation-delay: .3s; }
 .win-word { font-size: 26px; font-weight: 900; letter-spacing: 4px; color: var(--go-dark); }
 .mini-bus { position: relative; width: 84px; height: 40px; border-radius: 10px 16px 8px 8px; background: var(--bus); box-shadow: inset 0 -6px 0 var(--bus-dark); margin-bottom: 8px; }
 .mini-bus .wheel { width: 16px; height: 16px; border-width: 4px; bottom: -7px; }
 
 @media (min-width: 700px) {
+  .lvl small.lvl-stars { height: 18px; }
+  .lvl .st { width: 18px; height: 18px; }
   #app { max-width: 620px; }
 }
 
@@ -409,6 +420,8 @@ button { font: inherit; color: inherit; touch-action: manipulation; cursor: poin
   .levels-h { margin: 6px 0 4px; font-size: 20px; }
   .level-grid { gap: 6px; }
   .lvl { aspect-ratio: 11 / 8; }
+  .lvl small.lvl-stars { height: 14px; }
+  .lvl .st { width: 14px; height: 14px; }
   .title-foot { margin-top: 10px; }
   .foot { padding-top: 6px; padding-bottom: calc(8px + var(--safe-bot)); min-height: 56px; }
 }

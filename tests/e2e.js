@@ -153,7 +153,9 @@ async function seeded(page, save) {
   return page.evaluate(() => ({
     open: [...document.querySelectorAll('.lvl')].filter(b => !b.disabled).map(b => +b.getAttribute('data-level')),
     current: +(document.querySelector('.lvl.current') || { getAttribute: () => 0 }).getAttribute('data-level'),
-    stars: [...document.querySelectorAll('.lvl')].map(b => b.querySelector('small').textContent),
+    stars: [...document.querySelectorAll('.lvl')].map(b => { const sm = b.querySelector('small'), n = sm.hasAttribute('data-stars') ? +sm.getAttribute('data-stars') : -1;
+      if (n < 0) return ''; if (sm.querySelectorAll('svg.st.on').length !== n || sm.querySelectorAll('svg.st').length !== 3) return 'MISMATCH';
+      return '\u2605\u2605\u2605'.slice(0, n) + '\u2606\u2606\u2606'.slice(0, 3 - n); }),
     play: document.getElementById('btn-play').textContent,
     stored: JSON.parse(localStorage.getItem('wordJamBus.progress.v1'))
   }));

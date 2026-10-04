@@ -104,6 +104,11 @@
   function hideOverlays() { ['ov-win', 'ov-lose', 'ov-shop', 'ov-coach', 'ov-howto'].forEach(function (id) { overlay(id, false); }); $('deadend').classList.remove('show'); }
 
   function starText(n) { return '\u2605\u2605\u2605'.slice(0, n) + '\u2606\u2606\u2606'.slice(0, 3 - n); }
+  // Crisp SVG stars (same shape on the level select and the win card): solid gold
+  // with a darker edge when earned, a dim outline when not.
+  var STAR_PATH = 'M12 2.4l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.2l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9z';
+  function starSvg(on) { return '<svg class="st ' + (on ? 'on' : 'off') + '" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="' + STAR_PATH + '"/></svg>'; }
+  function starIcons(n) { return [1, 2, 3].map(function (k) { return starSvg(k <= n); }).join(''); }
 
   function renderLevelGrid() {
     var grid = $('level-grid');
@@ -115,8 +120,8 @@
       var scr = lv.mode === 'scramble';
       b.className = 'lvl' + (locked ? ' locked' : '') + (stars ? ' done' : '') + (i === firstUnsolved() ? ' current' : '') + (scr ? ' scr' : '');
       b.setAttribute('data-level', i + 1);
-      b.innerHTML = '<span>' + (locked ? '\uD83D\uDD12' : (i + 1)) + '</span><small>' + (locked ? '' : starText(stars)) + '</small>' + (scr ? SHUFFLE_SVG.replace('<svg', '<svg class="lvl-scr"') : '');
-      b.setAttribute('aria-label', 'Level ' + (i + 1) + (scr ? ' (Scramble: any order)' : '') + (locked ? ' (locked)' : ''));
+      b.innerHTML = '<span>' + (locked ? '\uD83D\uDD12' : (i + 1)) + '</span>' + (locked ? '<small class="lvl-stars"></small>' : '<small class="lvl-stars" data-stars="' + stars + '">' + starIcons(stars) + '</small>') + (scr ? SHUFFLE_SVG.replace('<svg', '<svg class="lvl-scr"') : '');
+      b.setAttribute('aria-label', 'Level ' + (i + 1) + (scr ? ' (Scramble: any order)' : '') + (locked ? ' (locked)' : ', ' + stars + ' of 3 stars'));
       if (locked) b.disabled = true;
       b.addEventListener('click', function () { Sound.unlock(); startLevel(i); });
       grid.appendChild(b);
@@ -634,7 +639,8 @@
     $('bus').classList.add('drive-off');
     return wait(700).then(function () {
       $('win-word').textContent = cur.game.words.join(' \u2192 ');
-      $('win-stars').innerHTML = [1, 2, 3].map(function (n) { return '<span class="' + (n <= stars ? 'on' : '') + '">\u2605</span>'; }).join('');
+      $('win-stars').innerHTML = starIcons(stars);
+      $('win-stars').setAttribute('aria-label', stars + ' of 3 stars');
       $('win-stars').setAttribute('data-stars', stars);
       $('win-detail').textContent = 'Moves ' + moves + ' \u00b7 Par ' + par + (assisted ? ' \u00b7 Booster used (max 2\u2605)' : stars === 3 ? ' \u00b7 Perfect route!' : stars === 2 ? ' \u00b7 Close to par!' : ' \u00b7 Try for fewer moves.');
       var parts = ['fares ' + fares];
