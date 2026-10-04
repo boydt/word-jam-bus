@@ -23,6 +23,9 @@ Rules
     beyond the remaining need of that letter) that form a word from
     levels/baywords.json (any order) leave the bay. The check runs before
     the bay-full check: park, clear, then lose if the bay is over capacity.
+  v7:
+  * Keys and padlocks: a car with "lock": colour cannot move at all (no slide,
+    reverse or exit) while the car with "key": colour is still in the lot.
 
 Usage:
   python3 tools/wjb_solver.py levels/levels.json           # report
@@ -67,7 +70,13 @@ class Lot:
                     raise ValueError(f"car {i} overlaps at {cell}")
                 taken.add(cell)
             # position = offset of the head cell from its start, along (dr, dc)
-            self.cars.append({"unit": car["l"].upper(), "d": (dr, dc), "head": (car["r"], car["c"]), "n": n})
+            self.cars.append({"unit": car["l"].upper(), "d": (dr, dc), "head": (car["r"], car["c"]), "n": n,
+                              "key": car.get("key"), "lock": car.get("lock")})
+        keys = {c["key"]: i for i, c in enumerate(self.cars) if c["key"]}
+        for i, c in enumerate(self.cars):
+            if c["lock"] and c["lock"] not in keys:
+                raise ValueError(f"car {i}: no key car for its {c['lock']} padlock")
+            c["lock_by"] = keys[c["lock"]] if c["lock"] else None
         self.start = tuple(0 for _ in self.cars)
 
     def cells(self, i, off):
@@ -141,6 +150,8 @@ class Lot:
             if off is None:
                 continue
             car = self.cars[i]
+            if car["lock_by"] is not None and offs[car["lock_by"]] is not None:
+                continue  # padlocked: its key car has not left yet
             dr, dc = car["d"]
             for sgn in (1, -1):  # 1 = forward (toward the nose), -1 = reverse
                 cs = self.cells(i, off)

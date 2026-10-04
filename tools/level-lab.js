@@ -7,6 +7,14 @@
  *   node tools/level-lab.js --word ROCKET --grid 6 6 --bay 3 --empty 6 \
  *        --par 14 20 --tries 4000 --seed 7 [--chunk TH] [--wild 1] [--words BUS,STOP]
  *
+ * v7 keys and padlocks:
+ *   --keys gold:1,blue:2   one key car per colour + that many padlocked cars
+ *   --chain 1              the second colour's key car is padlocked by the first
+ *   --locktries 30         lock placements tried per lot
+ *   --gain 3               the locks must add at least this many moves to par
+ *   --scramble 1           solve as a Scramble level
+ *   --lockfirst 1          place padlocks first and solve the locked lot; solve lock-free (--basestates) only for lots in range
+ *
  * Everything it prints still has to pass tools/verify-levels.js.
  */
 'use strict';
@@ -32,6 +40,12 @@ var minRev = +arg('rev', 1, 1);
 var long3 = +arg('long3', 1, 0.15);
 var long2 = +arg('long2', 1, 0.4);
 var keep = +arg('keep', 1, 3);
+var keySpec = (arg('keys', 1, '') || '').split(',').filter(Boolean).map(function (t) { var a = t.split(':'); return { color: a[0], locks: +(a[1] || 1) }; });
+var chain = +arg('chain', 1, 0);
+var lockTries = +arg('locktries', 1, 30);
+var lockFirst = +arg('lockfirst', 1, 0), baseStates = +arg('basestates', 1, 2000000);
+var minGain = +arg('gain', 1, 3);
+var scramble = +arg('scramble', 1, 0);
 
 function rng() { // mulberry32
   seed = (seed + 0x6D2B79F5) | 0; var t = seed;
@@ -97,7 +111,29 @@ function candidate() {
   });
   var lv = { word: word, grid: [rows, cols], bay: bay, cars: cars };
   if (words) { delete lv.word; lv.words = words.split(','); }
+  if (scramble) lv.mode = 'scramble';
   return lv;
+}
+/** A copy of lv with random key / padlock placements per --keys (and --chain). */
+function withLocks(lv, early) {
+  var o = JSON.parse(JSON.stringify(lv)), idx = o.cars.map(function (_, i) { return i; }).sort(function () { return rng() - 0.5; }), at = 0;
+  if (early && rng() < 0.7) { // smart placement: padlocks on cars the lock-free optimum moves early, keys on cars it moves late (or never)
+    var late = idx.slice().sort(function (a, b) { return (early[b] === undefined ? 99 : early[b]) - (early[a] === undefined ? 99 : early[a]) + (rng() - 0.5) * 6; });
+    idx = [late[0]].concat(idx.filter(function (i) { return i !== late[0]; }).sort(function (a, b) { return (early[a] === undefined ? 99 : early[a]) - (early[b] === undefined ? 99 : early[b]) + (rng() - 0.5) * 4; }));
+    if (keySpec.length > 1) { var k2 = late[1] === idx[1] ? late[2] : late[1]; idx = [idx[0], k2].concat(idx.slice(1).filter(function (i) { return i !== k2; })); }
+  }
+  var keyCar = {};
+  keySpec.forEach(function (k) { keyCar[k.color] = idx[at++]; o.cars[keyCar[k.color]].key = k.color; });
+  keySpec.forEach(function (k) {
+    for (var q = 0; q < k.locks; q++) {
+      if (at >= idx.length) return;
+      o.cars[idx[at++]].lock = k.color;
+    }
+  });
+  if (chain && keySpec.length > 1) { // the chained key car is locked by colour 1, and colour 1's key is free
+    o.cars[keyCar[keySpec[1].color]].lock = keySpec[0].color;
+  }
+  return o;
 }
 
 function metrics(lv) {
@@ -116,21 +152,57 @@ function metrics(lv) {
     if (r.result === 'slide') { slides++; if (m.which === E.BACK) rev++; } else exits++;
     st = r.state;
   });
-  return { par: sol.par, states: sol.states, slides: slides, rev: rev, exits: exits, empty: grid[0] * grid[1] - g.cars.reduce(function (a, c) { return a + c.len; }, 0), cars: g.n };
+  return { path: sol.path, par: sol.par, states: sol.states, slides: slides, rev: rev, exits: exits, empty: grid[0] * grid[1] - g.cars.reduce(function (a, c) { return a + c.len; }, 0), cars: g.n };
 }
 
 var best = [];
-var why = { nocand: 0, free: 0, none: 0, limit: 0, par: 0, rev: 0 };
+var why = { nocand: 0, free: 0, none: 0, limit: 0, par: 0, rev: 0, gain: 0 };
 for (var i = 0; i < tries; i++) {
+  if (process.env.LAB_LOG && i % 25 === 0) console.error('try ' + i + ' ' + JSON.stringify(why));
   var lv = candidate();
   if (!lv) { why.nocand++; continue; }
   var m;
-  try { m = metrics(lv); } catch (e) { continue; }
+  if (keySpec.length && lockFirst) { // padlocks first (the locked lot is cheap to solve), the lock-free solve only for lots in range
+    m = null;
+    for (var lf = 0; lf < lockTries && !m; lf++) {
+      var lk2 = withLocks(lv, null), mk2;
+      try { mk2 = metrics(lk2); } catch (e) { continue; }
+      if (!mk2) continue;
+      if (mk2.par < parRange[0] || mk2.par > parRange[1]) { why.par++; continue; }
+      var nl = E.solve(E.prepare(lk2, { locks: false }), null, { maxStates: baseStates });
+      if (nl.par === null) { why[nl.status]++; continue; }
+      mk2.noLockPar = nl.par; mk2.gain = mk2.par - nl.par;
+      if (mk2.gain < minGain) { why.gain++; continue; }
+      m = mk2; lv = lk2;
+    }
+    if (!m) continue;
+  } else if (keySpec.length) {
+    var base;
+    try { base = metrics(lv); } catch (e) { continue; }
+    if (!base) continue;
+    var bestLock = null, early = {};
+    base.path.forEach(function (mv, k) { if (early[mv.car] === undefined) early[mv.car] = k; });
+    for (var lt = 0; lt < lockTries; lt++) {
+      var lk = withLocks(lv, early), mk;
+      try { mk = metrics(lk); } catch (e) { continue; }
+      if (!mk) continue;
+      mk.gain = mk.par - base.par; mk.noLockPar = base.par;
+      if (mk.gain < minGain) { why.gain++; continue; }
+      if (mk.par < parRange[0] || mk.par > parRange[1]) { why.par++; continue; }
+      if (!bestLock || mk.gain > bestLock.m.gain) bestLock = { m: mk, lv: lk };
+    }
+    if (!bestLock) continue;
+    lv = bestLock.lv; m = bestLock.m;
+  } else {
+    try { m = metrics(lv); } catch (e) { continue; }
+  }
   if (!m) continue;
   if (m.par < parRange[0] || m.par > parRange[1]) { why.par++; if (process.env.LAB_DEBUG) console.log('par', m.par); continue; }
   if (m.rev < minRev) { why.rev++; continue; }
-  m.score = m.par + m.rev * 2 + m.slides - m.states / 50000;
+  m.score = m.par + m.rev * 2 + m.slides - m.states / 50000 + (m.gain || 0) * 2;
+  delete m.path;
   best.push({ m: m, lv: lv });
+  if (process.env.LAB_LOG) console.error('found par ' + m.par + ' gain ' + m.gain + ' at try ' + i);
   best.sort(function (a, b) { return b.m.score - a.m.score; });
   best = best.slice(0, keep);
   var outFile = arg('out', 1, null);

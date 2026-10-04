@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /*
  * Rule tests for js/engine.js (Node, no dependencies): Scramble boarding,
- * Bay Word clearing (incl. before the bay-full loss), boosters, and a
- * randomised JS-vs-Python par cross-check on small lots with Bay Words.
+ * Bay Word clearing (incl. before the bay-full loss), boosters, keys and
+ * padlocks, and a randomised JS-vs-Python par cross-check on small lots
+ * with Bay Words and padlocks.
  *   node tests/rules.js            (add --no-py to skip the Python fuzz)
  */
 'use strict';
@@ -93,13 +94,57 @@ console.log('# Boosters');
   check(!E.flippable(gf2, ex.state, 0) && E.applyBooster(gf2, ex.state, 'flip', 0) === null, 'a car that has left the lot cannot be flipped');
 }
 
-console.log('# JS vs Python on random small lots with Bay Words');
+console.log('# Keys and padlocks');
+{
+  // row 1: K (gold key) faces right, free to exit; row 2: L (gold padlock) faces right, free lane but locked
+  const lv = { id: 'k', word: 'LK', grid: [3, 3], bay: 2, cars: [
+    { l: 'K', r: 1, c: 3, dir: 'right', key: 'gold' }, { l: 'L', r: 2, c: 3, dir: 'right', lock: 'gold' },
+    { l: 'M', r: 3, c: 2, dir: 'left', lock: 'gold' }, { l: 'X', r: 3, c: 1, dir: 'up' }] };
+  const g = E.prepare(lv), s0 = E.initialState(g);
+  check(g.cars[1].lockBy === 0 && g.cars[2].lockBy === 0 && g.hasLocks, 'prepare links each padlock to the key car of its colour');
+  check(E.isLocked(g, s0.pos, 1) && E.isLocked(g, s0.pos, 2) && !E.isLocked(g, s0.pos, 0), 'locked while the key car is in the lot');
+  const b = E.step(g, s0, 1, E.FWD), bb = E.step(g, s0, 1, E.BACK);
+  check(b.result === 'bump' && b.locked && b.key === 0 && !b.state && bb.result === 'bump' && bb.locked, 'a padlocked car cannot exit or reverse (bump, locked, names the key car; no move)');
+  check(E.probe(g, E.buildGrid(g, s0.pos), s0.pos, 1, E.FWD).locked === true, 'probe (preview) reports the padlock');
+  const k = E.step(g, s0, 0, E.FWD);
+  check(k.result === 'bay' && String(k.unlocked) === '1,2', 'the key car exits (to the bay) and reports the locks it opens: one key opens every lock of its colour');
+  check(!E.isLocked(g, k.state.pos, 1) && !E.isLocked(g, k.state.pos, 2), 'after the key car leaves, both gold locks are open');
+  const l = E.step(g, k.state, 1, E.FWD);
+  check(l.result === 'fill' && l.state.idx === 2 && l.won, 'the unlocked car now drives out (L boards, K auto-boards from the bay: won)');
+  check(E.isLocked(g, s0.pos, 1), 'undo = the previous state: the key car is back, so the lock is back');
+  check(E.solve(g).par === 2 && E.solve(E.prepare(lv, { locks: false })).par === 2, 'solver: par 2 (key first)');
+  // a chain: blue key car is itself padlocked gold
+  const ch = { id: 'c', word: 'ABC', grid: [3, 3], bay: 3, cars: [
+    { l: 'C', r: 1, c: 3, dir: 'right', key: 'gold' }, { l: 'B', r: 2, c: 3, dir: 'right', key: 'blue', lock: 'gold' }, { l: 'A', r: 3, c: 3, dir: 'right', lock: 'blue' }] };
+  const gc = E.prepare(ch);
+  const ignore = E.solve(E.prepare(ch, { locks: false })).par, real = E.solve(gc);
+  check(ignore === 3 && real.par === 3 && String(real.path.map(m => m.car)) === '0,1,2', 'chain gold -> blue -> A: the only line is C, B, A (bay holds C and B)');
+  const ch2 = Object.assign({}, ch, { bay: 1 });
+  check(E.solve(E.prepare(ch2)).par === null && E.solve(E.prepare(ch2, { locks: false })).par === 3, 'with a 1-spot bay the chain is unwinnable, though ignoring locks it is 3: the solver respects locks');
+  const bad = (cars, msg) => { let t = false; try { E.prepare({ id: 'x', word: 'A', grid: [3, 3], bay: 1, cars }); } catch (e) { t = /key|padlock|lock/.test(e.message); } check(t, msg); };
+  bad([{ l: 'A', r: 1, c: 1, dir: 'up', lock: 'blue' }], 'a padlock with no key car of its colour is rejected');
+  bad([{ l: 'A', r: 1, c: 1, dir: 'up', key: 'gold', lock: 'gold' }], 'a key car locked by its own key is rejected');
+  bad([{ l: 'A', r: 1, c: 1, dir: 'up', key: 'gold', lock: 'blue' }, { l: 'B', r: 1, c: 2, dir: 'up', key: 'blue', lock: 'gold' }], 'a padlock cycle (gold <-> blue) is rejected');
+  bad([{ l: 'A', r: 1, c: 1, dir: 'up', key: 'gold' }, { l: 'B', r: 1, c: 2, dir: 'up', key: 'gold' }], 'two key cars of one colour are rejected');
+  bad([{ l: 'A', r: 1, c: 1, dir: 'up', key: 'red' }], 'an unknown key colour is rejected');
+  // boosters
+  check(!E.towable(g, s0, 1) && !E.towable(g, s0, 0) && E.towable(g, s0, 3), 'tow: refuses a padlocked car and the key car; a plain decoy is fine');
+  const gn = E.prepare({ id: 'n', word: 'A', grid: [1, 4], bay: 1, cars: [{ l: 'K', r: 1, c: 4, dir: 'right', key: 'pink' }, { l: 'A', r: 1, c: 2, dir: 'left', lock: 'pink' }] });
+  const sn = E.initialState(gn);
+  check(E.nudgeTo(gn, sn, 1, E.BACK) === null && E.applyBooster(gn, sn, 'nudge', 1, E.BACK) === null, 'nudge: refused on a padlocked car (it has room)');
+  check(!E.flippable(gn, sn, 1) && E.applyBooster(gn, sn, 'flip', 1) === null && E.flippable(gn, sn, 0), 'flip: refused on a padlocked car; the key car can flip');
+  const sn2 = E.step(gn, sn, 0, E.FWD).state;
+  check(E.nudgeTo(gn, sn2, 1, E.BACK) === 2 && E.flippable(gn, sn2, 1), 'once unlocked, nudge and flip work on it');
+  check(E.applyBooster(gn, sn, 'bay') !== null, 'Bay +1 is unaffected by locks');
+}
+
+console.log('# JS vs Python on random small lots with Bay Words and padlocks');
 if (process.argv.indexOf('--no-py') === -1) {
   let seed = 7;
   const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
   const lots = [];
   const words = ['TEN', 'MAP', 'SUN', 'BEE', 'TOOT'];
-  for (let k = 0; lots.length < 60 && k < 4000; k++) {
+  for (let k = 0; lots.length < 90 && k < 6000; k++) {
     const word = words[k % words.length], occ = new Set(), cars = [];
     for (let q = 0; q < 40 && cars.length < 9; q++) {
       const dir = ['up', 'down', 'left', 'right'][Math.floor(rnd() * 4)], r = 1 + Math.floor(rnd() * 4), c = 1 + Math.floor(rnd() * 4), len = rnd() < 0.25 ? 2 : 1;
@@ -109,9 +154,14 @@ if (process.argv.indexOf('--no-py') === -1) {
       const car = { l: 'AEOCTPDGN'[Math.floor(rnd() * 9)], r, c, dir }; if (len === 2) car.len = 2; cars.push(car);
     }
     word.split('').forEach((ch, i) => { if (cars[i]) cars[i].l = ch; });
+    if (k % 3 !== 2 && cars.length >= 4) { // keys and padlocks on two lots in three: a gold key, 1-2 gold locks, sometimes a blue chain
+      const order = cars.map((_, i) => i).sort(() => rnd() - 0.5);
+      cars[order[0]].key = 'gold'; cars[order[1]].lock = 'gold'; if (rnd() < 0.5) cars[order[2]].lock = 'gold';
+      if (rnd() < 0.4 && cars.length >= 5) { cars[order[1]].key = 'blue'; cars[order[3]].lock = 'blue'; }
+    }
     const lv = { id: 'f' + k, word, grid: [4, 4], bay: 1 + (k % 3), cars };
     if (k % 2) lv.mode = 'scramble';
-    try { const g = E.prepare(lv); const sol = E.solve(g, null, { maxStates: 200000 }); if (sol.status === 'limit') continue; lv.par = sol.par; lv.withWords = E.explore(g, 200000).bayWords; } catch (e) { continue; }
+    try { const g = E.prepare(lv); const sol = E.solve(g, null, { maxStates: 200000 }); if (sol.status === 'limit') continue; lv.par = sol.par; lv.noLockPar = E.solve(E.prepare(lv, { locks: false }), null, { maxStates: 200000 }).par; lv.withWords = E.explore(g, 200000).bayWords; } catch (e) { continue; }
     lots.push(lv);
   }
   const tmp = path.join(os.tmpdir(), 'wjb-fuzz.json');
@@ -121,7 +171,8 @@ if (process.argv.indexOf('--no-py') === -1) {
   const parsePar = l => { const m = /par=(\w+)/.exec(l); return m ? (m[1] === 'None' ? null : +m[1]) : 'x'; };
   const agree = lots.every((lv, i) => parsePar(lines[i]) === lv.par);
   const withWord = lots.filter(lv => Object.keys(lv.withWords || {}).length).length;
-  check(lines.length === lots.length && agree, 'Python solver agrees with js/engine.js on ' + lots.length + ' random lots (' + lots.filter(l => l.mode).length + ' scramble, ' +
+  const locked = lots.filter(lv => lv.cars.some(c => c.lock)), lockMatters = locked.filter(lv => lv.par !== lv.noLockPar).length;
+  check(lines.length === lots.length && agree, 'Python solver agrees with js/engine.js on ' + lots.length + ' random lots (' + locked.length + ' with padlocks, ' + lockMatters + ' where the locks change par, ' + lots.filter(l => l.mode).length + ' scramble, ' +
     withWord + ' with a reachable Bay Word, ' + lots.filter(l => l.par === null).length + ' unsolvable)');
   if (!agree) lots.forEach((lv, i) => { if (parsePar(lines[i]) !== lv.par) console.log('    ' + lv.id + ' js ' + lv.par + ' / ' + lines[i]); });
 } else console.log('  (skipped)');

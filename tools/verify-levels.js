@@ -35,6 +35,12 @@
  *    breather (par below the previous route level's par, but at least 60% of
  *    it); at least 3 route levels sit between Scramble levels, the first one
  *    has a tip and comes after the starter levels.
+ * Keys and padlocks (v7, any level with a "lock"): the locks really matter
+ *    (ignoring them the lot is at least 2 moves faster, so the padlocks block
+ *    the naive line); the first level with padlocks has teaches "keys" and a
+ *    tip that mentions the key; a core level that teaches a new mechanic
+ *    starts a new difficulty ramp (it is exempt from the 75% rule and the
+ *    ramp continues from its par).
  * Bay Word (every level): par with the Bay Word rule equals par without it,
  * so a Bay Word is never needed for 3 stars; reachable Bay Words are listed.
  * Boosters are never part of these proofs: every par is booster-free.
@@ -101,6 +107,7 @@ function restricted(g, opts, full) {
 function worse(p, par) { return p === null || p > par; }
 
 var seenIds = {};
+var firstLockSeen = false;
 var coreSeen = 0;
 levels.forEach(function (lv, n) {
   var problems = [];
@@ -110,7 +117,7 @@ levels.forEach(function (lv, n) {
   try { g = E.prepare(lv); } catch (e) { problems.push(e.message); }
   var tier = lv.tier || 'core';
   var scr = lv.mode === 'scramble';
-  var row = { n: n + 1, id: lv.id, word: name, grid: lv.grid.join('x'), bay: lv.bay, tier: tier, mode: scr ? 'scramble' : 'route', teaches: lv.teaches || '' };
+  var row = { n: n + 1, id: lv.id, word: name, grid: lv.grid.join('x'), bay: lv.bay, tier: tier, mode: scr ? 'scramble' : 'route', teaches: lv.teaches || '', debut: tier === 'core' && !!lv.teaches };
   var coreIdx = tier === 'core' && !scr ? coreSeen++ : -1;
   if (g) {
     var t0 = Date.now();
@@ -142,6 +149,17 @@ levels.forEach(function (lv, n) {
       var noWord = E.solve(E.prepare(lv, { bayWords: false }));
       row.noBayWordPar = noWord.par;
       if (noWord.par !== sol.par) problems.push('par depends on the Bay Word rule (' + noWord.par + ' without it, ' + sol.par + ' with it)');
+      if (g.hasLocks) {
+        var noLock = E.solve(E.prepare(lv, { locks: false }));
+        row.noLockPar = noLock.par;
+        row.locks = Object.keys(g.keys).map(function (k) { var kc = g.cars[g.keys[k]]; return k + ' key ' + kc.l + (kc.lock ? ' (padlocked ' + kc.lock + ')' : '') + ' -> ' + g.cars.filter(function (c) { return c.lock === k; }).map(function (c) { return c.l; }).join(''); }).join('; ');
+        if (noLock.par === null || noLock.par > sol.par - 2) problems.push('padlocks barely matter: ignoring them par is ' + noLock.par + ' (want <= ' + (sol.par - 2) + ')');
+        if (!firstLockSeen) {
+          firstLockSeen = true;
+          if (lv.teaches !== 'keys') problems.push('the first level with padlocks should have teaches: "keys"');
+          if (!lv.tip || !/key/i.test(lv.tip)) problems.push('the first level with padlocks needs a tip about the key');
+        }
+      }
       if (scr) {
         if (tier !== 'core') problems.push('scramble levels belong to the core tier');
         if (slides < 1) problems.push('trivial: optimal solution needs no slides');
@@ -192,6 +210,7 @@ levels.forEach(function (lv, n) {
     ' bay ' + row.bay + ' (min ' + row.minBay + ') par ' + row.par + ' [slides ' + row.slides + ', reverse ' + row.reverse + ', exits ' + row.exits +
     '] fwd-only ' + row.fwdOnlyPar + ' | reachable ' + (row.reachable || '?') + ', dead ' + (row.dead === undefined ? '?' : row.dead) +
     ', losing first moves ' + (row.losingFirstMoves || '?') + (tier === 'starter' ? ', loss possible ' + (row.canLose ? 'yes' : 'no') + ', no-slide par ' + row.noSlidePar + ', no-bay par ' + row.noBayPar : '') +
+    (row.locks ? ' | KEYS ' + row.locks + ', par ignoring padlocks ' + row.noLockPar : '') +
     ' | Bay Words reachable: ' + (row.bayWords || 'none') + ', par without Bay Word ' + row.noBayWordPar +
     ' | BFS-to-win states ' + row.states + ' (' + row.ms + ' ms)');
   problems.forEach(function (p) { console.log('   PROBLEM: ' + p); });
@@ -201,6 +220,7 @@ levels.forEach(function (lv, n) {
 // core tier: par of each level >= 75% of the previous core max (small dips allowed)
 var maxPar = 0;
 table.filter(function (r) { return r.tier === 'core' && r.mode === 'route'; }).forEach(function (r) {
+  if (r.debut && maxPar) { console.log('[OK] L' + r.n + ' ' + r.word + ' debuts "' + r.teaches + '": a new ramp starts at par ' + r.par + ' (after max ' + maxPar + ')'); maxPar = r.par || 0; return; }
   if (r.par && r.par < Math.floor(maxPar * 0.75)) { failures++; console.log('[FAIL] L' + r.n + ' par ' + r.par + ' drops far below earlier par ' + maxPar); }
   maxPar = Math.max(maxPar, r.par || 0);
 });

@@ -36,6 +36,21 @@
  *  - Boosters (UI-only helpers, never needed to win): tow a spare car away,
  *    +1 bay spot for the level, nudge a car exactly one cell. They change
  *    the state (state.cap, state.used) and every search re-runs from there.
+ *
+ * v7: keys and padlocks
+ *  - A car may carry a key ("key": colour) and/or a padlock ("lock": colour);
+ *    colours are KEY_COLORS (gold / blue / pink; the UI also gives each its own
+ *    shape: circle / triangle / square, so colour is never the only cue).
+ *  - A padlocked car cannot move at all (no slide, reverse or exit) while the
+ *    key car of its colour is still in the lot. When the key car exits, every
+ *    lock of that colour opens for good. One key car per colour; it opens all
+ *    locks of its colour. A key car may itself be padlocked by another colour
+ *    (a chain), never by its own colour and never in a cycle.
+ *  - Lock state is derived from "has the key car left?" (its pos is -1), so it
+ *    adds no solver state, and undoing the key car's exit re-locks.
+ *  - Tapping a locked car is a bump: { result:'bump', locked:true, key }.
+ *  - Boosters: Tow, Nudge and Flip refuse a locked car; Tow also refuses a key
+ *    car (towing it would open its locks for free). Bay +1 is unaffected.
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -44,6 +59,7 @@
   'use strict';
 
   var DIRS = { up: [-1, 0], down: [1, 0], left: [0, -1], right: [0, 1] };
+  var KEY_COLORS = ['gold', 'blue', 'pink'];
   var FWD = 0, BACK = 1;
   var BAYWORDS = (typeof module === 'object' && module.exports) ? require('./baywords.js')
     : (typeof self !== 'undefined' && self.WJB_BAYWORDS) || [];
@@ -97,10 +113,33 @@
         id: i, l: String(raw.l == null ? '' : raw.l).toUpperCase(), dir: raw.dir, len: len,
         horiz: horiz, sign: sign, lane: horiz ? raw.r - 1 : raw.c - 1,
         span: horiz ? cols : rows, start: Math.min.apply(null, along),
-        r: raw.r, c: raw.c
+        r: raw.r, c: raw.c,
+        key: raw.key || null, lock: opts.locks === false ? null : (raw.lock || null), lockBy: -1
       };
     });
     cars.forEach(function (c, i) { if (c && !c.l) errors.push('car ' + i + ' has no letter'); });
+    // keys and padlocks
+    var keys = {};
+    cars.forEach(function (c, i) {
+      if (!c) return;
+      if (c.key) {
+        if (KEY_COLORS.indexOf(c.key) === -1) errors.push('car ' + i + ' bad key colour ' + c.key);
+        else if (keys[c.key] !== undefined) errors.push('two ' + c.key + ' key cars (' + keys[c.key] + ' and ' + i + ')');
+        else keys[c.key] = i;
+      }
+      if (c.lock && KEY_COLORS.indexOf(c.lock) === -1) errors.push('car ' + i + ' bad lock colour ' + c.lock);
+    });
+    cars.forEach(function (c, i) {
+      if (!c || !c.lock || KEY_COLORS.indexOf(c.lock) === -1) return;
+      if (keys[c.lock] === undefined) errors.push('car ' + i + ' has a ' + c.lock + ' padlock but there is no ' + c.lock + ' key car');
+      else if (keys[c.lock] === i) errors.push('car ' + i + ' is locked by its own key');
+      else c.lockBy = keys[c.lock];
+    });
+    cars.forEach(function (c, i) { // no cycles: follow lockBy from each car
+      if (!c) return;
+      var seen = {}, x = i;
+      while (x >= 0 && cars[x]) { if (seen[x]) { errors.push('padlock cycle through car ' + i); break; } seen[x] = 1; x = cars[x].lockBy; }
+    });
     var mode = level.mode === 'scramble' ? 'scramble' : 'route';
     if (level.mode && level.mode !== 'scramble' && level.mode !== 'route') errors.push('unknown mode ' + level.mode);
     if (mode === 'scramble') {
@@ -114,6 +153,7 @@
     return {
       level: level, rows: rows, cols: cols, target: target, words: wordsOf(level),
       cap: level.bay, cars: cars, n: cars.length, mode: mode, scramble: mode === 'scramble',
+      keys: keys, hasLocks: cars.some(function (c) { return c && c.lockBy >= 0; }),
       seats: seats, full: (1 << target.length) - 1,
       dict: opts.bayWords === false ? null : (opts.dict ? buildDict(opts.dict) : DICT)
     };
@@ -208,16 +248,28 @@
     return grid;
   }
 
+  /** Padlocked right now? (its key car is still in the lot) */
+  function isLocked(game, pos, i) { var k = game.cars[i].lockBy; return k >= 0 && pos[k] >= 0; }
+  /** Cars car i unlocks when it exits (padlocks of its key colour still in the lot). */
+  function locksOf(game, pos, i) {
+    var out = [], c = game.cars[i];
+    if (!c.key) return out;
+    for (var j = 0; j < game.n; j++) if (game.cars[j].lockBy === i && pos[j] >= 0) out.push(j);
+    return out;
+  }
+
   /**
    * Where would car i go? Returns
    *   { kind:'exit' }                       forward, path fully clear
    *   { kind:'slide', dist, by }            slides dist cells, stops at car `by` (or edge, by = -1)
    *   { kind:'bump', by }                   cannot move at all
+   *   { kind:'bump', by:-1, locked:true, key } padlocked (key car `key` is still in the lot)
    * `which` is FWD (toward the nose) or BACK.
    */
   function probe(game, grid, pos, i, which) {
     var car = game.cars[i], p = pos[i];
     if (p < 0) return { kind: 'gone' };
+    if (car.lockBy >= 0 && pos[car.lockBy] >= 0) return { kind: 'bump', by: -1, locked: true, key: car.lockBy };
     var s = which === FWD ? car.sign : -car.sign;
     var edgeCoord = s > 0 ? p + car.len - 1 : p;   // leading cell in the moving direction
     var x = edgeCoord + s, k = 0;
@@ -262,7 +314,7 @@
     if (state.pos[i] < 0) return { result: 'gone' };
     grid = grid || buildGrid(game, state.pos);
     var pr = probe(game, grid, state.pos, i, which);
-    if (pr.kind === 'bump') return { result: 'bump', by: pr.by, which: which };
+    if (pr.kind === 'bump') return pr.locked ? { result: 'bump', by: -1, which: which, locked: true, key: pr.key } : { result: 'bump', by: pr.by, which: which };
     var s = cloneState(state);
     s.moves++;
     var car = game.cars[i];
@@ -273,7 +325,7 @@
     // exit
     var u = car.l;
     s.pos[i] = -1;
-    var out = { state: s, unit: u, slot: s.idx, auto: [], cleared: [], which: which, dist: pr.dist };
+    var out = { state: s, unit: u, slot: s.idx, auto: [], cleared: [], which: which, dist: pr.dist, unlocked: locksOf(game, state.pos, i) };
     var seat = game.scramble ? seatFor(game, s.mask, u) : -1;
     if (game.scramble ? seat >= 0 : (u === '?' || game.target.substr(s.idx, u.length) === u)) {
       out.result = 'fill';
@@ -300,10 +352,12 @@
   }
 
   /* ---------------------------- boosters ---------------------------- */
-  /** Tow truck: only a single-letter car the bus can do without (a decoy or a spare copy). */
+  /** Tow truck: only a single-letter car the bus can do without (a decoy or a spare copy);
+   *  never a padlocked car, and never a key car (that would open its locks for free). */
   function towable(game, state, i) {
     var car = game.cars[i];
     if (state.pos[i] < 0 || car.l.length !== 1 || car.l === '?') return false;
+    if (car.key || isLocked(game, state.pos, i)) return false;
     var need = needOf(game, state.idx, state.mask || 0)[car.l] || 0;
     if (!need) return true;
     var supply = 0;
@@ -320,7 +374,7 @@
    * (1-cell cars, long trucks, chunk trucks and the taxi alike).
    */
   var OPPOSITE = { up: 'down', down: 'up', left: 'right', right: 'left' };
-  function flippable(game, state, i) { return state.pos[i] >= 0 && !!game.cars[i]; }
+  function flippable(game, state, i) { return state.pos[i] >= 0 && !!game.cars[i] && !isLocked(game, state.pos, i); }
   function flipCar(game, i) {
     var g = {}, k;
     for (k in game) if (Object.prototype.hasOwnProperty.call(game, k)) g[k] = game[k];
@@ -360,7 +414,7 @@
   /** Nudge: exactly one cell along the car's axis into an empty cell of the lot (never exits). */
   function nudgeTo(game, state, i, which) {
     var p = state.pos[i];
-    if (p < 0) return null;
+    if (p < 0 || isLocked(game, state.pos, i)) return null;
     var car = game.cars[i], sg = (which === BACK || which === 'back') ? -car.sign : car.sign;
     var lead = sg > 0 ? p + car.len - 1 : p, x = lead + sg;
     if (x < 0 || x >= car.span) return null;
@@ -407,6 +461,8 @@
     var maxStates = opts.maxStates || Infinity;
     var wMax = opts.forwardOnly ? 1 : 2;
     var cars = game.cars;
+    var lockBy = new Int16Array(n);
+    for (var lb = 0; lb < n; lb++) lockBy[lb] = cars[lb].lockBy;
     var size = 4096;
     // prog = word index (route) or filled-seat mask (scramble)
     var posBuf = new Int8Array(size * n), progBuf = new Uint16Array(size), bayBuf = new Uint16Array(size);
@@ -525,6 +581,7 @@
         for (var i = 0; i < n; i++) {
           var p = pos[i];
           if (p < 0) continue;
+          if (lockBy[i] >= 0 && pos[lockBy[i]] >= 0) continue;   // padlocked: its key car is still here
           var car = cars[i];
           for (var w = 0; w < wMax; w++) {
             var sgn = w === 0 ? car.sign : -car.sign;
@@ -626,6 +683,11 @@
     var out = ['    '];
     for (var c2 = 1; c2 <= game.cols; c2++) out[0] += ' c' + c2;
     grid.forEach(function (row, r) { out.push(('r' + (r + 1) + '   ').slice(0, 4) + row.join('')); });
+    game.cars.forEach(function (car, i) {
+      if (pos[i] < 0 || !(car.key || car.lock)) return;
+      var h = headCell(game, i, pos[i]);
+      out.push('    ' + car.l + '@r' + h.r + 'c' + h.c + (car.key ? ' carries the ' + car.key + ' key' : '') + (car.key && car.lock ? ',' : '') + (car.lock ? ' padlocked ' + car.lock : ''));
+    });
     return out.join('\n');
   }
 
@@ -644,6 +706,7 @@
     isWon: isWon, sweepBay: sweepBay, eligibleBay: eligibleBay, needOf: needOf, seatFor: seatFor,
     towable: towable, applyBooster: applyBooster, nudgeTo: nudgeTo, boosted: boosted, capOf: capOf,
     flippable: flippable, flipCar: flipCar,
+    KEY_COLORS: KEY_COLORS, isLocked: isLocked, locksOf: locksOf,
     BAYWORDS: BAYWORDS
   };
 });
