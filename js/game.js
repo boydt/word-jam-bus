@@ -325,6 +325,16 @@
     el.style.width = b.width + 'px'; el.style.height = b.height + 'px';
   }
 
+  /** Point car i's graphic (nose arrow, headlights, windshield, tail lights) the way the CURRENT game model says it faces.
+   *  The only place the chassis rotation is set, so a rerender after a Flip can't fall back to an old direction. */
+  function orientCar(i, angle) {
+    var el = cur.carEls[i], ch = el && el.querySelector('.chassis');
+    if (!ch) return;
+    var a = angle === undefined ? ANGLE[cur.game.cars[i].dir] : angle;
+    ch.style.transform = 'translate(-50%, -50%) rotate(' + a + 'deg)';
+    el.setAttribute('data-dir', cur.game.cars[i].dir);
+  }
+
   function layout() {
     if (!cur) return;
     var g = cur.game;
@@ -354,7 +364,7 @@
       var ch = el.querySelector('.chassis');
       ch.style.width = (car.len * cell - pad * 2) + 'px';
       ch.style.height = (cell - pad * 2) + 'px';
-      ch.style.transform = 'translate(-50%, -50%) rotate(' + ANGLE[car.dir] + 'deg)';
+      orientCar(i);
     });
     void lot.offsetWidth;
     lot.classList.remove('no-anim');
@@ -859,11 +869,20 @@
       setTimeout(function () { el.style.display = 'none'; el.classList.remove('towed'); }, 520);
       toast('Towed away!');
     } else if (kind === 'flip') {
-      var fe = cur.carEls[i], fc = cur.game.cars[i];
-      fe.setAttribute('data-dir', fc.dir);
+      // v6b: the chassis itself turns 180deg and STAYS turned (the old keyframe spun the whole car and ended back at 0deg,
+      // while the chassis rotation was only ever set in layout(), so the graphic snapped back to the old direction).
+      var fe = cur.carEls[i], fc = cur.game.cars[i], fromA = ANGLE[OPP[fc.dir]], fch = fe.querySelector('.chassis');
       fe.setAttribute('aria-label', (fc.l === '?' ? 'wildcard taxi' : 'car ' + fc.l) + ' facing ' + fc.dir);
-      fe.classList.remove('flipping'); void fe.offsetWidth; fe.classList.add('flipping');
-      setTimeout(function () { fe.classList.remove('flipping'); }, 600);
+      fe.classList.remove('flipping');
+      orientCar(i, fromA);                       // start from the old look, no transition
+      void fe.offsetWidth;
+      fe.classList.add('flipping');              // .flipping .chassis has the rotate transition
+      orientCar(i, fromA + 180);                 // turn half a circle (same look as ANGLE[new dir])
+      var flipDone = function () {
+        if (cur && cur.carEls[i] === fe) { fe.classList.remove('flipping'); orientCar(i); }  // settle on the canonical angle, no visual change
+      };
+      if (fch) fch.addEventListener('transitionend', function te(ev) { if (ev.propertyName === 'transform') { fch.removeEventListener('transitionend', te); flipDone(); } });
+      setTimeout(flipDone, 650);
       Sound.slide(); toast('Flipped! Now facing ' + fc.dir);
     } else if (kind === 'nudge') {
       placeCar(i); Sound.slide(); toast('Nudged 1 cell');

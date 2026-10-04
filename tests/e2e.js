@@ -54,6 +54,54 @@ const findCar = (page, which, kind, opts) => page.evaluate(([which, kind, opts])
 }, [which, kind, opts || null]);
 
 /** Real input: forward = tap/click; reverse = swipe/drag toward the tail (or right-click). */
+/* v6b: RENDERED orientation of a car (not just state): which side of the car's centre its nose arrow, headlights and
+   windshield sit on, and the opposite of where its tail lights sit, measured from getBoundingClientRect (so every CSS
+   transform, animation and inline rotation is included). game = the direction the current game model says it faces. */
+const ORIENT_FN = id => {
+  const el = document.querySelector('.car[data-id="' + id + '"]'), c = el.getBoundingClientRect(), cc = [c.left + c.width / 2, c.top + c.height / 2];
+  const opp = { right: 'left', left: 'right', up: 'down', down: 'up' };
+  const side = sel => { const r = el.querySelector(sel).getBoundingClientRect(), dx = r.left + r.width / 2 - cc[0], dy = r.top + r.height / 2 - cc[1];
+    return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'); };
+  const car = window.WJB.session.game.cars[id];
+  return { id: id, game: car.dir, dataDir: el.getAttribute('data-dir'), arrow: side('.arrow'), lights: side('.lights'), glass: side('.glass'), tail: opp[side('.tail')],
+    kind: (car.l === '?' ? 'taxi' : car.l.length > 1 ? 'chunk' : car.len + '-cell') + (car.horiz ? ' horizontal' : ' vertical'), flipped: !!car.flipped };
+};
+const orientOk = o => !!o && o.arrow === o.game && o.lights === o.game && o.glass === o.game && o.tail === o.game && o.dataDir === o.game;
+const orientOf = (page, id) => page.evaluate(ORIENT_FN, id);
+/** Every visible car's graphic must face the way the game model says; returns the cars that don't. */
+const orientBad = page => page.evaluate(fn => { const f = eval('(' + fn + ')'), s = window.WJB.session, bad = [];
+  s.game.cars.forEach((c, i) => { const el = document.querySelector('.car[data-id="' + i + '"]'); if (s.state.pos[i] < 0 || !el || el.style.display === 'none' || el.classList.contains('leaving')) return;
+    const o = f(i); if (!(o.arrow === o.game && o.lights === o.game && o.glass === o.game && o.tail === o.game && o.dataDir === o.game)) bad.push(o); });
+  return bad; }, ORIENT_FN.toString());
+const ostr = o => o ? o.kind + ' car ' + o.id + ': model ' + o.game + ', arrow ' + o.arrow + ', headlights ' + o.lights + ', windshield ' + o.glass + ', tail-lights opposite ' + o.tail : 'n/a';
+/** Where the preview ghost / exit mark points relative to car i: the exit-mark class for an exit, else the side the ghost moved to. */
+const ghostSide = (page, i) => page.evaluate(id => {
+  const g = document.getElementById('ghost'), m = document.getElementById('exit-mark'), el = document.querySelector('.car[data-id="' + id + '"]');
+  if (!g.classList.contains('show')) return { kind: 'none' };
+  if (g.classList.contains('bump')) return { kind: 'bump' };
+  const gr = g.getBoundingClientRect(), cr = el.getBoundingClientRect(), dx = gr.left + gr.width / 2 - (cr.left + cr.width / 2), dy = gr.top + gr.height / 2 - (cr.top + cr.height / 2);
+  const ghostDir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+  if (g.classList.contains('exit')) { const mr = m.getBoundingClientRect(), mx = mr.left + mr.width / 2 - (cr.left + cr.width / 2), my = mr.top + mr.height / 2 - (cr.top + cr.height / 2);
+    const markSide = Math.abs(mx) > Math.abs(my) ? (mx > 0 ? 'right' : 'left') : (my > 0 ? 'down' : 'up');
+    return { kind: 'exit', dir: [...m.classList].find(k => ['up', 'down', 'left', 'right'].includes(k)), markSide: markSide, ghostDir: (Math.abs(dx) + Math.abs(dy) < 2) ? null : ghostDir }; }
+  return { kind: 'slide', dir: ghostDir };
+}, i);
+/** Press (finger down, no release) on car i so the move preview shows, read it, then cancel the press. */
+async function pressPreview(page, i) {
+  await page.evaluate(id => { const el = document.querySelector('.car[data-id="' + id + '"]'), r = el.getBoundingClientRect();
+    el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, pointerId: 77, pointerType: 'touch', isPrimary: true, button: 0 })); }, i);
+  await page.waitForTimeout(120);
+  const g = await ghostSide(page, i);
+  await page.evaluate(id => { document.getElementById('lot').dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 77, pointerType: 'touch' })); }, i);
+  await page.waitForTimeout(120);
+  return g;
+}
+/** Flip car i via the booster bar (confirm, pick) and wait past the 0.5 s turn. */
+async function flipVia(page, ctx, i, wait) {
+  await buy(page, ctx, 'flip');
+  await inputMove(page, ctx, i, 0, 'tap');
+  await page.waitForTimeout(wait === undefined ? 900 : wait);
+}
 async function inputMove(page, ctx, car, which, how) {
   const info = await page.evaluate(id => {
     const g = window.WJB.session.game, c = g.cars[id];
@@ -524,6 +572,88 @@ async function fitCheck(page, label) {
   await p.waitForSelector('#ov-win.show', { timeout: 8000 }).catch(() => {});
   check(await p.locator('#ov-win.show').count() === 1 && +(await p.getAttribute('#win-stars', 'data-stars')) <= 2 && /Booster used/.test(await p.textContent('#win-detail')), 'a win that used Flip is capped at 2 stars ("Booster used")');
 
+  // --- v6b: the Flip must stay flipped ON SCREEN (the graphic used to turn, then snap back to the old direction) ---
+  console.log('\n# Flip: rendered orientation (graphic, not just state)');
+  await seeded(p, v4save({ coins: 100000 }));
+  await openLevel(p, 13);
+  const oc = fx ? fx.car : 0, o0 = await orientOf(p, oc);
+  check(orientOk(o0) && (await orientBad(p)).length === 0, 'before Flip: every car\'s graphic matches its direction (' + ostr(o0) + ')');
+  await flipVia(p, T, oc);
+  let o1 = await orientOf(p, oc);
+  check(orientOk(o1) && o1.arrow !== o0.arrow && o1.arrow === { right: 'left', left: 'right', up: 'down', down: 'up' }[o0.arrow], 'after the Flip settles (0.9 s > 0.5 s turn): nose arrow, headlights, windshield and tail lights all face the new way and stay there (' + ostr(o1) + ')');
+  await p.waitForTimeout(1200);
+  o1 = await orientOf(p, oc);
+  check(orientOk(o1) && o1.game !== o0.game, 'still flipped 2 s later (no snap-back)');
+  const pv = await pressPreview(p, oc);
+  check(pv.kind === 'exit' && pv.dir === o1.arrow && pv.markSide === o1.arrow, 'press preview on the flipped car: exit lane + exit mark on its new nose side (' + JSON.stringify(pv) + ')');
+  // a hint after the flip: the hinted car's ghost goes the way its RENDERED nose (fwd) or tail (back) says
+  await tapEl(p, T, '#btn-hint');
+  await p.waitForFunction(() => document.querySelector('.car.hint'), null, { timeout: 20000 }).catch(() => {});
+  const hc = await p.evaluate(() => { const e = document.querySelector('.car.hint'); return e ? { id: +e.getAttribute('data-id'), w: e.getAttribute('data-hint') } : null; });
+  if (hc) {
+    const ho = await orientOf(p, hc.id), hg = await ghostSide(p, hc.id), want = hc.w === 'fwd' ? ho.arrow : { right: 'left', left: 'right', up: 'down', down: 'up' }[ho.arrow];
+    check(orientOk(ho) && (hg.kind === 'bump' || hg.dir === want), 'hint after Flip: car ' + hc.id + ' (' + hc.w + ') ghost/arrow goes ' + hg.dir + ', matching its on-screen ' + (hc.w === 'fwd' ? 'nose' : 'tail'));
+    await p.evaluate(() => { document.querySelectorAll('.car.hint').forEach(e => e.classList.remove('hint')); });
+  } else check(false, 'hint after Flip shows a car');
+  // rerender caused by another move, then by a relayout (resize)
+  const other = await p.evaluate(fc => { const s = window.WJB.session, E = window.WJBEngine, gr = E.buildGrid(s.game, s.state.pos);
+    for (const k of ['slide', 'exit']) for (let i = 0; i < s.game.n; i++) if (i !== fc && s.state.pos[i] >= 0 && E.probe(s.game, gr, s.state.pos, i, 0).kind === k) return i; return -1; }, oc);
+  if (other >= 0) { await inputMove(p, T, other, 0, 'tap'); await settle(p); await p.waitForTimeout(400); }
+  o1 = await orientOf(p, oc);
+  check(other >= 0 && orientOk(o1) && o1.game !== o0.game && (await orientBad(p)).length === 0, 'after another car\'s move (car ' + other + '): the flipped car still shows the new direction, all cars match');
+  await p.setViewportSize({ width: 391, height: 844 }); await p.waitForTimeout(400);
+  await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(400);
+  o1 = await orientOf(p, oc);
+  check(orientOk(o1) && o1.game !== o0.game && (await orientBad(p)).length === 0, 'after a relayout (resize): still flipped on screen');
+  if (other >= 0) { await tapEl(p, T, '#btn-undo'); await settle(p); }
+  await tapEl(p, T, '#btn-undo'); await settle(p); await p.waitForTimeout(300);
+  const o2 = await orientOf(p, oc);
+  check(orientOk(o2) && o2.arrow === o0.arrow && (await orientBad(p)).length === 0, 'after Undo: the car is back to its original look (' + ostr(o2) + ')');
+  await shot(p, 'v6b-after-flip-e2e-undo.png');
+  // restart after a flip
+  await flipVia(p, T, oc);
+  await tapEl(p, T, '#btn-restart'); await p.waitForTimeout(700);
+  const o3 = await orientOf(p, oc);
+  check(orientOk(o3) && o3.arrow === o0.arrow && (await orientBad(p)).length === 0, 'after Restart: original look (' + ostr(o3) + ')');
+  // flip, then move on to the next level: a fresh lot, every car drawn the way it faces
+  await flipVia(p, T, oc);
+  await openLevel(p, 14);
+  check((await orientBad(p)).length === 0, 'next level after a Flip: every car\'s graphic matches its direction');
+  // every kind of car: horizontal / vertical, 1-, 2-, 3-cell trucks, chunk trucks, the taxi
+  const kinds = {};
+  for (const n of [13, 15, 16, 20, 21]) { // between them: 1/2/3-cell both ways, the TH chunk truck (20) and the taxi (21)
+    await openLevel(p, n);
+    const list = await p.evaluate(() => { const s = window.WJB.session; return s.game.cars.map((c, i) => ({ i: i, k: (c.l === '?' ? 'taxi' : c.l.length > 1 ? 'chunk' : c.len + '-cell') + (c.horiz ? ' horizontal' : ' vertical'), on: s.state.pos[i] >= 0 })); });
+    const todo = list.filter(c => c.on && !kinds[c.k]);
+    const seen = {};
+    for (const c of todo) {
+      if (seen[c.k]) continue; seen[c.k] = 1;
+      const a = await orientOf(p, c.i);
+      await flipVia(p, T, c.i);
+      await p.evaluate(() => document.getElementById('deadend').classList.remove('show')); // a flip can make a dead end; keep the lot tappable
+      const b2 = await orientOf(p, c.i);
+      kinds[c.k] = { ok: orientOk(a) && orientOk(b2) && b2.arrow !== a.arrow && b2.game !== a.game, level: n, car: c.i, from: a.arrow, to: b2.arrow };
+    }
+    if (todo.length) check((await orientBad(p)).length === 0, 'level ' + n + ' after flipping ' + Object.keys(seen).join(', ') + ': all cars drawn the way they face');
+  }
+  for (const k of Object.keys(kinds).sort()) check(kinds[k].ok, 'Flip graphic, ' + k + ' (level ' + kinds[k].level + ', car ' + kinds[k].car + '): ' + kinds[k].from + ' -> ' + kinds[k].to + ' and it stays');
+  const needKinds = ['1-cell horizontal', '1-cell vertical', '2-cell horizontal', '2-cell vertical', '3-cell horizontal', '3-cell vertical', 'chunk', 'taxi'];
+  check(needKinds.every(k => Object.keys(kinds).some(x => x.indexOf(k) === 0)), 'covered every kind of car: ' + Object.keys(kinds).sort().join(', '));
+  // reduced motion: no turn animation, the new look is there at once
+  {
+    const rc = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2, reducedMotion: 'reduce' });
+    const rp = await rc.newPage(); watch(rp, 'reduced-motion');
+    await seeded(rp, v4save({ coins: 1000 }));
+    await openLevel(rp, 13);
+    const r0 = await orientOf(rp, oc);
+    await flipVia(rp, T, oc, 60);
+    const r1 = await orientOf(rp, oc);
+    await rp.waitForTimeout(1000);
+    const r2 = await orientOf(rp, oc);
+    check(orientOk(r1) && orientOk(r2) && r1.arrow !== r0.arrow && r2.arrow === r1.arrow, 'reduced motion: flipped look shows at once (60 ms) and stays (' + ostr(r2) + ')');
+    await rc.close();
+  }
+
   console.log('\n# Bay Word');
   await seeded(p, v4save({ coins: 0 }));
   await openLevel(p, 17);
@@ -771,6 +901,15 @@ async function fitCheck(page, label) {
   await inputMove(d, M, dn, 0, 'click'); await settle(d);
   const dna = await S(d);
   check(dna.pos[dn] === dnb.pos[dn] + (await d.evaluate(id => window.WJB.session.game.cars[id].sign, dn)) && dna.coins === dnb.coins - 60, 'desktop: a click nudges a car exactly one cell forward (60 coins)');
+  // v6b: desktop Flip keeps its new look too (mouse)
+  await seeded(d, v4save({ coins: 1000 }));
+  await openLevel(d, 13);
+  const dq0 = await orientOf(d, 0);
+  await flipVia(d, M, 0);
+  const dq1 = await orientOf(d, 0);
+  await tapEl(d, M, '#btn-undo'); await settle(d); await d.waitForTimeout(300);
+  const dq2 = await orientOf(d, 0);
+  check(orientOk(dq1) && dq1.arrow !== dq0.arrow && orientOk(dq2) && dq2.arrow === dq0.arrow, 'desktop: flipped car stays flipped on screen (' + dq0.arrow + ' -> ' + dq1.arrow + '), Undo turns it back (' + dq2.arrow + ')');
   await desk.close();
   await browser.close();
 

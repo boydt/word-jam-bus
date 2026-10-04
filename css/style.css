@@ -501,8 +501,11 @@ button { font: inherit; color: inherit; touch-action: manipulation; cursor: poin
 .confirm-icon { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 16px; background: #fff6d6; margin: 0 auto; }
 .confirm-icon svg { width: 30px; height: 30px; fill: none; stroke: var(--ink); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 /* Flip: a quick turn-around */
-.car.flipping { animation: carflip .5s ease-in-out; }
-@keyframes carflip { 0% { transform: scale(1); } 45% { transform: scale(.55) rotate(90deg); } 100% { transform: scale(1) rotate(0); } }
+.car.flipping { animation: carflip .5s ease-in-out; z-index: 3; }
+.car.flipping .chassis { transition: transform .5s ease-in-out; }
+/* v6b: the outer car only does a small hop; the 180deg turn is on the chassis and is kept (see orientCar in game.js) */
+@keyframes carflip { 0%, 100% { transform: scale(1); } 50% { transform: scale(.86); } }
+@media (prefers-reduced-motion: reduce) { .car.flipping { animation: none; } .car.flipping .chassis { transition: none; } }
 @media (max-height: 700px) {
   .foot { gap: 4px; padding: 4px 8px calc(6px + var(--safe-bot)); }
   .foot .tip { font-size: 11.5px; line-height: 1.2; }
@@ -560,3 +563,4 @@ button { font: inherit; color: inherit; touch-action: manipulation; cursor: poin
 .set-row #btn-howto { min-height: 44px; }
 @media (max-height: 700px) { .settings-card { gap: 6px; padding: 10px 14px 12px; } .set-row { min-height: 44px; padding: 2px 0; } .set-note { font-size: 11.5px; } .set-head h2 { font-size: 21px; } }
 .boost-bar .btn { min-height: 44px; min-width: 64px; }
+.lot.no-anim .car .chassis { transition: none !important; }

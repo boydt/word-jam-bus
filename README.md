@@ -119,6 +119,8 @@ The footer has the level tip on top and a bar below it: the coin balance (with t
 
 **Flip price.** Flip is priced at **120**, between Nudge (60) and Tow (150). It is stronger than Nudge because it opens a whole new exit lane rather than shifting a car by one cell. It is weaker than Tow because the flipped car still sits in the lot, its letter still has to board or park in the bay, and the new lane may be blocked too. In the engine a flip returns a new game model with that one car reversed (positions are stored as each car's lowest cell, so the state doesn't change), and the undo history keeps the matching model, so the hint and dead-end search plan with the new direction and Undo turns the car back.
 
+**v6b fix (Flip graphic).** A flipped car now stays drawn facing its new way: the chassis (nose arrow, headlights, windshield, tail lights) turns 180° and keeps that rotation. Before, the flip animation spun the whole car and ended back at 0°, and the chassis rotation was only ever set on a full relayout, so the car looked unflipped while it drove the new way. All car rotation now goes through one `orientCar()` that reads the current game model. The e2e measures where each car's arrow, headlights, windshield and tail lights actually sit on screen after a flip, a later move, a relayout, a hint, a press preview, Undo, Restart, the next level and with reduced motion, for every kind of car.
+
 ### Settings and test / cheat options
 The gear on the title screen opens **Settings**: Sound and How to play, a clearly marked **Test / cheat options** section, and a separate **Reset progress** with its own confirm step. The toggles are a list (`TEST_TOGGLES` in `js/game.js`), so new ones only need an entry there:
 - **Unlock all levels:** any level can be picked; levels opened only by this toggle get a dashed red outline.
@@ -336,6 +338,7 @@ tools/scramble-lab.js    Scramble lot generator (dev)
 tools/scramble-improve.js Scramble lot hill-climber (dev)
 tests/rules.js           Node rule/solver tests incl. JS-vs-Python fuzz
 tests/e2e.js             Playwright play-test (phone + desktop): levels, Scramble, coins, booster bar, Flip, settings/cheats, bus art
+tests/flip-orient.js     Playwright check that a flipped car is DRAWN facing its new way (phone + desktop; pass a URL to check the live site)
 tests/file-url.js        file:// smoke test
 screenshots/             test screenshots
 ```
