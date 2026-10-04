@@ -170,15 +170,15 @@
    * State: pos (axis position per car, -1 = gone), idx (seats filled; in route
    * mode also the next seat), mask (scramble: filled seats bitmask), bay,
    * moves, cap (bay size now; Bay +1 raises it), words (Bay Words cleared),
-   * used (boosters used this run: {tow, bay, nudge}).
+   * used (boosters used this run: {tow, bay, nudge, flip}).
    */
   function initialState(game) {
-    return { pos: game.cars.map(function (c) { return c.start; }), idx: 0, mask: 0, bay: [], moves: 0, cap: game.cap, words: 0, used: { tow: 0, bay: 0, nudge: 0 } };
+    return { pos: game.cars.map(function (c) { return c.start; }), idx: 0, mask: 0, bay: [], moves: 0, cap: game.cap, words: 0, used: { tow: 0, bay: 0, nudge: 0, flip: 0 } };
   }
   function cloneState(s) {
     var u = s.used || {};
     return { pos: s.pos.slice(), idx: s.idx, mask: s.mask || 0, bay: s.bay.slice(), moves: s.moves, cap: s.cap, words: s.words || 0,
-      used: { tow: u.tow || 0, bay: u.bay || 0, nudge: u.nudge || 0 } };
+      used: { tow: u.tow || 0, bay: u.bay || 0, nudge: u.nudge || 0, flip: u.flip || 0 } };
   }
   function capOf(game, s) { return s && s.cap !== undefined && s.cap !== null ? s.cap : game.cap; }
   function isWon(game, s) { return game.scramble ? (s.mask || 0) === game.full : s.idx >= game.target.length; }
@@ -311,7 +311,27 @@
     for (var b = 0; b < state.bay.length; b++) if (state.bay[b] === car.l) supply++;
     return supply >= need;
   }
-  /** Apply a booster; returns the new state or null if not allowed. kind: 'tow' | 'bay' | 'nudge'. */
+  /**
+   * Flip booster: car i turns round in place (same cells), so its nose points the
+   * other way. A car's direction is part of the game model, not the state, so a
+   * flip returns a NEW game (cars copied, car i reversed) to pair with the state
+   * from applyBooster(game, state, 'flip', i). Positions are stored as the car's
+   * lowest cell along its axis, so they don't change. Any car in the lot can flip
+   * (1-cell cars, long trucks, chunk trucks and the taxi alike).
+   */
+  var OPPOSITE = { up: 'down', down: 'up', left: 'right', right: 'left' };
+  function flippable(game, state, i) { return state.pos[i] >= 0 && !!game.cars[i]; }
+  function flipCar(game, i) {
+    var g = {}, k;
+    for (k in game) if (Object.prototype.hasOwnProperty.call(game, k)) g[k] = game[k];
+    g.cars = game.cars.slice();
+    var c = {}, o = game.cars[i];
+    for (k in o) if (Object.prototype.hasOwnProperty.call(o, k)) c[k] = o[k];
+    c.dir = OPPOSITE[o.dir]; c.sign = -o.sign; c.flipped = !o.flipped;
+    g.cars[i] = c;
+    return g;
+  }
+  /** Apply a booster; returns the new state or null if not allowed. kind: 'tow' | 'bay' | 'nudge' | 'flip'. */
   function applyBooster(game, state, kind, i, which) {
     var s = cloneState(state);
     if (kind === 'bay') {
@@ -322,6 +342,11 @@
     if (kind === 'tow') {
       if (!towable(game, state, i)) return null;
       s.pos[i] = -1; s.moves++; s.used.tow++;
+      return s;
+    }
+    if (kind === 'flip') {
+      if (!flippable(game, state, i)) return null;
+      s.moves++; s.used.flip++;
       return s;
     }
     if (kind === 'nudge') {
@@ -343,7 +368,7 @@
     if (grid[cellAt(game, car, x)] !== -1) return null;
     return p + sg;
   }
-  function boosted(state) { var u = state.used || {}; return (u.tow || 0) + (u.bay || 0) + (u.nudge || 0) > 0; }
+  function boosted(state) { var u = state.used || {}; return (u.tow || 0) + (u.bay || 0) + (u.nudge || 0) + (u.flip || 0) > 0; }
 
   /* ------------------------------------------------------------------ */
   /* Solver: breadth-first search over (car positions, word index, bay). */
@@ -618,6 +643,7 @@
     stateKey: stateKey, ascii: ascii, cellAt: cellAt, headCell: headCell,
     isWon: isWon, sweepBay: sweepBay, eligibleBay: eligibleBay, needOf: needOf, seatFor: seatFor,
     towable: towable, applyBooster: applyBooster, nudgeTo: nudgeTo, boosted: boosted, capOf: capOf,
+    flippable: flippable, flipCar: flipCar,
     BAYWORDS: BAYWORDS
   };
 });

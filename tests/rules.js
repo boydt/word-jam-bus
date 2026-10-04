@@ -78,6 +78,19 @@ console.log('# Boosters');
   const g3 = E.prepare({ id: 'd', word: 'A', grid: [1, 2], bay: 1, cars: [{ l: 'A', r: 1, c: 2, dir: 'right' }] });
   check(E.applyBooster(g3, E.initialState(g3), 'nudge', 0, E.FWD) === null, 'nudge never drives a car out of the lot');
   check(E.solve(g, b).par !== null && E.createSearch(g, b).run(Infinity) === 'win', 'the solver re-plans from a boosted state (cap from the state)');
+  // Flip: A faces right into X (which faces back at it from the wall), so A can never leave; flipped, it exits left.
+  const gf = E.prepare({ id: 'f', word: 'A', grid: [1, 3], bay: 1, cars: [{ l: 'A', r: 1, c: 2, dir: 'right' }, { l: 'X', r: 1, c: 3, dir: 'left' }] });
+  const sf = E.initialState(gf);
+  check(E.solve(gf, sf).par === null, 'flip: the unflipped lot is unwinnable');
+  const sf2 = E.applyBooster(gf, sf, 'flip', 0), gf2 = E.flipCar(gf, 0);
+  check(sf2 && sf2.moves === 1 && sf2.used.flip === 1 && E.boosted(sf2) && sf2.pos[0] === sf.pos[0], 'flip: same cells, +1 move, counts as a booster');
+  check(gf2.cars[0].dir === 'left' && gf2.cars[0].sign === -1 && gf.cars[0].dir === 'right' && gf2.cars[1] === gf.cars[1], 'flip returns a new game with only that car reversed (original untouched)');
+  const ex = E.step(gf2, sf2, 0, E.FWD);
+  check(ex.won && E.solve(gf2, sf2).par === 1, 'flipped car drives out of its former tail end; the solver re-plans with the new direction (par 1)');
+  const gt = E.prepare({ id: 't', word: 'A', grid: [4, 1], bay: 1, cars: [{ l: 'TH', r: 3, c: 1, dir: 'down', len: 2 }, { l: 'A', r: 4, c: 1, dir: 'down' }] });
+  const st = E.initialState(gt), gt2 = E.flipCar(gt, 0);
+  check(String(E.buildGrid(gt, st.pos)) === String(E.buildGrid(gt2, st.pos)) && E.headCell(gt2, 0, st.pos[0]).r === 2, 'a 2-cell chunk truck flips in place (same cells, head moves to the old tail)');
+  check(!E.flippable(gf2, ex.state, 0) && E.applyBooster(gf2, ex.state, 'flip', 0) === null, 'a car that has left the lot cannot be flipped');
 }
 
 console.log('# JS vs Python on random small lots with Bay Words');
