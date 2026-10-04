@@ -830,7 +830,7 @@ async function fitCheck(page, label) {
   check(same(t.open, range(1, 13)) && t.current === 12, 'v3 save that beat BUS: levels 1-13 open, Continue = the new Scramble level 12');
   // C: v3 player who finished all 20
   t = await seeded(p, { v: 3, unlocked: 19, stars: starsFor(v3ids), best: {}, sound: true });
-  check(same(t.open, range(1, KEYS[0])) && t.current === 12, 'v3 save with all 20 beaten: the old 23 open plus the first new level ' + KEYS[0] + ', Continue = the first unplayed Scramble level (12)');
+  check(same(t.open, range(1, KEYS[0])) && t.current === KEYS[0], 'v3 save with all 20 beaten: the old 23 open plus the first new level, Continue = level ' + KEYS[0] + ' (the first key level; got ' + t.open.length + ' open, Continue ' + t.current + ')');
   // F2: a v4 save that finished the old last level (lv10-school, then the end of the list) gets the first new level
   t = await seeded(p, v4save({ unlocked: 22, unlockedId: 'lv10-school', stars: starsFor(LVS.slice(0, 23).map(l => l.id)) }));
   check(same(t.open, range(1, KEYS[0])) && t.current === KEYS[0] && t.stored.unlockedId === LVS[KEYS[0] - 1].id, 'v4 save that beat all 23 old levels: level ' + KEYS[0] + ' (new) opens and is Continue; migrated by id (' + t.stored.unlockedId + ')');
