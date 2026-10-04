@@ -56,10 +56,16 @@
   //    Wins on levels you had really unlocked count normally.
   //  - unlimitedCoins: boosters cost nothing and never touch the real balance; fares
   //    earned meanwhile are not banked; a win that used a free booster is not saved.
+  //  - unlimitedHints / unlimitedUndos: the per-level count never drops (badge shows
+  //    \u221e); a win that used more than the normal 3 hints / 5 undos is not saved.
+  //  Toggles can only change on the title screen, so each level session snapshots them
+  //  when it starts; turning one off gives the normal fresh count on the next level start.
   var TEST_KEY = 'wordJamBus.test.v1';
   var TEST_TOGGLES = [
-    { key: 'unlockAll', label: 'Unlock all levels', desc: 'Pick any level from the level select, whatever its lock. Levels opened only by this are played off the record.' },
-    { key: 'unlimitedCoins', label: 'Unlimited coins', desc: 'Every booster is free (\u221e). Your real coins are not spent, and coins earned meanwhile are not banked.' }
+    { key: 'unlockAll', label: 'Unlock all levels', desc: 'Pick any level, whatever its lock.' },
+    { key: 'unlimitedCoins', label: 'Unlimited coins', desc: 'Boosters are free (\u221e); real coins untouched.' },
+    { key: 'unlimitedHints', label: 'Unlimited hints', desc: 'Hint never runs out (\u221e).' },
+    { key: 'unlimitedUndos', label: 'Unlimited undos', desc: 'Undo never runs out (\u221e).' }
   ];
   function loadTest() {
     var p = null, t = {};
@@ -190,7 +196,8 @@
       plan: null, planOptimal: false, search: null, serial: 0, pendingHint: false,
       scramble: game.scramble, boostMode: null, gameHist: [],
       cheatOnly: !!test.unlockAll && !realUnlocked(index),   // open only because of "Unlock all"
-      free: !!test.unlimitedCoins                            // boosters free, fares not banked
+      free: !!test.unlimitedCoins,                           // boosters free, fares not banked
+      freeHints: !!test.unlimitedHints, freeUndos: !!test.unlimitedUndos, hintsUsed: 0, undosUsed: 0
     };
     renderTestMode();
     $('bus').classList.toggle('scr', game.scramble);
@@ -389,9 +396,11 @@
     bayEl.classList.toggle('warn', free === 1);
     bayEl.classList.toggle('danger', free <= 0);
     $('bay-count').textContent = '(' + Math.min(d.bay.length, cap) + '/' + cap + ')';
-    $('undo-count').textContent = cur.undos;
+    $('undo-count').textContent = cur.freeUndos ? '\u221e' : cur.undos;
+    $('undo-count').classList.toggle('inf', cur.freeUndos);
     $('btn-undo').disabled = cur.undos <= 0 || !cur.history.length || cur.ended;
-    $('hint-count').textContent = cur.hints;
+    $('hint-count').textContent = cur.freeHints ? '\u221e' : cur.hints;
+    $('hint-count').classList.toggle('inf', cur.freeHints);
     $('btn-hint').disabled = cur.hints <= 0 || cur.ended;
     renderCoins();
   }
@@ -675,7 +684,7 @@
     var earned = fares + parBonus + words + first;
     // Test mode: a level opened only by "Unlock all", or won with a free booster, is off
     // the record; with "Unlimited coins" on, fares are not banked.
-    var saveable = !cur.cheatOnly && !(cur.free && assisted);
+    var saveable = !cur.cheatOnly && !(cur.free && assisted) && cur.hintsUsed <= HINTS_PER_LEVEL && cur.undosUsed <= UNDOS_PER_LEVEL;
     var bank = saveable && !cur.free;
     cur.banked = true;
     if (saveable) {
@@ -711,7 +720,8 @@
 
   function undo() {
     if (!cur || cur.ended || cur.undos <= 0 || !cur.history.length) return;
-    cur.undos--;
+    if (!cur.freeUndos) cur.undos--;
+    cur.undosUsed++;
     cur.token++;
     cancelSearch();
     cur.chain = Promise.resolve();
@@ -755,7 +765,8 @@
     cur.pendingHint = false;
     $('btn-hint').classList.remove('thinking');
     if (!cur.plan || !cur.plan.length || cur.hints <= 0) return;
-    cur.hints--;
+    if (!cur.freeHints) cur.hints--;
+    cur.hintsUsed++;
     renderHud();
     showHint(cur.plan[0]);
   }

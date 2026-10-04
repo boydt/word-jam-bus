@@ -131,12 +131,17 @@ async function layoutOk(page, label) {
     const lot = document.getElementById('lot').getBoundingClientRect();
     const cars = [...document.querySelectorAll('.car')].filter(e => e.style.display !== 'none').map(e => e.getBoundingClientRect());
     const inLot = cars.every(c => c.left >= lot.left - 1 && c.right <= lot.right + 1 && c.top >= lot.top - 1 && c.bottom <= lot.bottom + 1);
-    const vis = ['bus', 'lot', 'bay', 'btn-hint', 'btn-restart', 'btn-undo', 'btn-menu'].every(id => {
-      const b = document.getElementById(id).getBoundingClientRect(); return b.top >= 0 && b.bottom <= innerHeight + 1 && b.left >= 0 && b.right <= innerWidth + 1;
+    const boosting = document.getElementById('screen-game').classList.contains('boosting');
+    const ids = ['bus', 'lot', 'bay', 'btn-restart', 'btn-undo', 'btn-menu'].concat(boosting ? [] : ['btn-hint', 'coin-box', 'bst-tow', 'bst-bay', 'bst-nudge', 'bst-flip']);
+    const vis = ids.every(id => {
+      const b = document.getElementById(id).getBoundingClientRect(); return b.width > 0 && b.top >= 0 && b.bottom <= innerHeight + 1 && b.left >= 0 && b.right <= innerWidth + 1;
     });
-    return { inLot, vis, minCar: Math.min(...cars.map(c => Math.min(c.width, c.height))), scroll: document.documentElement.scrollHeight <= innerHeight + 1 };
+    // bus art: hood + bumper (front) and tailpipe (back) stay on screen and clear of the lot
+    const art = ['#bus .hood', '#bus .bumper', '#bus .pipe'].map(q => document.querySelector(q).getBoundingClientRect());
+    const artOk = art.every(b => b.width > 0 && b.left >= 0 && b.right <= innerWidth + 1 && b.bottom <= lot.top + 1);
+    return { inLot, vis, artOk, minCar: Math.min(...cars.map(c => Math.min(c.width, c.height))), scroll: document.documentElement.scrollHeight <= innerHeight + 1 };
   });
-  check(r.inLot && r.vis && r.scroll, label + ': lot, bus, bay and buttons fit without scrolling');
+  check(r.inLot && r.vis && r.scroll && r.artOk, label + ': lot, bus (with hood, bumper, tailpipe), bay, booster bar and buttons fit without scrolling');
   return r;
 }
 
@@ -185,14 +190,48 @@ async function winAll(page, ctx, label) {
 }
 const v4save = extra => Object.assign({ v: 4, unlocked: 22, unlockedId: 'lv10-school', stars: {}, best: {}, sound: false, coins: 0, seen: { scramble: true } }, extra || {});
 async function buy(page, ctx, kind) {
-  await tapEl(page, ctx, '#btn-shop'); await page.waitForSelector('#ov-shop.show'); await page.waitForTimeout(350);
-  await tapEl(page, ctx, '#buy-' + kind); await page.waitForSelector('#shop-confirm.show'); await page.waitForTimeout(250);
+  await tapEl(page, ctx, '#bst-' + kind); await page.waitForSelector('#ov-shop.show'); await page.waitForTimeout(350);
   await tapEl(page, ctx, '#btn-confirm'); await page.waitForTimeout(250);
 }
+/** Booster bar: 4 boosters + coins + Hint, each >= 44px, on screen, not covering the lot, bay or tip. */
+async function barCheck(page, label) {
+  const r = await page.evaluate(() => {
+    const R = id => document.getElementById(id).getBoundingClientRect();
+    const btns = ['coin-box', 'bst-tow', 'bst-bay', 'bst-nudge', 'bst-flip', 'btn-hint'].map(R);
+    const keep = ['lot', 'bay-zone', 'tip'].map(R);
+    const hit = (a, b) => a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1;
+    return { min: Math.round(Math.min(...btns.slice(1).map(b => Math.min(b.width, b.height)))), onScreen: btns.every(b => b.left >= 0 && b.right <= innerWidth && b.top >= 0 && b.bottom <= innerHeight),
+      clear: btns.every(b => keep.every(k => !hit(b, k))), apart: btns.every((a, i) => btns.every((b, j) => i === j || !hit(a, b))), tipH: Math.round(keep[2].height) };
+  });
+  check(r.min >= 44 && r.onScreen && r.clear && r.apart, label + ': booster bar (coins, Tow, Bay +1, Nudge, Flip, Hint) fits, targets >= 44px (' + r.min + 'px), clear of the lot, bay and tip');
+  return r;
+}
+/** A car whose flip lets it drive straight out of its former tail end (and that can't leave forward now). */
+/** Element shot of the play bus including the hood, bumper, tailpipe and wheels (they hang outside the body box). */
+async function busShot(page, name) {
+  const clip = await page.evaluate(() => {
+    const rs = ['#bus', '#bus .hood', '#bus .bumper', '#bus .pipe', '#bus .wheel', '#bus .shuffle-badge'].flatMap(q => [...document.querySelectorAll(q)]).map(e => e.getBoundingClientRect()).filter(r => r.width > 0);
+    const x0 = Math.min(...rs.map(r => r.left)) - 22, y0 = Math.min(...rs.map(r => r.top)) - 10, x1 = Math.max(...rs.map(r => r.right)) + 10, y1 = Math.max(...rs.map(r => r.bottom)) + 8;
+    return { x: Math.max(0, x0), y: Math.max(0, y0), width: Math.min(innerWidth, x1) - Math.max(0, x0), height: y1 - Math.max(0, y0) };
+  });
+  await page.screenshot({ path: path.join(SHOTS, name), clip });
+  console.log('  shot screenshots/' + name);
+}
+const findFlipExit = page => page.evaluate(() => {
+  const s = window.WJB.session, E = window.WJBEngine, g = s.game;
+  for (let i = 0; i < g.n; i++) {
+    if (s.state.pos[i] < 0) continue;
+    const leaves = r => r && r.state && r.state.pos[i] === -1 && r.result !== 'lose';
+    if (leaves(E.step(g, s.state, i, 0))) continue;   // it can't leave nose-first right now...
+    const g2 = E.flipCar(g, i), st = E.applyBooster(g, s.state, 'flip', i), r = E.step(g2, st, i, 0);
+    if (leaves(r) && !r.won) return { car: i, dir: g.cars[i].dir, to: g2.cars[i].dir, result: r.result };   // ...but flipped it drives straight out
+  }
+  return null;
+});
 async function fitCheck(page, label) {
   return page.evaluate(() => {
     const r = [...document.querySelectorAll('.lvl')].map(b => b.getBoundingClientRect());
-    const foot = [...document.querySelectorAll('.title-foot .btn')].map(b => b.getBoundingClientRect());
+    const foot = [...document.querySelectorAll('#btn-settings')].map(b => b.getBoundingClientRect());
     return { fits: r.every(b => b.top >= 0 && b.bottom <= innerHeight && b.left >= 0 && b.right <= innerWidth), footFits: foot.every(b => b.bottom <= innerHeight),
       rows: new Set(r.map(b => Math.round(b.top))).size, minW: Math.min(...r.map(b => b.width)), minH: Math.min(...r.map(b => b.height)),
       scroll: document.getElementById('screen-title').scrollHeight <= innerHeight + 1 };
@@ -237,6 +276,8 @@ async function fitCheck(page, label) {
   await p.waitForSelector('#ov-win.show', { timeout: 5000 });
   let cs = await S(p);
   check(cs.coins === 26 && (await p.getAttribute('#win-coins', 'data-earned')) === '26', 'win at par: 3 fares x2 (par bonus) + 20 first clear = 26 coins banked (' + (await p.textContent('#win-coins')).trim() + ')');
+  const drive = await p.evaluate(() => new DOMMatrixReadOnly(getComputedStyle(document.getElementById('bus')).transform).m41);
+  check(drive > 0, 'on a win the bus drives off to the right, hood first (translateX ' + Math.round(drive) + 'px)');
   t = await seeded(p, await p.evaluate(() => JSON.parse(localStorage.getItem('wordJamBus.progress.v1'))));
   check(t.stored.coins === 26 && (await p.textContent('#title-coins')).trim() === '26', 'coins saved in localStorage and shown on the title after reload (26)');
   await openLevel(p, 1);
@@ -302,20 +343,29 @@ async function fitCheck(page, label) {
   }
   check(seat13 && seat13.nums === range(1, seat13.len).join(',') && seat13.n === 1 && +seat13.next === seat13.idx && seat13.glow !== 'none', 'in-order level ' + lv13 + ': seats numbered ' + (seat13 && seat13.nums) + '; exactly one seat glows, the next one (' + (seat13 && seat13.idx + 1) + ')');
   await shot(p, 'v4-04-phone-route-numbered-seats.png');
+  // bus art: hood + bumper at the front (right, the driving direction), tailpipe at the back
+  for (const [n, name] of [[11, 'v6-bus-closeup.png'], [12, 'v6-bus-scramble-closeup.png']]) {
+    await openLevel(p, n);
+    const art = await p.evaluate(() => { const R = q => document.querySelector(q).getBoundingClientRect(), b = R('#bus'), h = R('#bus .hood'), u = R('#bus .bumper'), t = R('#bus .pipe');
+      return { front: h.left > b.left + b.width / 2 && u.right >= h.right - 1 && h.height < b.height && h.bottom >= b.bottom - 1, back: t.right <= b.left + 3, hoodBg: getComputedStyle(document.querySelector('#bus .hood')).backgroundColor, busBg: getComputedStyle(document.getElementById('bus')).backgroundColor, puff: document.querySelectorAll('#bus .puff').length,
+        title: !!document.querySelector('.logo-bus .hood') && !!document.querySelector('.logo-bus .pipe'), mini: !!document.querySelector('.mini-bus .hood'), coach: !!document.querySelector('.coach-bus .hood') }; });
+    check(art.front && art.back && art.hoodBg === art.busBg && art.puff === 2 && art.title && art.mini && art.coach, 'level ' + n + ' bus: lower, shorter hood + bumper at the front, tailpipe + puff at the back, hood in the bus colour (' + art.busBg + '); title, win-card and tip buses have them too');
+    await busShot(p, name);
+  }
 
   // --- boosters (coins seeded) ---
   console.log('\n# Boosters');
   await seeded(p, v4save({ coins: 1000 }));
   await openLevel(p, 13);
-  await tapEl(p, T, '#btn-shop'); await p.waitForSelector('#ov-shop.show');
-  check((await p.textContent('#shop-balance')).trim() === '1000' && /150/.test(await p.textContent('#buy-tow')) && /100/.test(await p.textContent('#buy-bay')) && /60/.test(await p.textContent('#buy-nudge')),
-    'shop lists Tow 150, Bay +1 100, Nudge 60 with the coin balance');
-  await shot(p, 'v4-05-phone-booster-shop.png');
-  await tapEl(p, T, '#buy-tow'); await p.waitForSelector('#shop-confirm.show');
-  check(/Spend 150 coins on Tow truck\?/.test(await p.textContent('#confirm-title')), 'confirm-before-spend: "Spend 150 coins on Tow truck?"');
-  await shot(p, 'v4-06-phone-confirm-spend.png');
-  await tapEl(p, T, '#btn-confirm-cancel'); await tapEl(p, T, '#btn-shop-close'); await p.waitForTimeout(200);
-  check((await S(p)).coins === 1000, 'Cancel spends nothing');
+  const prices = await p.evaluate(() => ['tow', 'bay', 'nudge', 'flip'].map(k => document.querySelector('#bst-' + k + ' .bst-price').textContent.trim()).join(','));
+  check((await p.textContent('#coin-count')).trim() === '1000' && prices === '150,100,60,120', 'booster bar shows the balance (1000) and Tow 150, Bay +1 100, Nudge 60, Flip 120 (' + prices + ')');
+  await barCheck(p, 'phone 390x844 L13');
+  await shot(p, 'v6-play-booster-bar-390x844.png');
+  await tapEl(p, T, '#bst-tow'); await p.waitForSelector('#ov-shop.show'); await p.waitForTimeout(300);
+  check(/Spend 150 coins on Tow truck\?/.test(await p.textContent('#confirm-title')), 'tapping Tow in the bar goes straight to "Spend 150 coins on Tow truck?"');
+  await shot(p, 'v6-booster-confirm-from-bar.png');
+  await tapEl(p, T, '#btn-confirm-cancel'); await p.waitForTimeout(200);
+  check((await S(p)).coins === 1000 && await p.locator('#ov-shop.show').count() === 0 && await p.locator('#boost-bar.show').count() === 0, 'Cancel closes the confirm and spends nothing');
   // Tow
   await buy(p, T, 'tow');
   check(await p.locator('#boost-bar.show').count() === 1 && await p.locator('.car.can-boost').count() > 0, 'tow mode: banner + glowing towable cars');
@@ -403,9 +453,9 @@ async function fitCheck(page, label) {
   if (dp) await playPath(p, T, dp);
   await p.waitForSelector('#deadend.show', { timeout: 15000 }).catch(() => {});
   check(dp && await p.locator('#deadend.show').count() === 1, 'dead-end banner after ' + (dp ? dp.length : '?') + ' moves');
-  await tapEl(p, T, '#btn-dead-shop'); await p.waitForSelector('#ov-shop.show');
-  check(true, 'dead-end banner has a Boosters button that opens the shop');
-  await tapEl(p, T, '#buy-bay'); await p.waitForSelector('#shop-confirm.show'); await tapEl(p, T, '#btn-confirm'); await p.waitForTimeout(300);
+  await tapEl(p, T, '#btn-dead-shop'); await p.waitForTimeout(300);
+  check(await p.locator('#deadend.show').count() === 0 && await p.locator('#booster-bar.attention').count() === 1, 'dead-end banner\'s Boosters button reveals and highlights the booster bar');
+  await buy(p, T, 'bay'); await p.waitForTimeout(100);
   await p.waitForFunction(() => !window.WJB.searching(), null, { timeout: 20000 }).catch(() => {});
   await p.waitForTimeout(400);
   const rescued = await p.evaluate(() => window.WJBEngine.solve(window.WJB.session.game, window.WJB.session.state, { maxStates: 2000000 }).par !== null);
@@ -414,6 +464,66 @@ async function fitCheck(page, label) {
   await layoutOk(p, 'phone L13 with boosters');
 
   // --- Bay Word on level 17 (JUNGLE): junk letters spell a word, clear, pay 10 ---
+  // --- booster bar states: red price when too poor, Bay +1 "Used" ---
+  console.log('\n# Booster bar states + Flip');
+  await seeded(p, v4save({ coins: 80 }));
+  await openLevel(p, 13);
+  const poor = await p.evaluate(() => ['tow', 'bay', 'nudge', 'flip'].map(k => document.getElementById('bst-' + k).classList.contains('poor') ? 1 : 0).join(''));
+  const red = await p.evaluate(() => getComputedStyle(document.querySelector('#bst-tow .bst-price')).color);
+  check(poor === '1101' && red === 'rgb(224, 49, 49)', 'with 80 coins: Tow, Bay +1 and Flip show their price in red, Nudge (60) does not (' + poor + ', ' + red + ')');
+  await tapEl(p, T, '#bst-tow'); await p.waitForTimeout(350);
+  check(await p.locator('#ov-shop.show').count() === 0 && (await S(p)).coins === 80 && /Need 150 coins/.test(await p.textContent('#toast')), 'tapping an unaffordable booster: no confirm, "Need 150 coins" toast, nothing spent');
+  await seeded(p, v4save({ coins: 1000 }));
+  await openLevel(p, 13);
+  await buy(p, T, 'bay');
+  check(await p.locator('#bst-bay.off').count() === 1 && (await p.textContent('#bst-bay .bst-price')).trim() === 'Used', 'after Bay +1 its button greys out and reads "Used"');
+  await tapEl(p, T, '#bst-bay'); await p.waitForTimeout(300);
+  check(await p.locator('#ov-shop.show').count() === 0 && (await S(p)).coins === 900, 'tapping a used Bay +1 does nothing (no confirm, no charge)');
+  // --- Flip: a car turns round and drives out of its former tail end ---
+  let flipLv = 0, fx = null;
+  for (const n of [13, 14, 11, 15, 16, 18, 19, 20, 23, 9, 10, 8]) { await openLevel(p, n); fx = await findFlipExit(p); if (fx) { flipLv = n; break; } }
+  check(!!fx, 'found a car on level ' + flipLv + ' that can only leave the other way (car ' + (fx && fx.car) + ', facing ' + (fx && fx.dir) + ')');
+  const fb = await S(p);
+  await tapEl(p, T, '#bst-flip'); await p.waitForSelector('#ov-shop.show'); await p.waitForTimeout(300);
+  check(/Spend 120 coins on Flip\?/.test(await p.textContent('#confirm-title')), 'Flip confirm: "Spend 120 coins on Flip?"');
+  await tapEl(p, T, '#btn-confirm'); await p.waitForTimeout(300);
+  const flipPick = await p.evaluate(() => ({ glow: document.querySelectorAll('.car.can-boost').length, cars: [...document.querySelectorAll('.car')].filter(e => e.style.display !== 'none').length, bar: document.getElementById('boost-bar').classList.contains('show') }));
+  check(flipPick.bar && flipPick.glow === flipPick.cars && (await S(p)).coins === 1000, 'flip pick mode: every car in the lot glows (trucks too), Cancel bar shown, nothing charged yet');
+  await shot(p, 'v6-flip-pick.png');
+  await inputMove(p, T, fx.car, 0, 'tap'); await p.waitForTimeout(650); await settle(p);
+  let fa = await S(p);
+  const fdir = await p.evaluate(id => ({ game: window.WJB.session.game.cars[id].dir, el: document.querySelector('.car[data-id="' + id + '"]').getAttribute('data-dir') }), fx.car);
+  check(fdir.game === fx.to && fdir.el === fx.to && fa.coins === 880 && fa.moves === fb.moves + 1 && fa.used.flip === 1 && fa.pos[fx.car] === fb.pos[fx.car],
+    'Flip: car ' + fx.car + ' now faces ' + fx.to + ' (was ' + fx.dir + '), same cells, 120 coins, +1 move');
+  await shot(p, 'v6-flip-done.png');
+  await p.waitForFunction(() => !window.WJB.searching(), null, { timeout: 20000 }).catch(() => {});
+  fa = await S(p);
+  check(fa.dead === (await p.evaluate(() => window.WJBEngine.solve(window.WJB.session.game, window.WJB.session.state).par === null)), 'dead-end check re-ran with the flipped direction (dead = ' + fa.dead + ')');
+  if (!fa.dead) {
+    await tapEl(p, T, '#btn-hint');
+    await p.waitForFunction(() => document.querySelector('.car.hint'), null, { timeout: 20000 }).catch(() => {});
+    const fh = await p.locator('.car.hint').count() ? await hintCheck(p) : { ok: false };
+    check(fh.ok, 'hint after Flip is optimal for the flipped lot (' + fh.d0 + ' -> ' + fh.d1 + ')');
+    await p.evaluate(() => { document.querySelectorAll('.car.hint').forEach(e => e.classList.remove('hint')); });
+  }
+  const pre2 = await S(p);
+  await inputMove(p, T, fx.car, 0, 'tap'); await settle(p);
+  fa = await S(p);
+  check(fa.pos[fx.car] === -1 && fa.moves === pre2.moves + 1, 'tapping the flipped car drives it out of its former tail end (' + fx.to + ')');
+  await tapEl(p, T, '#btn-undo'); await settle(p);
+  await tapEl(p, T, '#btn-undo'); await settle(p);
+  fa = await S(p);
+  const fu = await p.evaluate(id => ({ game: window.WJB.session.game.cars[id].dir, el: document.querySelector('.car[data-id="' + id + '"]').getAttribute('data-dir') }), fx.car);
+  check(fu.game === fx.dir && fu.el === fx.dir && fa.coins === 1000 && fa.used.flip === 0 && fa.pos[fx.car] === fb.pos[fx.car] && fa.moves === fb.moves, 'Undo x2: the car is back and faces ' + fx.dir + ' again; Flip\'s 120 coins refunded (1000)');
+  // a win that used Flip is capped at 2 stars
+  await openLevel(p, 11);
+  await buy(p, T, 'flip');
+  const fc = await p.evaluate(() => { const s = window.WJB.session, E = window.WJBEngine; let best = -1, bp = 99; for (let i = 0; i < s.game.n; i++) { if (s.state.pos[i] < 0) continue; const g2 = E.flipCar(s.game, i), st = E.applyBooster(s.game, s.state, 'flip', i), q = E.solve(g2, st).par; if (q !== null && q < bp) { bp = q; best = i; } } return best; });
+  await inputMove(p, T, fc, 0, 'tap'); await p.waitForTimeout(600); await settle(p);
+  await playPath(p, T, await p.evaluate(() => window.WJB.solution()));
+  await p.waitForSelector('#ov-win.show', { timeout: 8000 }).catch(() => {});
+  check(await p.locator('#ov-win.show').count() === 1 && +(await p.getAttribute('#win-stars', 'data-stars')) <= 2 && /Booster used/.test(await p.textContent('#win-detail')), 'a win that used Flip is capped at 2 stars ("Booster used")');
+
   console.log('\n# Bay Word');
   await seeded(p, v4save({ coins: 0 }));
   await openLevel(p, 17);
@@ -472,6 +582,126 @@ async function fitCheck(page, label) {
   // F: v4 save keeps coins and the seen flag
   t = await seeded(p, v4save({ unlocked: 5, coins: 321, stars: starsFor(v3ids.slice(0, 5)), unlockedId: 'st6-milk', seen: {} }));
   check(same(t.open, range(1, 6)) && t.stored.coins === 321 && (await p.textContent('#title-coins')).trim() === '321', 'v4 save: coins (321) and progress load unchanged');
+  /* ----------------------- SETTINGS + TEST MODE ----------------------- */
+  console.log('\n# Settings / test (cheat) options');
+  const REAL = { v: 4, unlocked: 2, unlockedId: 'st3-sun', stars: { 'st1-cat': 3, 'st2-dog': 2 }, best: { 'st1-cat': 3 }, sound: false, coins: 345, seen: {} };
+  t = await seeded(p, REAL);
+  const real0 = await p.evaluate(() => localStorage.getItem('wordJamBus.progress.v1'));
+  const testStore = () => p.evaluate(() => JSON.parse(localStorage.getItem('wordJamBus.test.v1') || 'null'));
+  check(same(t.open, [1, 2, 3]) && (await p.textContent('#title-coins')).trim() === '345' && !(await p.locator('#screen-title .test-badge').isVisible()), 'real save: levels 1-3 open, 345 coins, no TEST MODE tag');
+  const gear = await p.locator('#btn-settings').boundingBox();
+  check(gear.width >= 44 && gear.height >= 44, 'gear button on the title screen is a 44px target');
+  await tapEl(p, T, '#btn-settings'); await p.waitForSelector('#ov-settings.show'); await p.waitForTimeout(300);
+  const TKEYS = ['unlockAll', 'unlimitedCoins', 'unlimitedHints', 'unlimitedUndos'];
+  const offState = await p.evaluate(keys => ({ on: keys.filter(k => document.getElementById('test-' + k).checked).length, h: document.querySelector('.set-test h3').textContent, n: document.querySelectorAll('#test-toggles .set-row').length,
+    labels: [...document.querySelectorAll('#test-toggles .set-label b')].map(e => e.textContent).join(', ') }), TKEYS);
+  check(offState.on === 0 && /Test \/ cheat options/i.test(offState.h) && offState.n === 4, 'settings: "Test / cheat options" section with 4 toggles, all off (' + offState.labels + ')');
+  await shot(p, 'v6-settings-toggles-off.png');
+  const sw = await p.evaluate(() => [...document.querySelectorAll('.switch')].map(e => { const r = e.getBoundingClientRect(); return Math.min(r.width, r.height); }));
+  check(Math.min(...sw) >= 44, 'toggle switches are >= 44px targets');
+  for (let k = 1; k <= 4; k++) { await p.locator('#test-toggles .set-row:nth-child(' + k + ') .switch').scrollIntoViewIfNeeded(); await tapEl(p, T, '#test-toggles .set-row:nth-child(' + k + ') .switch'); await p.waitForTimeout(150); }
+  let ts = await testStore();
+  check(ts && TKEYS.every(k => ts[k] === true), 'all 4 toggles on, saved separately under wordJamBus.test.v1');
+  await p.evaluate(() => { document.querySelector('.settings-card').scrollTop = 0; });
+  check(await p.evaluate(() => localStorage.getItem('wordJamBus.progress.v1')) === real0, 'turning cheats on does not touch the real save');
+  await shot(p, 'v6-settings-toggles-on.png');
+  await tapEl(p, T, '#btn-settings-close'); await p.waitForTimeout(250);
+  t = await p.evaluate(() => ({ open: [...document.querySelectorAll('.lvl')].filter(b => !b.disabled).length, cheat: [...document.querySelectorAll('.lvl.cheat')].map(b => +b.getAttribute('data-level')), coins: document.getElementById('title-coins').textContent }));
+  check(t.open === NLEV && same(t.cheat, range(4, NLEV)) && t.coins === '\u221e' && await p.locator('#screen-title .test-badge').isVisible(), 'unlock all: all 23 open (4-23 marked as test-opened), coins show \u221e, TEST MODE tag on the title');
+  sel = await fitCheck(p);
+  check(sel.fits && sel.scroll, 'level select with unlock-all still fits without scrolling');
+  await shot(p, 'v6-level-select-unlock-all.png');
+  // a test-opened level: playable, but off the record
+  await tapEl(p, T, '.lvl[data-level="12"]'); await p.waitForTimeout(800);
+  check(await p.locator('#ov-coach.show').count() === 1 && await p.locator('.hud-mid .test-badge').isVisible(), 'test-opened level 12 starts (Scramble tip shows); TEST MODE tag in the HUD');
+  await tapEl(p, T, '#btn-coach'); await p.waitForTimeout(300);
+  await playPath(p, T, await p.evaluate(() => window.WJB.solution()));
+  await p.waitForSelector('#ov-win.show', { timeout: 8000 }).catch(() => {});
+  check(await p.locator('#ov-win.show').count() === 1 && /TEST MODE: not saved/.test(await p.textContent('#win-detail')) && (await p.getAttribute('#win-coins', 'data-earned')) === '0',
+    'winning a test-opened level: "TEST MODE: not saved", 0 coins banked');
+  check(await p.evaluate(() => localStorage.getItem('wordJamBus.progress.v1')) === real0, 'real save unchanged after that win (no stars, unlock, coins or tip flag)');
+  // a free booster on a really-unlocked level, then win: also off the record
+  await openLevel(p, 3);
+  check((await p.textContent('#coin-count')).trim() === '\u221e' && await p.evaluate(() => ['tow', 'bay', 'nudge', 'flip'].every(k => document.querySelector('#bst-' + k + ' .bst-price').textContent.trim() === 'Free')), 'unlimited coins: bar shows \u221e and every booster reads "Free"');
+  await tapEl(p, T, '#bst-bay'); await p.waitForSelector('#ov-shop.show'); await p.waitForTimeout(300);
+  check(/Use Bay \+1 for free\?/.test(await p.textContent('#confirm-title')), 'confirm under unlimited coins: "Use Bay +1 for free?"');
+  await tapEl(p, T, '#btn-confirm'); await p.waitForTimeout(300);
+  cs = await S(p);
+  check(cs.used.bay === 1 && cs.cap === 5 && cs.coins === 345, 'free Bay +1 applied; real balance untouched (345)');
+  await tapEl(p, T, '#btn-undo'); await settle(p);
+  check((await S(p)).coins === 345 && (await S(p)).used.bay === 0, 'Undo of a free booster refunds nothing (still 345)');
+  await buy(p, T, 'nudge');
+  const nf = await p.evaluate(() => { const s = window.WJB.session, E = window.WJBEngine; let best = -1, bp = 99; for (let i = 0; i < s.game.n; i++) for (const w of [0, 1]) { const to = E.nudgeTo(s.game, s.state, i, w); if (to === null) continue; const st = E.applyBooster(s.game, s.state, 'nudge', i, w), q = E.solve(s.game, st).par; if (q !== null && q < bp) { bp = q; best = [i, w]; } } return best; });
+  await inputMove(p, T, nf[0], nf[1], nf[1] ? 'swipe' : 'tap'); await settle(p);
+  await playPath(p, T, await p.evaluate(() => window.WJB.solution()));
+  await p.waitForSelector('#ov-win.show', { timeout: 8000 }).catch(() => {});
+  check(await p.locator('#ov-win.show').count() === 1 && /not saved/.test(await p.textContent('#win-detail')), 'a win with a free booster is off the record');
+  check(await p.evaluate(() => localStorage.getItem('wordJamBus.progress.v1')) === real0, 'real save still byte-identical');
+  // turn everything off: the real state returns exactly
+  await p.goto(URL); await p.waitForSelector('#screen-title.active');
+  await tapEl(p, T, '#btn-settings'); await p.waitForSelector('#ov-settings.show'); await p.waitForTimeout(300);
+  await tapEl(p, T, '#btn-test-off'); await p.waitForTimeout(200);
+  ts = await testStore();
+  check(ts.unlockAll === false && ts.unlimitedCoins === false && await p.locator('#btn-test-off[disabled]').count() === 1, '"Turn all test options off" clears both toggles');
+  await tapEl(p, T, '#btn-settings-close'); await p.waitForTimeout(200);
+  t = await (async () => { await p.goto(URL); await p.evaluate(sv => { localStorage.setItem('wordJamBus.progress.v1', sv); localStorage.setItem('wordJamBus.test.v1', JSON.stringify({ unlockAll: false, unlimitedCoins: false })); }, real0); await p.reload(); await p.waitForSelector('#screen-title.active');
+    return p.evaluate(() => ({ open: [...document.querySelectorAll('.lvl')].filter(b => !b.disabled).map(b => +b.getAttribute('data-level')), coins: document.getElementById('title-coins').textContent, cheat: document.querySelectorAll('.lvl.cheat').length, badge: getComputedStyle(document.querySelector('#screen-title .test-badge')).display })); })();
+  check(same(t.open, [1, 2, 3]) && t.coins === '345' && t.cheat === 0 && t.badge === 'none', 'cheats off: levels 1-3 open again, 345 coins, no TEST MODE tag');
+  // a real win while unlimited coins is on: stars count, fares are not banked
+  await p.evaluate(() => localStorage.setItem('wordJamBus.test.v1', JSON.stringify({ unlimitedCoins: true })));
+  await p.reload(); await p.waitForSelector('#screen-title.active');
+  await openLevel(p, 3);
+  await playPath(p, T, await p.evaluate(() => window.WJB.solution()));
+  await p.waitForSelector('#ov-win.show', { timeout: 8000 }).catch(() => {});
+  let stored = await p.evaluate(() => JSON.parse(localStorage.getItem('wordJamBus.progress.v1')));
+  check(stored.stars['st3-sun'] === 3 && stored.coins === 345 && stored.unlocked === 3 && /not banked/.test(await p.textContent('#win-coins')), 'real level won with unlimited coins on (no booster): 3 stars + unlock saved, coins not banked (345)');
+  await p.evaluate(() => localStorage.setItem('wordJamBus.test.v1', JSON.stringify({ unlimitedCoins: false })));
+  await p.goto(URL); await p.reload(); await p.waitForSelector('#screen-title.active');
+  check((await p.textContent('#title-coins')).trim() === '345', 'unlimited off: the real 345 coins are back');
+  // unlimited hints + undos: never run out, \u221e badges; using more than the normal count keeps the win off the record
+  await p.evaluate(() => localStorage.setItem('wordJamBus.test.v1', JSON.stringify({ unlimitedHints: true, unlimitedUndos: true })));
+  await p.reload(); await p.waitForSelector('#screen-title.active');
+  check(await p.locator('#screen-title .test-badge').isVisible(), 'unlimited hints/undos alone light the TEST MODE tag');
+  await openLevel(p, 4);
+  check((await p.textContent('#undo-count')).trim() === '\u221e' && (await p.textContent('#hint-count')).trim() === '\u221e' && await p.locator('#undo-count.inf').count() === 1 && await p.locator('.hud-mid .test-badge').isVisible(), 'undo and hint buttons show an \u221e badge; TEST MODE in the HUD');
+  const m1 = (await p.evaluate(() => window.WJB.solution()))[0];
+  for (let k = 0; k < 7; k++) { await inputMove(p, T, m1.car, m1.which, m1.which ? 'swipe' : 'tap'); await settle(p); await tapEl(p, T, '#btn-undo'); await settle(p); }
+  cs = await S(p);
+  check(cs.moves === 0 && cs.undos === 5 && await p.evaluate(() => window.WJB.session.undosUsed) === 7, 'unlimited undos: 7 undos used, the count never drops');
+  for (let k = 0; k < 4; k++) {
+    await tapEl(p, T, '#btn-hint');
+    await p.waitForFunction(() => document.querySelector('.car.hint'), null, { timeout: 15000 }).catch(() => {});
+    await p.evaluate(() => document.querySelectorAll('.car.hint').forEach(e => e.classList.remove('hint')));
+    await p.waitForTimeout(150);
+  }
+  check(await p.evaluate(() => window.WJB.session.hintsUsed) === 4 && (await S(p)).hints === 3 && !(await p.locator('#btn-hint').isDisabled()), 'unlimited hints: 4 hints shown, still available');
+  await buy(p, T, 'bay');
+  check((await S(p)).coins === 245, 'a real-coin booster under unlimited undos: Bay +1 costs 100 (245 left)');
+  await tapEl(p, T, '#btn-undo'); await settle(p);
+  check((await S(p)).coins === 345 && (await S(p)).used.bay === 0, 'undoing it under unlimited undos still refunds the 100 coins (345)');
+  await playPath(p, T, await p.evaluate(() => window.WJB.solution()));
+  await p.waitForSelector('#ov-win.show', { timeout: 8000 }).catch(() => {});
+  stored = await p.evaluate(() => JSON.parse(localStorage.getItem('wordJamBus.progress.v1')));
+  check(/not saved/.test(await p.textContent('#win-detail')) && !stored.stars['st4-hat'] && stored.coins === 345, 'a win that needed more than 5 undos / 3 hints is not saved (no stars, coins 345)');
+  await p.evaluate(() => localStorage.setItem('wordJamBus.test.v1', JSON.stringify({ unlimitedHints: false, unlimitedUndos: false })));
+  await p.reload(); await p.waitForTimeout(300);
+  await openLevel(p, 4);
+  check((await p.textContent('#undo-count')).trim() === '5' && (await p.textContent('#hint-count')).trim() === '3' && await p.locator('.badge.inf').count() === 0 && !(await p.locator('.hud-mid .test-badge').isVisible()), 'toggles off: the next level starts with the normal 5 undos and 3 hints');
+  await p.goto(URL); await p.waitForSelector('#screen-title.active');
+  // How to play + Sound live in settings; Reset is separate and asks first
+  await tapEl(p, T, '#btn-settings'); await p.waitForSelector('#ov-settings.show'); await p.waitForTimeout(300);
+  await tapEl(p, T, '#btn-reset'); await p.waitForTimeout(150);
+  check(await p.locator('#reset-confirm.show').count() === 1, 'Reset asks for confirmation first');
+  await tapEl(p, T, '#btn-reset-cancel'); await p.waitForTimeout(150);
+  stored = await p.evaluate(() => JSON.parse(localStorage.getItem('wordJamBus.progress.v1')));
+  check(stored.coins === 345 && stored.stars['st3-sun'] === 3, 'Cancel keeps the progress');
+  await tapEl(p, T, '#btn-reset'); await p.waitForTimeout(150); await tapEl(p, T, '#btn-reset-yes'); await p.waitForTimeout(200);
+  stored = await p.evaluate(() => JSON.parse(localStorage.getItem('wordJamBus.progress.v1')));
+  check(stored.coins === 0 && Object.keys(stored.stars).length === 0 && stored.unlocked === 0, 'Yes, reset: progress and coins cleared');
+  await tapEl(p, T, '#btn-howto'); await p.waitForSelector('#ov-howto.show');
+  check(true, 'How to play opens from settings');
+  await tapEl(p, T, '#btn-howto-close'); await p.waitForTimeout(150);
+  await tapEl(p, T, '#btn-settings-close');
   await phone.close();
 
   /* ------------------------------ SMALL PHONE 375x667 ------------------------------ */
@@ -490,10 +720,18 @@ async function fitCheck(page, label) {
     if (n === 23) await shot(sp, 'v4-13-small-phone-375x667-level23.png');
     check(r.minCar >= 34, '375x667 L' + n + ': cars are >= 34px targets (' + Math.round(r.minCar) + 'px)');
   }
-  const sbtn = await sp.evaluate(() => ['btn-shop', 'btn-hint'].map(id => document.getElementById(id).getBoundingClientRect()).every(b => b.bottom <= innerHeight && b.height >= 40));
-  check(sbtn, '375x667: coin/booster and hint buttons visible, >= 40px tall');
-  await tapEl(sp, ST, '#btn-shop'); await sp.waitForSelector('#ov-shop.show');
-  check(await sp.evaluate(() => { const r = document.querySelector('.shop-card').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }), '375x667: booster shop sheet fits on screen');
+  for (const n of [22, 23]) { await openLevel(sp, n); await barCheck(sp, '375x667 L' + n); }
+  await shot(sp, 'v6-play-booster-bar-375x667.png');
+  await tapEl(sp, ST, '#bst-flip'); await sp.waitForSelector('#ov-shop.show'); await sp.waitForTimeout(300);
+  check(await sp.evaluate(() => { const r = document.querySelector('.shop-card').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }), '375x667: booster confirm sheet fits on screen');
+  await tapEl(sp, ST, '#btn-confirm'); await sp.waitForTimeout(300);
+  check(await sp.evaluate(() => { const b = document.getElementById('btn-boost-cancel').getBoundingClientRect(); return b.height >= 40 && b.bottom <= innerHeight; }), '375x667: pick-a-car Cancel bar replaces the booster bar');
+  await tapEl(sp, ST, '#btn-boost-cancel'); await sp.waitForTimeout(250);
+  check(await sp.locator('#boost-bar.show').count() === 0 && (await S(sp)).coins === 400, 'Cancel leaves pick mode with no charge');
+  await seeded(sp, v4save({}));
+  await sp.waitForTimeout(300);
+  await sp.goto(URL + '#level-1'); await sp.reload(); await sp.waitForTimeout(800);
+  await layoutOk(sp, '375x667 L1');
   await small.close();
 
   /* ------------------------------ DESKTOP ------------------------------ */
@@ -523,8 +761,9 @@ async function fitCheck(page, label) {
   const sol22 = await d.evaluate(() => window.WJB.solution());
   for (const m of sol22.slice(0, 6)) { await inputMove(d, M, m.car, m.which, m.which === 1 ? 'drag' : 'click'); await settle(d); }
   await shot(d, 'v4-16-desktop-scramble-midplay.png');
-  await d.click('#btn-shop'); await d.waitForSelector('#ov-shop.show');
-  await d.click('#buy-nudge'); await d.waitForSelector('#shop-confirm.show');
+  await barCheck(d, 'desktop L22');
+  await shot(d, 'v6-play-booster-bar-desktop.png');
+  await d.click('#bst-nudge'); await d.waitForSelector('#ov-shop.show');
   await shot(d, 'v4-17-desktop-booster-confirm.png');
   await d.click('#btn-confirm'); await d.waitForTimeout(200);
   const dn = await d.evaluate(() => { const s = window.WJB.session, E = window.WJBEngine; for (let i = 0; i < s.game.n; i++) if (s.state.pos[i] >= 0 && E.nudgeTo(s.game, s.state, i, 0) !== null) return i; return -1; });
