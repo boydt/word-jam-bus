@@ -2,7 +2,7 @@
 /*
  * Headless browser play-test for Word Jam Bus (v2 slide-until-blocked rules;
  * v4 level set: 10 starter levels, the 10 v2 levels and 3 Scramble breathers = 23;
- * coins + boosters; Bay Word).
+ * coins + boosters; Bay Word; v7: 5 Downtown levels with keys and padlocks = 28).
  *   python3 -m http.server 8765   (in the game folder, or set WJB_URL)
  *   node tests/e2e.js
  * Uses REAL input only to move cars: touch taps + touch swipes (CDP touch
@@ -130,6 +130,20 @@ async function inputMove(page, ctx, car, which, how) {
     await page.mouse.up();
   }
 }
+/* v7 keys and padlocks: read the lot's key / lock setup and what the page shows for it. */
+const lockInfo = page => page.evaluate(() => {
+  const s = window.WJB.session, g = s.game, E = window.WJBEngine;
+  return g.cars.map((c, i) => {
+    const el = document.querySelector('.car[data-id="' + i + '"]'), kb = el.querySelector('.kb-key'), lb = el.querySelector('.kb-lock');
+    const vis = b => !!b && getComputedStyle(b).display !== 'none' && b.getBoundingClientRect().width > 0;
+    const shape = b => b ? (b.querySelector('svg polygon') ? 'triangle' : b.querySelector('svg rect:not([x="4"])') ? 'square' : 'circle') : null;
+    return { i, l: c.l, key: c.key, lock: c.lock, lockBy: c.lockBy, on: s.state.pos[i] >= 0, locked: E.isLocked(g, s.state.pos, i), cls: el.className,
+      keyBadge: vis(kb), lockBadge: vis(lb), keyShape: c.key ? shape(kb) : null, lockShape: c.lock ? shape(lb) : null, aria: el.getAttribute('aria-label') };
+  });
+});
+/** Index in the optimal line where key car k drives out (or -1). */
+const keyExitAt = (page, sol, k) => page.evaluate(([sol, k]) => { const E = window.WJBEngine, g = window.WJB.session.game; let st = window.WJB.session.state;
+  for (let j = 0; j < sol.length; j++) { st = E.step(g, st, sol[j].car, sol[j].which).state; if (st.pos[k] < 0) return j; } return -1; }, [sol, k]);
 async function playPath(page, ctx, moves) {
   for (const m of moves) { await inputMove(page, ctx, m.car, m.which, m.which === 1 ? 'swipe' : 'tap'); await settle(page); }
 }
@@ -216,8 +230,11 @@ async function seeded(page, save) {
 const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
 const same = (x, y) => JSON.stringify(x) === JSON.stringify(y);
 
-const NLEV = 23;
-const SCR = [12, 17, 22];
+const LVS = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'levels', 'levels.json'), 'utf8')).levels;
+const NLEV = LVS.length;
+const SCR = LVS.map((l, i) => l.mode === 'scramble' ? i + 1 : 0).filter(Boolean);
+const KEYS = LVS.map((l, i) => l.cars.some(c => c.lock) ? i + 1 : 0).filter(Boolean);   // levels with padlocks
+const LAST_ID = LVS[NLEV - 1].id;
 async function winAll(page, ctx, label) {
   for (let n = 1; n <= NLEV; n++) {
     await openLevel(page, n);
@@ -231,7 +248,7 @@ async function winAll(page, ctx, label) {
     const won = await page.locator('#ov-win.show').count() === 1;
     const st = await page.getAttribute('#win-stars', 'data-stars');
     const lv = await page.evaluate(() => ({ par: window.WJB.session.level.par, id: window.WJB.session.level.id, mode: window.WJB.session.level.mode || 'route', used: window.WJB.session.state.used }));
-    const noBoost = !lv.used.tow && !lv.used.bay && !lv.used.nudge;
+    const noBoost = !lv.used.tow && !lv.used.bay && !lv.used.nudge && !lv.used.flip;
     check(won && st === '3' && sol.length === lv.par && noBoost, label + ' level ' + n + ' (' + lv.id + (lv.mode === 'scramble' ? ', Scramble' : '') + ') won in ' + sol.length + ' moves (= par ' + lv.par + ', ' +
       sol.filter(m => m.which === 1).length + ' reverses), no boosters, 3 stars [' + (Date.now() - t0) + ' ms]');
   }
@@ -303,15 +320,15 @@ async function fitCheck(page, label) {
   check(await p.locator('.lvl').count() === NLEV, NLEV + ' levels listed');
   check(same(t.open, [1]), 'fresh save: only level 1 unlocked');
   check(same(await p.evaluate(() => [...document.querySelectorAll('.lvl.scr')].map(b => +b.getAttribute('data-level'))), SCR) &&
-    await p.locator('.lvl.scr .lvl-scr').count() === 3, 'level select marks the Scramble levels 12, 17, 22 with a shuffle icon');
+    await p.locator('.lvl.scr .lvl-scr').count() === SCR.length, 'level select marks the Scramble levels ' + SCR.join(', ') + ' with a shuffle icon');
   let sel = await fitCheck(p);
-  check(sel.fits && sel.footFits && sel.scroll && sel.minH >= 44, 'level select: all 23 buttons + footer fit on 390x844 without scrolling (' + sel.rows + ' rows, buttons ' + Math.round(sel.minW) + 'x' + Math.round(sel.minH) + 'px)');
+  check(sel.fits && sel.footFits && sel.scroll && sel.minH >= 44, 'level select: all ' + NLEV + ' buttons + footer fit on 390x844 without scrolling (' + sel.rows + ' rows, buttons ' + Math.round(sel.minW) + 'x' + Math.round(sel.minH) + 'px)');
   check((await p.textContent('#title-coins')).trim() === '0' && t.stored.coins === 0 && t.stored.v === 4, 'fresh save: coin counter 0, stored as v4');
   check(await p.evaluate(() => getComputedStyle(document.getElementById('lot')).touchAction) === 'none', 'lot has touch-action:none (swipes never scroll/zoom)');
 
   // --- coins: fares banked on a win, doubled at par, +20 first clear; saved ---
   await tapEl(p, T, '#btn-play'); await p.waitForSelector('#screen-game.active'); await p.waitForTimeout(700);
-  check((await p.textContent('#hud-level')).trim() === 'Level 1 of 23', 'Play opens "Level 1 of 23"');
+  check((await p.textContent('#hud-level')).trim() === 'Level 1 of ' + NLEV, 'Play opens "Level 1 of ' + NLEV + '"');
   check(await p.locator('#word .tile .seat-n').count() === 3 && (await p.locator('#word .tile.next').count()) === 1 &&
     await p.locator('#word .tile[data-slot="0"].next').count() === 1, 'in-order level: seats numbered 1-3, seat 1 glows as next');
   await layoutOk(p, 'phone L1');
@@ -679,16 +696,127 @@ async function fitCheck(page, label) {
   await shot(p, 'v4-11-phone-win-coins.png');
 
   // --- every level winnable through real touch input at par, no boosters ---
+  {  /* ----------------------- v7: KEYS AND PADLOCKS ----------------------- */
+  console.log('\n# Keys and padlocks');
+  check(KEYS.length >= 4 && KEYS[0] === 24 && LVS[KEYS[0] - 1].teaches === 'keys', 'padlocks appear on ' + KEYS.length + ' levels (' + KEYS.join(', ') + '), introduced on level ' + KEYS[0] + ' after the 23 earlier levels');
+  await seeded(p, v4save({ coins: 1000, unlocked: NLEV - 1, unlockedId: LAST_ID }));
+  await openLevel(p, KEYS[0]);
+  let li = await lockInfo(p);
+  const tip1 = (await p.textContent('#tip')).trim();
+  check(/key/i.test(tip1) && /padlock/i.test(tip1), 'first key level has a one-line tip about keys and padlocks ("' + tip1 + '")');
+  const keyCars = li.filter(c => c.key), lockCars = li.filter(c => c.lock);
+  const SHAPE = { gold: 'circle', blue: 'triangle', pink: 'square' };
+  check(keyCars.length >= 1 && keyCars.every(c => c.keyBadge && c.keyShape === SHAPE[c.key] && /carries the \w+ \w+ key/.test(c.aria)), 'key cars carry a key badge in their colour with its shape (' + keyCars.map(c => c.l + ': ' + c.key + ' ' + c.keyShape).join(', ') + ')');
+  check(lockCars.every(c => c.locked && c.lockBadge && c.lockShape === SHAPE[c.lock] && / locked\b|padlocked/.test(c.aria) && /\blocked\b/.test(c.cls)), 'padlocked cars show a padlock of the same colour + shape and a locked look (' + lockCars.map(c => c.l + ': ' + c.lock + ' ' + c.lockShape).join(', ') + ')');
+  await shot(p, 'v7-key-first-level-tip.png');
+  const L1 = lockCars[0].i, K1 = lockCars[0].lockBy;
+  let kb0 = await S(p);
+  await inputMove(p, T, L1, 0, 'tap'); await p.waitForTimeout(220);
+  const fb = await p.evaluate(([l, k]) => { const le = document.querySelector('.car[data-id="' + l + '"]'), ke = document.querySelector('.car[data-id="' + k + '"]');
+    return { wig: le.classList.contains('lock-wiggle'), lockAnim: getComputedStyle(le.querySelector('.kb-lock')).animationName, call: ke.classList.contains('key-call'), keyAnim: getComputedStyle(ke.querySelector('.chassis')).animationName, toast: document.getElementById('toast').textContent }; }, [L1, K1]);
+  let kb1 = await S(p);
+  check(fb.wig && fb.lockAnim === 'lockwiggle' && fb.call && fb.keyAnim === 'keycall' && /Locked/.test(fb.toast) && kb1.moves === kb0.moves && same(kb1.pos, kb0.pos),
+    'tapping a padlocked car: padlock wiggles, the matching key car lights up, "' + fb.toast + '", no move used');
+  await shot(p, 'v7-locked-tap-key-highlight.png');
+  await p.waitForTimeout(1800);
+  await inputMove(p, T, L1, 1, 'swipe'); await p.waitForTimeout(200);
+  kb1 = await S(p);
+  check(kb1.moves === kb0.moves && same(kb1.pos, kb0.pos), 'swiping it backwards does nothing either (no reverse while locked)');
+  // the unlock moment: play the optimal line up to the key car's exit
+  const solk = await p.evaluate(() => window.WJB.solution());
+  const kAt = await keyExitAt(p, solk, K1);
+  check(kAt >= 0 && solk.length === LVS[KEYS[0] - 1].par, 'the optimal line drives the key car out at move ' + (kAt + 1) + ' of ' + solk.length);
+  await playPath(p, T, solk.slice(0, kAt));
+  check((await lockInfo(p))[L1].locked, 'still locked before the key car leaves');
+  await inputMove(p, T, K1, solk[kAt].which, solk[kAt].which ? 'swipe' : 'tap'); await p.waitForTimeout(160);
+  const um = await p.evaluate(l => { const e = document.querySelector('.car[data-id="' + l + '"]'); return { unlocking: e.classList.contains('unlocking'), locked: e.classList.contains('locked'), anim: getComputedStyle(e.querySelector('.kb-lock')).animationName, toast: document.getElementById('toast').textContent }; }, L1);
+  check(um.unlocking && !um.locked && um.anim === 'lockpop' && /nlocked/.test(um.toast), 'key car drives out: its padlock(s) pop open with an unlock animation ("' + um.toast + '")');
+  await shot(p, 'v7-unlock-moment.png');
+  await settle(p); await p.waitForTimeout(1100);
+  li = await lockInfo(p);
+  check(li.filter(c => c.lockBy === K1).every(c => !c.locked && !c.lockBadge && /unlocked/.test(c.aria)), 'after the animation every lock of that colour is gone (one key opens all of its colour)');
+  // Undo of the key car's exit re-locks
+  await tapEl(p, T, '#btn-undo'); await p.waitForTimeout(120);
+  const rl = await p.evaluate(l => document.querySelector('.car[data-id="' + l + '"]').classList.contains('relock'), L1);
+  await settle(p); await p.waitForTimeout(400);
+  li = await lockInfo(p);
+  check(rl && li[K1].on && li.filter(c => c.lockBy === K1).every(c => c.locked && c.lockBadge), 'Undo of the key car\'s exit: the key car is back and its padlocks snap shut again');
+  kb0 = await S(p);
+  await inputMove(p, T, L1, 0, 'tap'); await p.waitForTimeout(200);
+  check(same((await S(p)).pos, kb0.pos) && (await S(p)).moves === kb0.moves, 're-locked car is really locked again (tap = no move)');
+  // hint understands locks
+  await p.waitForTimeout(1600);
+  await tapEl(p, T, '#btn-hint');
+  await p.waitForFunction(() => document.querySelector('.car.hint'), null, { timeout: 20000 }).catch(() => {});
+  const kh = await hintCheck(p);
+  check(kh.ok, 'hint with padlocks is on an optimal line (' + kh.d0 + ' -> ' + kh.d1 + ')');
+  await p.evaluate(() => { document.querySelectorAll('.car.hint').forEach(e => e.classList.remove('hint')); });
+  // boosters: Tow, Nudge, Flip refuse padlocked cars; Tow refuses key cars; they are grayed in pick-a-car
+  const coins0 = (await S(p)).coins;
+  await buy(p, T, 'tow');
+  let pk = await p.evaluate(([l, k]) => ({ l: document.querySelector('.car[data-id="' + l + '"]').className, k: document.querySelector('.car[data-id="' + k + '"]').className,
+    op: +getComputedStyle(document.querySelector('.car[data-id="' + l + '"]')).opacity }), [L1, K1]);
+  check(/no-boost/.test(pk.l) && !/can-boost/.test(pk.l) && /no-boost/.test(pk.k) && !/can-boost/.test(pk.k) && pk.op < 0.6, 'Tow pick: the padlocked car and the key car are grayed out (opacity ' + pk.op + ')');
+  await shot(p, 'v7-booster-pick-locked-grayed.png');
+  await inputMove(p, T, L1, 0, 'tap'); await p.waitForTimeout(250);
+  let tt = await p.textContent('#toast');
+  check(/Padlocked cars can't be towed/.test(tt) && (await S(p)).coins === coins0 && (await S(p)).pos[L1] >= 0, 'tapping it in Tow pick: "' + tt + '", nothing charged');
+  await inputMove(p, T, K1, 0, 'tap'); await p.waitForTimeout(250);
+  tt = await p.textContent('#toast');
+  check(/Key cars can't be towed/.test(tt) && (await S(p)).coins === coins0 && (await S(p)).pos[K1] >= 0, 'tapping the key car in Tow pick: "' + tt + '" (no free unlock), nothing charged');
+  await tapEl(p, T, '#btn-boost-cancel'); await p.waitForTimeout(250);
+  await buy(p, T, 'nudge');
+  pk = await p.evaluate(l => document.querySelector('.car[data-id="' + l + '"]').className, L1);
+  await inputMove(p, T, L1, 0, 'tap'); await p.waitForTimeout(250);
+  tt = await p.textContent('#toast');
+  check(/no-boost/.test(pk) && /Padlocked cars can't be nudged/.test(tt) && (await S(p)).coins === coins0, 'Nudge pick: padlocked car grayed, refused ("' + tt + '")');
+  await tapEl(p, T, '#btn-boost-cancel'); await p.waitForTimeout(250);
+  await buy(p, T, 'flip');
+  pk = await p.evaluate(([l, k]) => [document.querySelector('.car[data-id="' + l + '"]').className, document.querySelector('.car[data-id="' + k + '"]').className], [L1, K1]);
+  await inputMove(p, T, L1, 0, 'tap'); await p.waitForTimeout(250);
+  tt = await p.textContent('#toast');
+  check(/no-boost/.test(pk[0]) && /can-boost/.test(pk[1]) && /Padlocked cars can't be flipped/.test(tt) && (await S(p)).coins === coins0, 'Flip pick: padlocked car grayed + refused, the key car can flip (it still has to drive out)');
+  await tapEl(p, T, '#btn-boost-cancel'); await p.waitForTimeout(250);
+  check(await p.locator('#bst-bay.off').count() === 0, 'Bay +1 is unaffected by padlocks');
+  // Undo after a key-car exit + flip etc. keeps locks right: flip the key car, undo it, still locked
+  await buy(p, T, 'flip'); await inputMove(p, T, K1, 0, 'tap'); await p.waitForTimeout(800);
+  await tapEl(p, T, '#btn-undo'); await settle(p); await p.waitForTimeout(300);
+  li = await lockInfo(p);
+  check(li[L1].locked && li[L1].lockBadge && (await S(p)).coins === coins0, 'flip the key car, then Undo: refunded, its padlocks still shut');
+  // later mixed key levels: two colours, a chain, a Scramble stop with a padlock
+  for (const n of KEYS.slice(1)) {
+    await openLevel(p, n);
+    li = await lockInfo(p);
+    const cols = [...new Set(li.filter(c => c.key).map(c => c.key))], chain = li.some(c => c.key && c.lock);
+    const okBadges = li.every(c => (!c.key || (c.keyBadge && c.keyShape === SHAPE[c.key])) && (!c.lock || (c.lockBadge && c.locked && c.lockShape === SHAPE[c.lock])));
+    const lv = LVS[n - 1];
+    check(okBadges, 'level ' + n + ' (' + lv.id + (lv.mode === 'scramble' ? ', Scramble' : '') + '): ' + cols.map(k => k + ' ' + SHAPE[k]).join(' + ') + ' key(s), ' + li.filter(c => c.lock).length + ' padlock(s)' + (chain ? ', a padlocked key car (chain)' : '') + ', badges shown');
+    if (n === KEYS[2]) await shot(p, 'v7-key-mixed-level.png');
+    if (n === KEYS[KEYS.length - 1]) await shot(p, 'v7-key-boss-level.png');
+  }
+  const chainLv = KEYS.find(n => LVS[n - 1].cars.some(c => c.key && c.lock));
+  check(!!chainLv && KEYS.some(n => new Set(LVS[n - 1].cars.filter(c => c.key).map(c => c.key)).size >= 2), 'the mix includes a two-colour level and a chain (level ' + chainLv + ')');
+  if (chainLv) {   // a chained key car is itself locked until the first key leaves
+    await openLevel(p, chainLv);
+    li = await lockInfo(p);
+    const ck = li.find(c => c.key && c.lock);
+    kb0 = await S(p);
+    await inputMove(p, T, ck.i, 0, 'tap'); await p.waitForTimeout(220);
+    const cc = await p.evaluate(k => document.querySelector('.car[data-id="' + k + '"]').classList.contains('key-call'), ck.lockBy);
+    check(ck.locked && cc && same((await S(p)).pos, kb0.pos), 'chain: the padlocked key car (' + ck.l + ', ' + ck.key + ' key, ' + ck.lock + ' padlock) is locked too; tapping it calls the ' + ck.lock + ' key car');
+  }
+  }
+
   console.log('\n# Phone: all ' + NLEV + ' levels with taps + swipes, no boosters');
   await seeded(p, null);
   await winAll(p, T, 'phone');
   t = await seeded(p, await p.evaluate(() => JSON.parse(localStorage.getItem('wordJamBus.progress.v1'))));
-  check(t.open.length === NLEV && t.stars.every(s => s === '\u2605\u2605\u2605'), 'after winning all 23: everything open with 3 stars, coins ' + t.stored.coins);
+  check(t.open.length === NLEV && t.stars.every(s => s === '\u2605\u2605\u2605'), 'after winning all ' + NLEV + ': everything open with 3 stars, coins ' + t.stored.coins);
   await shot(p, 'v4-12-phone-level-select.png');
 
   /* ----------------------- PROGRESS MIGRATION ----------------------- */
   console.log('\n# Saved-progress migration (seeded localStorage)');
-  const v3ids = LV.filter(l => l.mode !== 'scramble').map(l => l.id);
+  const v3ids = LV.slice(0, 23).filter(l => l.mode !== 'scramble').map(l => l.id);   // the 20 levels a v3 save knew
   const starsFor = ids => { const o = {}; ids.forEach(id => { o[id] = 3; }); return o; };
   // A: v3 player who beat the 10 starters + BUS, CAR, PLANET; v3 index 13 = APPLE
   t = await seeded(p, { v: 3, unlocked: 13, stars: starsFor(v3ids.slice(0, 13)), best: { 'lv3-planet': 25 }, sound: true });
@@ -702,7 +830,12 @@ async function fitCheck(page, label) {
   check(same(t.open, range(1, 13)) && t.current === 12, 'v3 save that beat BUS: levels 1-13 open, Continue = the new Scramble level 12');
   // C: v3 player who finished all 20
   t = await seeded(p, { v: 3, unlocked: 19, stars: starsFor(v3ids), best: {}, sound: true });
-  check(t.open.length === NLEV && t.current === 12, 'v3 save with all 20 beaten: all 23 open, Continue = the first unplayed Scramble level (12)');
+  check(same(t.open, range(1, KEYS[0])) && t.current === 12, 'v3 save with all 20 beaten: the old 23 open plus the first new level ' + KEYS[0] + ', Continue = the first unplayed Scramble level (12)');
+  // F2: a v4 save that finished the old last level (lv10-school, then the end of the list) gets the first new level
+  t = await seeded(p, v4save({ unlocked: 22, unlockedId: 'lv10-school', stars: starsFor(LVS.slice(0, 23).map(l => l.id)) }));
+  check(same(t.open, range(1, KEYS[0])) && t.current === KEYS[0] && t.stored.unlockedId === LVS[KEYS[0] - 1].id, 'v4 save that beat all 23 old levels: level ' + KEYS[0] + ' (new) opens and is Continue; migrated by id (' + t.stored.unlockedId + ')');
+  t = await seeded(p, v4save({ unlocked: 22, unlockedId: 'lv10-school', stars: starsFor(LVS.slice(0, 22).map(l => l.id)) }));
+  check(same(t.open, range(1, 23)) && t.current === 23, 'v4 save that has NOT beaten level 23 yet: still stops at 23');
   // D: v3 starter-only player
   t = await seeded(p, { v: 3, unlocked: 2, stars: { 'st1-cat': 3, 'st2-dog': 3 }, best: {}, sound: true });
   check(same(t.open, [1, 2, 3]) && t.current === 3, 'v3 save (beat starters 1-2): levels 1-3 open, Continue = level 3');
@@ -737,7 +870,7 @@ async function fitCheck(page, label) {
   await shot(p, 'v6-settings-toggles-on.png');
   await tapEl(p, T, '#btn-settings-close'); await p.waitForTimeout(250);
   t = await p.evaluate(() => ({ open: [...document.querySelectorAll('.lvl')].filter(b => !b.disabled).length, cheat: [...document.querySelectorAll('.lvl.cheat')].map(b => +b.getAttribute('data-level')), coins: document.getElementById('title-coins').textContent }));
-  check(t.open === NLEV && same(t.cheat, range(4, NLEV)) && t.coins === '\u221e' && await p.locator('#screen-title .test-badge').isVisible(), 'unlock all: all 23 open (4-23 marked as test-opened), coins show \u221e, TEST MODE tag on the title');
+  check(t.open === NLEV && same(t.cheat, range(4, NLEV)) && t.coins === '\u221e' && await p.locator('#screen-title .test-badge').isVisible(), 'unlock all: all ' + NLEV + ' open (4-' + NLEV + ' marked as test-opened), coins show \u221e, TEST MODE tag on the title');
   sel = await fitCheck(p);
   check(sel.fits && sel.scroll, 'level select with unlock-all still fits without scrolling');
   await shot(p, 'v6-level-select-unlock-all.png');
@@ -842,9 +975,10 @@ async function fitCheck(page, label) {
   const ST = { touch: true, cdp: await small.newCDPSession(sp) };
   await seeded(sp, v4save({ coins: 400, stars: starsFor(v3ids.slice(0, 12)) }));
   sel = await fitCheck(sp);
-  check(sel.fits && sel.footFits && sel.scroll && sel.minH >= 40, '375x667: all 23 level buttons + footer fit without scrolling (' + sel.rows + ' rows, buttons ' + Math.round(sel.minW) + 'x' + Math.round(sel.minH) + 'px)');
+  check(sel.fits && sel.footFits && sel.scroll && sel.minH >= 40, '375x667: all ' + NLEV + ' level buttons + footer fit without scrolling (' + sel.rows + ' rows, buttons ' + Math.round(sel.minW) + 'x' + Math.round(sel.minH) + 'px)');
   await shot(sp, 'v4-14-small-phone-375x667-level-select.png');
-  for (const n of [17, 22, 23]) {
+  await seeded(sp, v4save({ coins: 400, stars: starsFor(v3ids.slice(0, 12)), unlocked: NLEV - 1, unlockedId: LAST_ID }));
+  for (const n of [17, 22, 23].concat(KEYS)) {
     await openLevel(sp, n);
     const r = await layoutOk(sp, '375x667 L' + n);
     if (n === 23) await shot(sp, 'v4-13-small-phone-375x667-level23.png');
@@ -872,7 +1006,7 @@ async function fitCheck(page, label) {
   const M = { touch: false };
   t = await seeded(d, null);
   sel = await fitCheck(d);
-  check(sel.fits && sel.scroll && t.open.length === 1, 'desktop level select shows all 23 levels without scrolling');
+  check(sel.fits && sel.scroll && t.open.length === 1, 'desktop level select shows all ' + NLEV + ' levels without scrolling');
   await d.click('#btn-play'); await d.waitForTimeout(750);
   await layoutOk(d, 'desktop L1');
   await openLevel(d, 3);
@@ -883,6 +1017,18 @@ async function fitCheck(page, label) {
   check(after.pos[c] === before.pos[c] - (await d.evaluate(id => window.WJB.session.game.cars[id].sign, c)) * pr.dist, 'desktop: right-click reverses a car');
   await d.keyboard.press('r'); await d.waitForTimeout(300);
   check((await S(d)).moves === 0, 'desktop: R restarts');
+  {  // v7: keys on desktop (mouse)
+  await seeded(d, v4save({ coins: 500, unlocked: NLEV - 1, unlockedId: LAST_ID }));
+  await openLevel(d, KEYS[1]);
+  let dl = await lockInfo(d);
+  const dL = dl.find(c => c.locked);
+  const dkb = await S(d);
+  await inputMove(d, M, dL.i, 0, 'click'); await d.waitForTimeout(220);
+  const dfb = await d.evaluate(([l, k]) => ({ wig: document.querySelector('.car[data-id="' + l + '"]').classList.contains('lock-wiggle'), call: document.querySelector('.car[data-id="' + k + '"]').classList.contains('key-call') }), [dL.i, dL.lockBy]);
+  check(dfb.wig && dfb.call && same((await S(d)).pos, dkb.pos), 'desktop: clicking a padlocked car wiggles its padlock and calls the key car, no move');
+  await layoutOk(d, 'desktop key level ' + KEYS[1]);
+  await shot(d, 'v7-desktop-key-level.png');
+  }
   console.log('\n# Desktop: all ' + NLEV + ' levels with clicks + mouse drags, no boosters');
   await winAll(d, M, 'desktop');
   t = await seeded(d, await d.evaluate(() => JSON.parse(localStorage.getItem('wordJamBus.progress.v1'))));

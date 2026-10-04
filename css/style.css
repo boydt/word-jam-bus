@@ -564,3 +564,56 @@ button { font: inherit; color: inherit; touch-action: manipulation; cursor: poin
 @media (max-height: 700px) { .settings-card { gap: 6px; padding: 10px 14px 12px; } .set-row { min-height: 44px; padding: 2px 0; } .set-note { font-size: 11.5px; } .set-head h2 { font-size: 21px; } }
 .boost-bar .btn { min-height: 44px; min-width: 64px; }
 .lot.no-anim .car .chassis { transition: none !important; }
+
+/* ---------- v7: keys and padlocks ---------- */
+/* Badges sit on the car (not the chassis), so they never rotate. Each colour has its own shape:
+   gold = circle, blue = triangle, pink = square (on the key's bow and on the padlock's face). */
+.car .kb {
+  position: absolute; z-index: 3; display: block; pointer-events: none;
+  width: calc(var(--cell) * .44); height: calc(var(--cell) * .44); min-width: 18px; min-height: 18px;
+  border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .35); padding: 1px;
+}
+.car .kb svg { display: block; width: 100%; height: 100%; }
+.car .kb-key { left: 2%; top: 2%; }
+.car .kb-lock { right: 2%; top: 2%; }
+.car.has-lock:not(.locked):not(.unlocking) .kb-lock { display: none; }
+.car.locked .chassis { filter: saturate(.45) brightness(.8); }
+.car.locked .chassis::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: repeating-linear-gradient(45deg, rgba(20, 24, 40, .28) 0 3px, transparent 3px 8px);
+  box-shadow: inset 0 0 0 2px var(--lc, #333);
+}
+.car.locked .roof { opacity: .82; }
+/* tapping a locked car: the padlock wiggles, the key car lights up */
+.car.lock-wiggle .kb-lock { animation: lockwiggle .6s ease-in-out; }
+@keyframes lockwiggle { 0%, 100% { transform: rotate(0); } 15% { transform: rotate(-22deg) scale(1.15); } 35% { transform: rotate(18deg) scale(1.15); } 55% { transform: rotate(-12deg); } 75% { transform: rotate(8deg); } }
+.car.key-call { z-index: 4; }
+.car.key-call .chassis { animation: keycall .55s ease-in-out 3; }
+.car.key-call .kb-key { animation: keybounce .55s ease-in-out 3; }
+@keyframes keycall { 0%, 100% { box-shadow: inset 0 -5px 0 rgba(0, 0, 0, .18), 0 0 0 3px #fff, 0 0 0 0 var(--kc); } 50% { box-shadow: inset 0 -5px 0 rgba(0, 0, 0, .18), 0 0 0 3px #fff, 0 0 14px 7px var(--kc); } }
+@keyframes keybounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.35) rotate(-12deg); } }
+/* the unlock moment: the shackle swings open, the padlock pops and fades, a ring bursts out */
+.car.unlocking .kb-lock { animation: lockpop .9s ease-out forwards; }
+.car.unlocking .kb-lock .shackle { transform-origin: 16.5px 11px; animation: shackle .35s ease-out forwards; }
+@keyframes shackle { to { transform: translateY(-2.5px) rotate(28deg); } }
+@keyframes lockpop { 0% { transform: scale(1); opacity: 1; } 35% { transform: scale(1.45); opacity: 1; } 100% { transform: scale(.3) translateY(-60%); opacity: 0; } }
+.car.unlocking::after {
+  content: ''; position: absolute; right: 2%; top: 2%; width: calc(var(--cell) * .4); height: calc(var(--cell) * .4); border-radius: 50%;
+  border: 3px solid var(--lc, #fff); pointer-events: none; animation: lockring .8s ease-out forwards; z-index: 2;
+}
+@keyframes lockring { from { transform: scale(.6); opacity: .95; } to { transform: scale(3.2); opacity: 0; } }
+.car.unlocking .chassis { animation: unlockglow .8s ease-out; }
+@keyframes unlockglow { 0% { filter: saturate(.45) brightness(.8); } 40% { filter: brightness(1.35); } 100% { filter: none; } }
+/* Undo brings a lock back: it snaps shut */
+.car.relock .kb-lock { animation: relock .45s ease-out; }
+@keyframes relock { 0% { transform: scale(1.6); opacity: 0; } 70% { transform: scale(.9); opacity: 1; } 100% { transform: scale(1); } }
+.car.leaving .kb { opacity: 0; transition: opacity .2s; }
+@media (prefers-reduced-motion: reduce) {
+  .car.lock-wiggle .kb-lock, .car.key-call .chassis, .car.key-call .kb-key, .car.unlocking .chassis, .car.relock .kb-lock, .car.unlocking .kb-lock .shackle { animation: none; }
+  .car.key-call .chassis { box-shadow: inset 0 -5px 0 rgba(0, 0, 0, .18), 0 0 0 3px #fff, 0 0 12px 6px var(--kc); }
+  .car.unlocking .kb-lock { animation: none; opacity: 0; }
+  .car.unlocking::after { animation: none; display: none; }
+}
+.toast.low { white-space: normal; text-align: center; width: max-content; max-width: min(92vw, 560px); line-height: 1.25; }
+.car .kb-key { box-shadow: 0 0 0 2px var(--kc), 0 1px 3px rgba(0, 0, 0, .35); }
+.car .kb-lock { box-shadow: 0 0 0 2px var(--lc), 0 1px 3px rgba(0, 0, 0, .35); }

@@ -9,6 +9,31 @@
   var OPP = { right: 'left', left: 'right', up: 'down', down: 'up' };
   var UNDOS_PER_LEVEL = 5, HINTS_PER_LEVEL = 3;
   var FWD = E.FWD, BACK = E.BACK;
+  /* v7 keys and padlocks: each colour also has its own SHAPE (on the key's bow and the padlock's face),
+     so the pairs never depend on colour alone (Okabe-Ito colours, safe for the common colour-blind types). */
+  var KEY_STYLE = {
+    gold: { name: 'gold', shape: 'circle', hex: '#e69f00' },
+    blue: { name: 'blue', shape: 'triangle', hex: '#0072b2' },
+    pink: { name: 'pink', shape: 'square', hex: '#cc79a7' }
+  };
+  function shapeSvg(shape, cx, cy, r, extra) {
+    if (shape === 'triangle') return '<polygon points="' + cx + ',' + (cy - r) + ' ' + (cx + r * 0.95) + ',' + (cy + r * 0.75) + ' ' + (cx - r * 0.95) + ',' + (cy + r * 0.75) + '" ' + extra + '/>';
+    if (shape === 'square') return '<rect x="' + (cx - r * 0.8) + '" y="' + (cy - r * 0.8) + '" width="' + (r * 1.6) + '" height="' + (r * 1.6) + '" rx="1" ' + extra + '/>';
+    return '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" ' + extra + '/>';
+  }
+  /** Key badge: a key whose bow is the colour's shape. */
+  function keySvg(color) {
+    var k = KEY_STYLE[color];
+    return '<svg viewBox="0 0 24 24" aria-hidden="true">' + shapeSvg(k.shape, 7.5, 12, 5.6, 'fill="' + k.hex + '"') + shapeSvg(k.shape, 7.5, 12.2, 2, 'fill="#fff"') +
+      '<path d="M12.5 12H22M18.5 12v4M21.5 12v3" stroke="' + k.hex + '" stroke-width="3" stroke-linecap="round" fill="none"/></svg>';
+  }
+  /** Padlock badge: shackle + body in the colour, the colour's shape in white on its face. */
+  function lockSvg(color) {
+    var k = KEY_STYLE[color];
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="shackle" d="M7.5 11V8a4.5 4.5 0 0 1 9 0v3" stroke="' + k.hex + '" stroke-width="2.8" fill="none" stroke-linecap="round"/>' +
+      '<rect x="4" y="10" width="16" height="12" rx="2.6" fill="' + k.hex + '"/>' + shapeSvg(k.shape, 12, 16.2, 3.3, 'fill="#fff"') + '</svg>';
+  }
+  function keyName(color) { var k = KEY_STYLE[color]; return k.name + ' ' + k.shape; }
   var STORE_KEY = 'wordJamBus.progress.v1';
 
   /* ---------------- persistence ---------------- */
@@ -35,6 +60,8 @@
     if (mapped >= 0) u = mapped;
     p.v = PROGRESS_VERSION;
     p.unlocked = Math.max(0, Math.min(LEVELS.length - 1, u));
+    // the furthest open level was already won (e.g. it was the last level before new ones were added): open the next
+    while (p.unlocked + 1 < LEVELS.length && p.stars[LEVELS[p.unlocked].id]) p.unlocked++;
     if (p.sound === undefined) p.sound = true;
     p.coins = Math.max(0, p.coins | 0);
     p.seen = p.seen || {};
@@ -122,7 +149,8 @@
     word: function () { var s = this; [784, 988, 1175].forEach(function (f, i) { s.tone(f, 0.16, 'triangle', 0.13, null, i * 0.08); }); },
     coin: function () { this.tone(1320, 0.08, 'square', 0.04, 1760); },
     win: function () { var s = this; [523, 659, 784, 1047].forEach(function (f, i) { s.tone(f, 0.22, 'triangle', 0.15, null, i * 0.11); }); },
-    lose: function () { this.tone(330, 0.5, 'sawtooth', 0.07, 110); }
+    lose: function () { this.tone(330, 0.5, 'sawtooth', 0.07, 110); },
+    unlockLocks: function () { var s = this; s.tone(1046, 0.09, 'square', 0.05, 1568); s.tone(1568, 0.16, 'triangle', 0.12, 2093, 0.09); }
   };
   function buzz(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* ignore */ } }
 
@@ -298,15 +326,64 @@
       el.setAttribute('data-letter', car.l);
       el.setAttribute('data-dir', car.dir);
       el.setAttribute('role', 'button');
-      el.setAttribute('aria-label', (wild ? 'wildcard taxi' : 'car ' + car.l) + ' facing ' + car.dir);
       el.style.setProperty('--c', PALETTE[(i * 5 + car.r * 3 + car.c) % PALETTE.length]);
       el.innerHTML = '<div class="chassis"><i class="rear"></i><i class="stripe"></i><i class="glass"></i>' +
         '<span class="lights"><i></i><i></i></span><i class="arrow"></i><i class="tail"></i></div>' +
-        '<div class="roof">' + car.l + '</div>';
+        '<div class="roof">' + car.l + '</div>' +
+        (car.key ? '<i class="kb kb-key k-' + car.key + '" data-key="' + car.key + '">' + keySvg(car.key) + '</i>' : '') +
+        (car.lock ? '<i class="kb kb-lock k-' + car.lock + '" data-lock="' + car.lock + '">' + lockSvg(car.lock) + '</i>' : '');
+      if (car.key) { el.classList.add('has-key'); el.style.setProperty('--kc', KEY_STYLE[car.key].hex); }
+      if (car.lock) { el.classList.add('has-lock'); el.style.setProperty('--lc', KEY_STYLE[car.lock].hex); }
+      if (car.lock && E.isLocked(cur.game, cur.state.pos, i)) el.classList.add('locked');
+      el.setAttribute('aria-label', carLabel(i, el));
       if (cur.state.pos[i] < 0) el.style.display = 'none';
       lot.appendChild(el);
       return el;
     });
+  }
+
+  function carLabel(i, el) {
+    var car = cur.game.cars[i];
+    el = el || cur.carEls[i];
+    var locked = car.lock && E.isLocked(cur.game, cur.state.pos, i);
+    return (car.l === '?' ? 'wildcard taxi' : 'car ' + car.l) + ' facing ' + car.dir +
+      (car.key ? ', carries the ' + keyName(car.key) + ' key' : '') +
+      (car.lock ? (locked ? ', padlocked (' + keyName(car.lock) + ')' : ', unlocked') : '');
+  }
+  /** Padlocks follow the state (a lock is shut while its key car is in the lot). With animate, an opening
+   *  lock pops open (the unlock moment when the key car drives out) and a closing one (Undo) snaps shut. */
+  function renderLocks(animate) {
+    if (!cur || !cur.game.hasLocks || !cur.carEls) return [];
+    var opened = [];
+    cur.game.cars.forEach(function (c, i) {
+      var el = cur.carEls[i];
+      if (!c.lock || !el) return;
+      var on = E.isLocked(cur.game, cur.state.pos, i), was = el.classList.contains('locked');
+      if (on === was) return;
+      el.classList.toggle('locked', on);
+      el.setAttribute('aria-label', carLabel(i, el));
+      if (!on) opened.push(i);
+      if (!animate) return;
+      var cls = on ? 'relock' : 'unlocking';
+      el.classList.remove('relock', 'unlocking'); void el.offsetWidth; el.classList.add(cls);
+      clearTimeout(el._lockT);
+      el._lockT = setTimeout(function () { el.classList.remove(cls); }, 1000);
+    });
+    return opened;
+  }
+  /** Tapped a padlocked car: the padlock wiggles and the matching key car lights up. No move is used. */
+  function lockedBump(i, key) {
+    var el = cur.carEls[i], kel = cur.carEls[key], car = cur.game.cars[i];
+    cur.bumps++;
+    el.classList.remove('lock-wiggle'); void el.offsetWidth; el.classList.add('lock-wiggle');
+    setTimeout(function () { el.classList.remove('lock-wiggle'); }, 650);
+    if (kel) {
+      kel.classList.remove('key-call'); void kel.offsetWidth; kel.classList.add('key-call');
+      clearTimeout(kel._kcT);
+      kel._kcT = setTimeout(function () { kel.classList.remove('key-call'); }, 1700);
+    }
+    Sound.bump(); buzz([20, 30, 20]);
+    toast('Locked! Drive the ' + keyName(car.lock) + ' key car (' + cur.game.cars[key].l + ') out first', 1700, true);
   }
 
   /** Pixel box of car i at axis position p. */
@@ -372,6 +449,7 @@
 
   /* ---------------- HUD rendering (from the display state) ---------------- */
   function renderHud() {
+    renderLocks(true);
     var g = cur.game, d = cur.disp, scr = g.scramble;
     $('hud-moves').textContent = cur.state.moves;
     var tiles = $('word').querySelectorAll('.tile');
@@ -484,9 +562,13 @@
   }
 
   /* ---------------- input ---------------- */
-  function toast(msg, ms) {
+  function toast(msg, ms, low) {
     var t = $('toast');
     t.textContent = msg;
+    // low: over the bay instead of the lot (padlock messages, so the glowing key car stays visible)
+    var bz = low && $('bay-zone'), sec = $('screen-game');
+    if (bz && sec.classList.contains('active')) { var br = bz.getBoundingClientRect(), sr = sec.getBoundingClientRect(); t.style.top = Math.round(br.top + br.height / 2 - sr.top) + 'px'; t.classList.add('low'); }
+    else { t.style.top = ''; t.classList.remove('low'); }
     t.classList.add('show');
     clearTimeout(toast._t);
     toast._t = setTimeout(function () { t.classList.remove('show'); }, ms || 900);
@@ -514,7 +596,7 @@
     var fromPos = cur.state.pos[i];
     var res = E.step(cur.game, cur.state, i, which);
     if (res.result === 'gone') return;
-    if (res.result === 'bump') { bump(i, which, res.by); return; }
+    if (res.result === 'bump') { if (res.locked) lockedBump(i, res.key); else bump(i, which, res.by); return; }
     clearHint();
     advancePlan(i, which);
     if (res.result === 'slide') {
@@ -554,6 +636,10 @@
     cur.state = res.state;
     $('deadend').classList.remove('show');
     renderHud();
+    if (res.unlocked && res.unlocked.length) {   // the key car left: its padlocks pop open
+      Sound.unlockLocks();
+      toast(res.unlocked.length > 1 ? res.unlocked.length + ' cars unlocked!' : 'Unlocked!', 1100, true);
+    }
     // 1) the car's own letter flies to the bus seat or to the bay
     enqueue(function () {
       var target;
@@ -750,7 +836,13 @@
     $('deadend').classList.remove('show');
     clearHint();
     syncDisplay();
-    if (revived.length || unflip) { buildLot(); layout(); }
+    var wasLocked = (cur.carEls || []).map(function (el) { return !!el && el.classList.contains('locked'); });
+    if (revived.length || unflip) {
+      buildLot(); layout();
+      cur.carEls.forEach(function (el, i) {   // a lock that came back with Undo snaps shut again
+        if (el.classList.contains('locked') && !wasLocked[i]) { el.classList.add('relock'); setTimeout(function () { el.classList.remove('relock'); }, 1000); }
+      });
+    }
     else cur.game.cars.forEach(function (c, i) { placeCar(i); }); // animated slide back
     renderHud();
     toast(refund > 0 ? 'Undo \u00b7 ' + refund + ' coins back' : 'Undo');
@@ -844,7 +936,10 @@
     var b = BOOSTERS[kind], ns = E.applyBooster(cur.game, cur.state, kind, i, which);
     if (!ns) {
       if (i !== undefined && cur.carEls[i]) { var el0 = cur.carEls[i]; el0.classList.remove('bump-' + cur.game.cars[i].dir); void el0.offsetWidth; el0.classList.add('bump-' + cur.game.cars[i].dir); setTimeout(function () { el0.classList.remove('bump-' + cur.game.cars[i].dir); }, 420); }
-      toast(kind === 'tow' ? 'The bus still needs that letter' : kind === 'flip' ? 'That car can\'t flip' : 'No room to nudge that way', 1200);
+      var lk = i !== undefined && E.isLocked(cur.game, cur.state.pos, i), kc = i !== undefined && cur.game.cars[i] && cur.game.cars[i].key;
+      toast(lk ? 'Padlocked cars can\'t be ' + (kind === 'tow' ? 'towed' : kind === 'flip' ? 'flipped' : 'nudged') + ' (drive the ' + keyName(cur.game.cars[i].lock) + ' key car out first)'
+        : kind === 'tow' && kc ? 'Key cars can\'t be towed: drive it out to open its locks'
+        : kind === 'tow' ? 'The bus still needs that letter' : kind === 'flip' ? 'That car can\'t flip' : 'No room to nudge that way', 1500, lk || kc);
       Sound.bump();
       return false;
     }
@@ -872,7 +967,7 @@
       // v6b: the chassis itself turns 180deg and STAYS turned (the old keyframe spun the whole car and ended back at 0deg,
       // while the chassis rotation was only ever set in layout(), so the graphic snapped back to the old direction).
       var fe = cur.carEls[i], fc = cur.game.cars[i], fromA = ANGLE[OPP[fc.dir]], fch = fe.querySelector('.chassis');
-      fe.setAttribute('aria-label', (fc.l === '?' ? 'wildcard taxi' : 'car ' + fc.l) + ' facing ' + fc.dir);
+      fe.setAttribute('aria-label', carLabel(i, fe));
       fe.classList.remove('flipping');
       orientCar(i, fromA);                       // start from the old look, no transition
       void fe.offsetWidth;

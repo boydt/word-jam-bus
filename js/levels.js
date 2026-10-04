@@ -2308,5 +2308,533 @@ window.WJB_LEVELS = [
     "len": 2
    }
   ]
+ },
+ {
+  "id": "dt1-bank",
+  "suggested_level": 24,
+  "teaches": "keys",
+  "word": "BANK",
+  "grid": [
+   6,
+   6
+  ],
+  "bay": 3,
+  "par": 14,
+  "tip": "Padlocked cars can’t move until the key car of the same colour and shape drives out. Free the key first!",
+  "cars": [
+   {
+    "l": "K",
+    "r": 5,
+    "c": 1,
+    "dir": "down"
+   },
+   {
+    "l": "M",
+    "r": 2,
+    "c": 2,
+    "dir": "right",
+    "len": 2
+   },
+   {
+    "l": "H",
+    "r": 4,
+    "c": 4,
+    "dir": "left"
+   },
+   {
+    "l": "U",
+    "r": 3,
+    "c": 4,
+    "dir": "up"
+   },
+   {
+    "l": "W",
+    "r": 6,
+    "c": 6,
+    "dir": "left"
+   },
+   {
+    "l": "H",
+    "r": 3,
+    "c": 1,
+    "dir": "left"
+   },
+   {
+    "l": "M",
+    "r": 5,
+    "c": 6,
+    "dir": "right",
+    "lock": "gold"
+   },
+   {
+    "l": "W",
+    "r": 1,
+    "c": 5,
+    "dir": "up"
+   },
+   {
+    "l": "B",
+    "r": 5,
+    "c": 4,
+    "dir": "down"
+   },
+   {
+    "l": "M",
+    "r": 6,
+    "c": 2,
+    "dir": "left",
+    "len": 2
+   },
+   {
+    "l": "W",
+    "r": 5,
+    "c": 3,
+    "dir": "down",
+    "len": 2
+   },
+   {
+    "l": "G",
+    "r": 2,
+    "c": 6,
+    "dir": "up",
+    "key": "gold"
+   },
+   {
+    "l": "W",
+    "r": 3,
+    "c": 5,
+    "dir": "up",
+    "len": 3
+   },
+   {
+    "l": "K",
+    "r": 6,
+    "c": 5,
+    "dir": "right"
+   },
+   {
+    "l": "A",
+    "r": 3,
+    "c": 6,
+    "dir": "down"
+   },
+   {
+    "l": "N",
+    "r": 4,
+    "c": 1,
+    "dir": "down"
+   },
+   {
+    "l": "G",
+    "r": 2,
+    "c": 3,
+    "dir": "up"
+   },
+   {
+    "l": "H",
+    "r": 6,
+    "c": 1,
+    "dir": "left"
+   },
+   {
+    "l": "R",
+    "r": 2,
+    "c": 4,
+    "dir": "down"
+   },
+   {
+    "l": "Y",
+    "r": 6,
+    "c": 4,
+    "dir": "down"
+   },
+   {
+    "l": "D",
+    "r": 3,
+    "c": 2,
+    "dir": "left",
+    "len": 2
+   }
+  ]
+ },
+ {
+  "id": "dt2-hotel",
+  "suggested_level": 25,
+  "word": "HOTEL",
+  "grid": [
+   6,
+   6
+  ],
+  "bay": 3,
+  "par": 20,
+  "tip": "One key opens every padlock of its colour.",
+  "cars": [
+   {
+    "l": "O",
+    "r": 3,
+    "c": 2,
+    "dir": "left"
+   },
+   {
+    "l": "E",
+    "r": 1,
+    "c": 3,
+    "dir": "right",
+    "len": 2
+   },
+   {
+    "l": "B",
+    "r": 5,
+    "c": 2,
+    "dir": "down",
+    "len": 2
+   },
+   {
+    "l": "K",
+    "r": 1,
+    "c": 5,
+    "dir": "right"
+   },
+   {
+    "l": "L",
+    "r": 6,
+    "c": 5,
+    "dir": "right",
+    "key": "gold"
+   },
+   {
+    "l": "H",
+    "r": 1,
+    "c": 4,
+    "dir": "right",
+    "lock": "gold"
+   },
+   {
+    "l": "M",
+    "r": 4,
+    "c": 4,
+    "dir": "up",
+    "len": 3
+   },
+   {
+    "l": "S",
+    "r": 2,
+    "c": 3,
+    "dir": "right",
+    "len": 3
+   },
+   {
+    "l": "D",
+    "r": 2,
+    "c": 5,
+    "dir": "right",
+    "len": 2,
+    "lock": "gold"
+   },
+   {
+    "l": "F",
+    "r": 3,
+    "c": 5,
+    "dir": "right",
+    "len": 2
+   },
+   {
+    "l": "H",
+    "r": 3,
+    "c": 3,
+    "dir": "up",
+    "len": 3
+   },
+   {
+    "l": "T",
+    "r": 3,
+    "c": 1,
+    "dir": "up",
+    "len": 2
+   },
+   {
+    "l": "Y",
+    "r": 6,
+    "c": 6,
+    "dir": "down",
+    "len": 3
+   },
+   {
+    "l": "W",
+    "r": 4,
+    "c": 5,
+    "dir": "down"
+   },
+   {
+    "l": "K",
+    "r": 6,
+    "c": 1,
+    "dir": "left"
+   }
+  ]
+ },
+ {
+  "id": "dt3-market",
+  "suggested_level": 26,
+  "word": "MARKET",
+  "grid": [
+   6,
+   6
+  ],
+  "bay": 3,
+  "par": 24,
+  "tip": "Two colours, two keys: match the shapes (circle opens circle, triangle opens triangle).",
+  "cars": [
+   {
+    "l": "W",
+    "r": 1,
+    "c": 6,
+    "dir": "up",
+    "len": 3
+   },
+   {
+    "l": "E",
+    "r": 4,
+    "c": 2,
+    "dir": "left",
+    "len": 3
+   },
+   {
+    "l": "U",
+    "r": 1,
+    "c": 5,
+    "dir": "up",
+    "len": 2
+   },
+   {
+    "l": "A",
+    "r": 1,
+    "c": 2,
+    "dir": "right",
+    "len": 2
+   },
+   {
+    "l": "G",
+    "r": 6,
+    "c": 3,
+    "dir": "down",
+    "len": 2,
+    "key": "gold"
+   },
+   {
+    "l": "U",
+    "r": 3,
+    "c": 3,
+    "dir": "down",
+    "len": 3
+   },
+   {
+    "l": "M",
+    "r": 3,
+    "c": 1,
+    "dir": "right"
+   },
+   {
+    "l": "F",
+    "r": 4,
+    "c": 6,
+    "dir": "right",
+    "len": 2,
+    "lock": "gold"
+   },
+   {
+    "l": "K",
+    "r": 1,
+    "c": 4,
+    "dir": "down",
+    "lock": "blue"
+   },
+   {
+    "l": "T",
+    "r": 2,
+    "c": 2,
+    "dir": "up",
+    "len": 2
+   },
+   {
+    "l": "G",
+    "r": 4,
+    "c": 1,
+    "dir": "up"
+   },
+   {
+    "l": "M",
+    "r": 6,
+    "c": 2,
+    "dir": "up"
+   },
+   {
+    "l": "Y",
+    "r": 2,
+    "c": 1,
+    "dir": "right"
+   },
+   {
+    "l": "M",
+    "r": 3,
+    "c": 5,
+    "dir": "up"
+   },
+   {
+    "l": "R",
+    "r": 3,
+    "c": 4,
+    "dir": "down"
+   },
+   {
+    "l": "N",
+    "r": 5,
+    "c": 1,
+    "dir": "up",
+    "len": 2,
+    "key": "blue"
+   }
+  ]
+ },
+ {
+  "id": "sc4-subway",
+  "suggested_level": 27,
+  "mode": "scramble",
+  "word": "SUBWAY",
+  "grid": [
+   6,
+   6
+  ],
+  "bay": 3,
+  "par": 18,
+  "tip": "Scramble stop with a padlock: any order again, but the key still comes first.",
+  "cars": [
+   {
+    "l": "H",
+    "r": 2,
+    "c": 1,
+    "dir": "up",
+    "len": 2
+   },
+   {
+    "l": "K",
+    "r": 6,
+    "c": 3,
+    "dir": "down",
+    "len": 2
+   },
+   {
+    "l": "A",
+    "r": 4,
+    "c": 4,
+    "dir": "down"
+   },
+   {
+    "l": "G",
+    "r": 1,
+    "c": 6,
+    "dir": "right",
+    "len": 3,
+    "lock": "gold"
+   },
+   {
+    "l": "B",
+    "r": 2,
+    "c": 4,
+    "dir": "up",
+    "lock": "gold"
+   },
+   {
+    "l": "U",
+    "r": 3,
+    "c": 6,
+    "dir": "down",
+    "len": 2
+   },
+   {
+    "l": "Y",
+    "r": 1,
+    "c": 3,
+    "dir": "right"
+   },
+   {
+    "l": "F",
+    "r": 1,
+    "c": 2,
+    "dir": "left"
+   },
+   {
+    "l": "U",
+    "r": 5,
+    "c": 1,
+    "dir": "up"
+   },
+   {
+    "l": "S",
+    "r": 2,
+    "c": 5,
+    "dir": "up",
+    "len": 2
+   },
+   {
+    "l": "R",
+    "r": 4,
+    "c": 1,
+    "dir": "left"
+   },
+   {
+    "l": "D",
+    "r": 4,
+    "c": 6,
+    "dir": "right",
+    "len": 2
+   },
+   {
+    "l": "T",
+    "r": 5,
+    "c": 2,
+    "dir": "down",
+    "len": 2,
+    "key": "gold"
+   },
+   {
+    "l": "R",
+    "r": 2,
+    "c": 3,
+    "dir": "right"
+   },
+   {
+    "l": "W",
+    "r": 3,
+    "c": 4,
+    "dir": "up"
+   },
+   {
+    "l": "T",
+    "r": 6,
+    "c": 2,
+    "dir": "right",
+    "len": 2
+   },
+   {
+    "l": "K",
+    "r": 2,
+    "c": 2,
+    "dir": "right"
+   },
+   {
+    "l": "A",
+    "r": 4,
+    "c": 3,
+    "dir": "left"
+   },
+   {
+    "l": "F",
+    "r": 6,
+    "c": 4,
+    "dir": "down",
+    "len": 2
+   }
+  ]
  }
 ];
