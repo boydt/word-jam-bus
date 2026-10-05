@@ -86,7 +86,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 1,
    "label": "Very Easy",
-   "score": 4.5,
+   "score": 4.3,
    "par": 4,
    "first": "3/3",
    "track": 0.938
@@ -141,7 +141,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 1,
    "label": "Very Easy",
-   "score": 5.8,
+   "score": 5.4,
    "par": 5,
    "first": "6/6",
    "track": 0.92
@@ -196,7 +196,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 1,
    "label": "Very Easy",
-   "score": 5.4,
+   "score": 5.2,
    "par": 5,
    "first": "6/6",
    "track": 0.96
@@ -257,7 +257,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 1,
    "label": "Very Easy",
-   "score": 6.2,
+   "score": 6.1,
    "par": 6,
    "first": "8/8",
    "track": 0.983
@@ -329,7 +329,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 2,
    "label": "Easy",
-   "score": 8.2,
+   "score": 7.3,
    "par": 6,
    "first": "6/7",
    "track": 0.852
@@ -404,7 +404,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 2,
    "label": "Easy",
-   "score": 8.2,
+   "score": 7.6,
    "par": 7,
    "first": "7/7",
    "track": 0.914
@@ -492,7 +492,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 2,
    "label": "Easy",
-   "score": 9,
+   "score": 8.5,
    "par": 8,
    "first": "8/8",
    "track": 0.939
@@ -586,7 +586,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 3,
    "label": "Normal",
-   "score": 12.5,
+   "score": 10.7,
    "par": 9,
    "first": "8/8",
    "track": 0.806
@@ -683,9 +683,9 @@ window.WJB_LEVELS = [
    }
   ],
   "difficulty": {
-   "tier": 2,
-   "label": "Easy",
-   "score": 10.8,
+   "tier": 3,
+   "label": "Normal",
+   "score": 10,
    "par": 9,
    "first": "11/12",
    "track": 0.911
@@ -810,7 +810,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 3,
    "label": "Normal",
-   "score": 12.7,
+   "score": 10.8,
    "par": 9,
    "first": "10/10",
    "track": 0.796
@@ -915,7 +915,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 3,
    "label": "Normal",
-   "score": 13.5,
+   "score": 11.4,
    "par": 9,
    "first": "9/10",
    "track": 0.767
@@ -1033,7 +1033,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 3,
    "label": "Normal",
-   "score": 13,
+   "score": 11.1,
    "par": 9,
    "first": "10/11",
    "track": 0.795
@@ -1137,7 +1137,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 3,
    "label": "Normal",
-   "score": 13.2,
+   "score": 11.7,
    "par": 10,
    "first": "9/10",
    "track": 0.856
@@ -1260,7 +1260,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 3,
    "label": "Normal",
-   "score": 15.4,
+   "score": 12.8,
    "par": 10,
    "first": "12/13",
    "track": 0.739
@@ -1375,7 +1375,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 3,
    "label": "Normal",
-   "score": 15.3,
+   "score": 12.7,
    "par": 10,
    "first": "11/11",
    "track": 0.733
@@ -1477,7 +1477,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 3,
    "label": "Normal",
-   "score": 15.3,
+   "score": 13.3,
    "par": 11,
    "first": "9/10",
    "track": 0.819
@@ -1585,7 +1585,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 3,
    "label": "Normal",
-   "score": 16,
+   "score": 13.5,
    "par": 11,
    "first": "10/10",
    "track": 0.773
@@ -1691,7 +1691,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 3,
    "label": "Normal",
-   "score": 16.3,
+   "score": 13.8,
    "par": 11,
    "first": "9/10",
    "track": 0.771
@@ -1814,7 +1814,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 3,
    "label": "Normal",
-   "score": 16.5,
+   "score": 14.2,
    "par": 12,
    "first": "10/10",
    "track": 0.813
@@ -1912,7 +1912,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 3,
    "label": "Normal",
-   "score": 17.4,
+   "score": 14.7,
    "par": 12,
    "first": "11/11",
    "track": 0.777
@@ -2004,9 +2004,9 @@ window.WJB_LEVELS = [
    }
   ],
   "difficulty": {
-   "tier": 4,
-   "label": "Hard",
-   "score": 18.6,
+   "tier": 3,
+   "label": "Normal",
+   "score": 14.5,
    "par": 10,
    "first": "7/8",
    "track": 0.59
@@ -2126,7 +2126,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 4,
    "label": "Hard",
-   "score": 33,
+   "score": 24.1,
    "par": 13,
    "first": "2/8",
    "track": 0.316
@@ -2247,7 +2247,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 4,
    "label": "Hard",
-   "score": 37.8,
+   "score": 28.5,
    "par": 17,
    "first": "2/7",
    "track": 0.451
@@ -2387,7 +2387,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 4,
    "label": "Hard",
-   "score": 30.7,
+   "score": 24.2,
    "par": 17,
    "first": "7/9",
    "track": 0.618
@@ -2504,7 +2504,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 4,
    "label": "Hard",
-   "score": 45.7,
+   "score": 33.7,
    "par": 21,
    "first": "3/4",
    "track": 0.43
@@ -2674,7 +2674,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 4,
    "label": "Hard",
-   "score": 43.6,
+   "score": 34.3,
    "par": 24,
    "first": "4/6",
    "track": 0.612
@@ -2821,9 +2821,9 @@ window.WJB_LEVELS = [
    }
   ],
   "difficulty": {
-   "tier": 5,
-   "label": "Super Hard",
-   "score": 61.3,
+   "tier": 4,
+   "label": "Hard",
+   "score": 44.7,
    "par": 26,
    "first": "2/7",
    "track": 0.363
@@ -2985,7 +2985,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 4,
    "label": "Hard",
-   "score": 52,
+   "score": 40,
    "par": 27,
    "first": "2/3",
    "track": 0.555
@@ -3141,7 +3141,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 4,
    "label": "Hard",
-   "score": 42.4,
+   "score": 34.2,
    "par": 26,
    "first": "5/5",
    "track": 0.685
@@ -3284,7 +3284,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 4,
    "label": "Hard",
-   "score": 41.2,
+   "score": 32,
    "par": 22,
    "first": "3/4",
    "track": 0.581
@@ -3464,7 +3464,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 5,
    "label": "Super Hard",
-   "score": 77.3,
+   "score": 54.5,
    "par": 30,
    "first": "5/12",
    "track": 0.241
@@ -3596,7 +3596,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 5,
    "label": "Super Hard",
-   "score": 77.8,
+   "score": 57.6,
    "par": 36,
    "first": "1/2",
    "track": 0.441
@@ -3752,7 +3752,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 4,
    "label": "Hard",
-   "score": 32,
+   "score": 23.8,
    "par": 14,
    "first": "5/10",
    "track": 0.41
@@ -3904,7 +3904,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 4,
    "label": "Hard",
-   "score": 29,
+   "score": 23.6,
    "par": 17,
    "first": "3/5",
    "track": 0.682
@@ -4028,7 +4028,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 4,
    "label": "Hard",
-   "score": 42.7,
+   "score": 32.2,
    "par": 20,
    "first": "5/11",
    "track": 0.473
@@ -4181,7 +4181,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 4,
    "label": "Hard",
-   "score": 41.7,
+   "score": 32.3,
    "par": 22,
    "first": "5/7",
    "track": 0.571
@@ -4320,7 +4320,7 @@ window.WJB_LEVELS = [
   "difficulty": {
    "tier": 5,
    "label": "Super Hard",
-   "score": 78.9,
+   "score": 56.7,
    "par": 33,
    "first": "4/8",
    "track": 0.328
