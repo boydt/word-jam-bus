@@ -312,7 +312,7 @@ async function mapBasics(page, ctx, label) {
 
   // other migrations: v2 / v3 saves land on the right district and stop
   for (const [label, save, stop] of [['v3 save (beat 1-2)', { v: 3, unlocked: 2, stars: { 'st1-cat': 3, 'st2-dog': 3 }, best: {}, sound: true }, 3],
-    ['v2 save (beat BUS, CAR, PLANET)', { unlocked: 3, stars: { 'lv1-bus': 3, 'lv2-car': 2, 'lv3-planet': 1 }, best: {}, sound: true }, AT('lv4-apple')],
+    ['v2 save (beat BUS, CAR, PLANET; next is JUNGLE, the stop after PLANET since v9)', { unlocked: 3, stars: { 'lv1-bus': 3, 'lv2-car': 2, 'lv3-planet': 1 }, best: {}, sound: true }, AT('sc2-jungle')],
     ['v8 save waiting at BUS (unlockedId lv1-bus)', wonV8(10), NORMAL[0]],
     ['v8 save that won all 28 (Main Street new)', wonV8(28), NORMAL[0]],
     ['v9 save that won all ' + NLEV, won(NLEV), NLEV]]) {

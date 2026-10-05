@@ -8,6 +8,8 @@ A parking-jam word puzzle for phones and desktops. Every car in a packed lot car
 
 **v7** adds keys and padlocked cars (Downtown, levels 24-28). **v8** replaces the level select with a **city route map**: five themed districts the bus drives through, a treasure **chest** at the end of each one, a **free-booster inventory** and **bus paints**; see [v8: the city route map](#v8-the-city-route-map).
 
+**v9** adds **Main Street**, a new district of 10 forgiving **normal** lots with many ways to win (stops 11-21), spreads the four **Scramble stops** so every district from Main Street on has one with a par in line with its neighbours, turns **Sunny Beach** into the "big jammed lots" district, and shows a five-tier **difficulty badge** (Very Easy to Super Hard, computed from solver data) on every map stop, the level-intro banner and the play-screen header; see [v9](#v9-main-street-scramble-spread-and-difficulty-tiers). There are now 38 levels in 6 districts.
+
 Plain HTML, CSS and JavaScript. There is no build step and no network or CDN dependency, so it can go straight onto a static host such as GitHub Pages.
 
 Live: https://boydt.github.io/word-jam-bus/
@@ -74,7 +76,7 @@ Live: https://boydt.github.io/word-jam-bus/
 
 ## v4 features
 
-### Scramble stops (levels 12, 17, 22)
+### Scramble stops (levels 12, 17, 22 in v4; see v9 for today's stops 13, 25, 31 and 35)
 
 - **Rules.** Any letter the word still needs boards **right away**, into the leftmost open seat for that letter, in any order. Only decoys and extra copies (for example a third Z in PIZZA) go to the bay, which is labelled **Junk bay** on these levels. Nothing in the bay ever boards later, so a junk letter just uses up a spot. You lose if a junk letter drives out while the junk bay is full. You win when every seat is filled.
 - **Visuals.** The bus turns purple with a shuffle badge, the seats have no numbers and all open seats glow, a "Scramble stop! Letters board in ANY order" banner shows at the start, and the first Scramble level shows a one-time tip card (remembered in `seen.scramble`). The level select marks Scramble levels with a shuffle icon.
@@ -135,7 +137,7 @@ The toggles are saved under `wordJamBus.test.v1`, apart from the real save, whic
 - With Unlimited hints or undos on, a win that used more than the normal 3 hints or 5 undos is not saved. An Undo that reverts a booster bought with real coins still refunds it.
 - Cheats can only be changed on the title screen, so each level takes a snapshot of them when it starts. Turning one off gives the normal fresh 5 undos / 3 hints (and real coin rules) from the next level start. Your real unlocks, stars and coins are exactly as they were, because they were never touched.
 
-## v7: keys and padlocked cars (Downtown, levels 24-28)
+## v7: keys and padlocked cars (Downtown, levels 24-28; stops 34-38 since v9)
 
 ### Rules
 - A car can carry a **key** (a key badge, top-left) and/or a **padlock** (top-right). A padlocked car **can't move at all**: no slide, no reverse, no exit. It opens when the **key car of its colour has left the lot** (driven out, into the bus or the bay).
@@ -176,6 +178,8 @@ Level JSON: `{"l": "S", "r": 3, "c": 2, "dir": "down", "key": "blue", "lock": "g
 ## v8: the city route map
 
 **Play / Continue** on the title screen opens the map (the level select). The bus drives along a winding road from district to district. Each stop is a level, and each district ends in a boss lot and a treasure chest. Everything is drawn with CSS and inline SVG, with no image files.
+
+v8 table (v8 stop numbers; v9 added Main Street and moved stops, see [v9](#v9-main-street-scramble-spread-and-difficulty-tiers) for today's map):
 
 | # | District | Theme (palette, landmarks, road) | Stops | Teaches | Boss lot | Chest |
 |---|---|---|---|---|---|---|
@@ -226,9 +230,157 @@ The save format is still `v: 4`, with new fields added: `inv`, `chests` (opened 
 
 For districts an older save has already finished, the chests are **claimable, one time each**, rather than auto-awarded, so players still get the chest-opening moment. The title says "N chests to open on the map!". The map shows the chests as ready, with a **N chests to open!** button that opens them one after another (the bus doesn't need to drive back). **Reset progress** clears the inventory, chests, paints and bus spot too.
 
+## v9: Main Street, Scramble spread and difficulty tiers
+
+Sections for v4-v8 above keep the stop numbers of their own release. Ids, layouts and par of every older level are unchanged; only positions moved.
+
+### Main Street: 10 normal levels
+
+The step from HOUSE (par 9, Easy) to BUS (par 10, but exacting) was the steepest on the route. v9 puts a new district between them: **Main Street** (stops 11-21), ten new lots with par 9-12 that are built to be **forgiving**: many first moves are fine, a slip or two still wins, and there are many different winning lines. They use only what the starter levels taught (slides, reverse, the bay and long trucks): no keys, chunk trucks or taxi. Each one is solver-proven winnable at par without boosters, and each has a tip.
+
+| # | id | Word | Grid | Cars | Bay | Par | First-move slack (par+1 / par+2) | On-track share along the best line (par+1) | Distinct winning sequences within par+2 | Optimal solutions | Score | Tier |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 11 | nm1-bread | BREAD | 6x6 | 16 | 3 | 9 | 10/10 / 10/10 | 0.796 | 293,386 | 96 | 12.7 | Normal |
+| 12 | nm2-shop | SHOP | 5x5 | 13 | 3 | 9 | 9/10 / 10/10 | 0.767 | 147,090 | 202 | 13.5 | Normal |
+| 14 | nm3-park | PARK | 5x5 | 13 | 3 | 10 | 9/10 / 10/10 | 0.856 | ≥1,000,000 | 9,125 | 13.2 | Normal |
+| 15 | nm4-music | MUSIC | 6x6 | 16 | 3 | 10 | 12/13 / 13/13 | 0.739 | ≥1,000,000 | 378 | 15.4 | Normal |
+| 16 | nm5-candy | CANDY | 5x5 | 15 | 3 | 10 | 11/11 / 11/11 | 0.733 | ≥1,000,000 | 576 | 15.3 | Normal |
+| 17 | nm6-clock | CLOCK | 5x5 | 13 | 3 | 11 | 9/10 / 10/10 | 0.819 | ≥1,000,000 | 400 | 15.3 | Normal |
+| 18 | nm7-tower | TOWER | 6x6 | 13 | 3 | 11 | 10/10 / 10/10 | 0.773 | ≥1,000,000 | 5,076 | 16.0 | Normal |
+| 19 | nm8-cinema | CINEMA | 5x5 | 13 | 3 | 11 | 9/10 / 10/10 | 0.771 | 423,265 | 214 | 16.3 | Normal |
+| 20 | nm9-bakery | BAKERY | 6x6 | 16 | 3 | 12 | 10/10 / 10/10 | 0.813 | 739,149 | 206 | 16.5 | Normal |
+| 21 | nm10-street | STREET | 5x5 | 12 | 3 | 12 | 11/11 / 11/11 | 0.777 | ≥1,000,000 | 1,116 | 17.4 | Normal |
+
+"≥1,000,000" means the count reached the solver's 1M cap. The lots were found with `tools/normal-lab.js` (random layouts filtered by the normal thresholds) and polished with `tools/normal-improve.js` (a random-edit hill-climb that keeps each lot inside the normal-tier limits), then checked by the verifier.
+
+**Comparison** (par / first-move slack at par+1 / on-track share / score):
+
+| Group | Par | First-move slack | On-track share | Score |
+|---|---|---|---|---|
+| Warm-ups FROG, TRAIN, TIGER, HOUSE (stops 7-10) | 7-9 | 91-100% (avg 97%) | 0.81-0.94 (avg 0.89) | 8.2-12.5 |
+| **Main Street normal lots (10)** | 9-12 | 90-100% (avg 95%) | 0.73-0.86 (avg 0.78) | 12.7-17.4 |
+| First big lots BUS, CAR, PLANET (22-24) | 10-17 | 25-87% (avg 47%) | 0.32-0.59 (avg 0.45) | 18.6-37.8 |
+| All hard + super hard in-order levels (22-38) | 10-36 | 25-100% (avg 56%) | 0.24-0.69 (avg 0.46) | 18.6-78.9 |
+
+So the normal lots sit between the warm-ups and the first big lots: about as long as BUS, but almost every first move is fine, and about four out of five moves along the way still keep a par+1 win open (BUS: 59%, CAR: 32%).
+
+### Variety metrics
+
+`E.variety(game, {slack: 2})` in `js/engine.js` runs a breadth-first search of every state within L = par + 2 moves of the start, then a backward pass for the fewest moves to a win from each of them, and returns (legal moves include losing ones, bumps don't count):
+- **first-move slack**: of the legal first moves, how many still allow a win within par + 1 and within par + 2 (`firstOkBySlack`);
+- **mid-game forgiveness**: walking the solver's optimal line, the average share of legal moves at each step that still allow a win within par + 1 / par + 2 (`midBySlack`);
+- **distinct winning sequences** within par + 2 (`seqWithin`, capped at 1,000,000) and the number of **optimal** (par-move) solutions (`optimal`);
+- the number of states searched.
+
+Within par + 2 nearly every move is "fine" (a wasted slide can be undone with the reverse slide, so it costs exactly 2), on easy and hard levels alike, so the tiers use the **par + 1** figures, which only forgive moves that belong to another real winning line. The par + 2 figures are still reported.
+
+**Normal-tier thresholds** (enforced by the verifier for every `"tier": "normal"` level): par 9-12; first-move slack at par + 1 ≥ 60%; on-track share at par + 1 ≥ 0.72; at least 4 optimal solutions; at least 1,000 winning sequences within par + 2; at most 1 word-letter car free on move 1; it needs slides; no padlocks, chunk trucks or `?` taxi; a loss is reachable (the bay matters); it has a tip; consecutive normal levels may raise par by at most 2 and lower it by at most 1.
+
+### Difficulty tiers
+
+Every level has a generated `difficulty` field (`tools/difficulty.js --write`; the verifier fails if it doesn't match the formula):
+
+    score = par × (1 + 2 × (1 − track)) + 3 × (1 − first)
+
+where `first` = first-move slack at par + 1 (as a share) and `track` = the on-track share at par + 1. A level where every move keeps you on track scores its par; one where only half the moves do scores double.
+
+| Tier | Badge | Score |
+|---|---|---|
+| 1 Very Easy | green, 1 pip | < 7 |
+| 2 Easy | teal, 2 pips | 7 to < 12 |
+| 3 Normal | blue, 3 pips | 12 to < 18 |
+| 4 Hard | orange, 4 pips | 18 to < 60 |
+| 5 Super Hard | red, 5 pips | ≥ 60 |
+
+The tier is computed from the unrounded score and depends only on the lot, never on its position; there are no manual overrides, so tiers can go up and down along the map (HOUSE is Easy after the Normal TIGER; PIZZA is Normal; JUNGLE and SUBWAY are Hard). The badge shows coloured pips (and the name on the banner and the HUD), so it never relies on colour alone, and has an aria label ("Difficulty: Normal (3 of 5)"). It shows:
+- on **map stops**, as a small pip pill under each stop (the stop's aria label also says the tier);
+- on the **level-intro banner** ("Level N · District · Par P" plus the badge, 1.8 s; on Scramble stops in the Scramble banner);
+- in the **play-screen header**, under "Level N of 38".
+
+### The map now (6 districts, 38 stops)
+
+| # | District | Stops | Teaches | Scramble | Boss lot | Chest |
+|---|---|---|---|---|---|---|
+| 1 | School Street | 1-6 | driving basics | - | 6 MILK (par 6) | 100 coins, Nudge ×1, Tow ×1 |
+| 2 | Maple Suburbs | 7-10 | long trucks | - | 10 HOUSE (par 9) | 150 coins, Bay +1 ×1, Flip ×1, **Maple Red** paint |
+| 3 | Main Street | 11-21 | many ways to win (normal lots) + the first Scramble stop | PIZZA | 21 STREET (par 12) | 175 coins, Tow ×1, Nudge ×1, **Trolley Green** paint |
+| 4 | Sunny Beach | 22-27 | big jammed lots + Bay Words | JUNGLE | 27 GARDEN (par 24) | 200 coins, Nudge ×2, Bay +1 ×1, **Surf Teal** paint |
+| 5 | Harbor Docks | 28-33 | chunk trucks and the wildcard taxi | DRAGONS | 33 SCHOOL (par 36) | 250 coins, Tow ×1, Flip ×1, Bay +1 ×1 |
+| 6 | Downtown | 34-38 | keys and padlocks | SUBWAY | 38 SQUARE (par 33) | 400 coins, Tow ×2, Flip ×2, **Midnight Neon** paint |
+
+- **Main Street** has its own theme: brick-sidewalk edges and a green square, a grey street with trolley-track ties, landmarks drawn in SVG (a shop with an awning, a clock tower, a green trolley, a lamp post with flowers, a café umbrella), teal and orange header accents, and a soft green play-screen tint. Its chest has 175 coins, a Tow, a Nudge and the new **Trolley Green** paint. Its header says "New: Many ways to win + Scramble".
+- **Maple Suburbs** now ends with HOUSE (stops 7-10, boss HOUSE); BUS opens **Sunny Beach**.
+- **Sunny Beach, rethought:** in v8 it "taught" Scramble stops, but PIZZA was its only one and the rest were the first big in-order lots. It is now where the **big jammed lots** begin (BUS, CAR, PLANET, APPLE, GARDEN), with JUNGLE as its Scramble stop and the Bay Word debut ("New: Big jammed lots + Bay Words").
+- **Harbor Docks** teaches chunk trucks and the taxi, with DRAGONS between MOTHER and BUS + STOP; **Downtown** has SUBWAY right after BANK (the first padlock level).
+
+### Scramble spread and par in line
+
+The Scramble stops used to be breathers that dipped well below the level before them. In v9 every district from Main Street on has one, and its par must be **in line** with its neighbours: within 0.8 × min to 1.2 × max of the in-order levels just before and after it. No Scramble par changed; they were moved instead:
+
+| Scramble | Stop (v8 → v9) | Par | Neighbours (par) | Allowed |
+|---|---|---|---|---|
+| PIZZA | 12 → 13 (Main Street) | 9 | SHOP 9, PARK 10 | 8-12 |
+| JUNGLE | 17 → 25 (Sunny Beach) | 17 | PLANET 17, APPLE 21 | 14-25 |
+| DRAGONS | 22 → 31 (Harbor Docks) | 22 | MOTHER 26, BUS + STOP 30 | 21-36 |
+| SUBWAY | 27 → 35 (Downtown) | 17 | BANK 14, HOTEL 20 | 12-24 |
+
+The other Scramble rules stay: at least 3 in-order levels between Scramble stops, none in the starter ramp (School Street and Maple Suburbs stay Scramble-free as the teaching ramp), the first one has a tip, and each Scramble lot is impossible or at least 2 moves slower in order.
+
+### Migration (v8 saves)
+
+The save format is still `v: 4`. Stars, best scores and chests are kept **by level / district id**, so they follow the moved levels.
+- **Chests:** each is claimed once, by id, never twice. A v8 player who beat HOUSE gets the Maple Suburbs chest as ready (its boss is now HOUSE); the Main Street chest stays locked until STREET (stop 21) is won.
+- **Access:** players past BUS keep everything they had open. Main Street opens for them but is not forced: the title and the district header say "New: Main Street, 10 new stops!".
+- **Continue:** a save waiting at BUS continues at stop 11 (BREAD). A level that was won always opens the stop after it (this keeps a v8 save that beat BUS and was waiting at PIZZA, now stop 13, moving on to CAR, stop 23). A save that beat everything continues at the first unplayed Main Street stop.
+
+### Levels (v9 order)
+
+| # | District | id | Word | Mode | Par | Tier | First (par+1) | Track (par+1) | Score |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | School Street | st1-cat | CAT | in order | 3 | Very Easy | 6/6 | 1 | 3.0 |
+| 2 | School Street | st2-dog | DOG | in order | 4 | Very Easy | 3/3 | 0.938 | 4.5 |
+| 3 | School Street | st3-sun | SUN | in order | 5 | Very Easy | 6/6 | 0.92 | 5.8 |
+| 4 | School Street | st4-hat | HAT | in order | 5 | Very Easy | 6/6 | 0.96 | 5.4 |
+| 5 | School Street | st5-fish | FISH | in order | 6 | Very Easy | 8/8 | 0.983 | 6.2 |
+| 6 | School Street | st6-milk | MILK | in order | 6 | Easy | 6/7 | 0.852 | 8.2 |
+| 7 | Maple Suburbs | st7-frog | FROG | in order | 7 | Easy | 7/7 | 0.914 | 8.2 |
+| 8 | Maple Suburbs | st8-train | TRAIN | in order | 8 | Easy | 8/8 | 0.939 | 9.0 |
+| 9 | Maple Suburbs | st9-tiger | TIGER | in order | 9 | Normal | 8/8 | 0.806 | 12.5 |
+| 10 | Maple Suburbs | st10-house | HOUSE | in order | 9 | Easy | 11/12 | 0.911 | 10.8 |
+| 11 | Main Street | nm1-bread | BREAD | in order | 9 | Normal | 10/10 | 0.796 | 12.7 |
+| 12 | Main Street | nm2-shop | SHOP | in order | 9 | Normal | 9/10 | 0.767 | 13.5 |
+| 13 | Main Street | sc1-pizza | PIZZA | **Scramble** | 9 | Normal | 10/11 | 0.795 | 13.0 |
+| 14 | Main Street | nm3-park | PARK | in order | 10 | Normal | 9/10 | 0.856 | 13.2 |
+| 15 | Main Street | nm4-music | MUSIC | in order | 10 | Normal | 12/13 | 0.739 | 15.4 |
+| 16 | Main Street | nm5-candy | CANDY | in order | 10 | Normal | 11/11 | 0.733 | 15.3 |
+| 17 | Main Street | nm6-clock | CLOCK | in order | 11 | Normal | 9/10 | 0.819 | 15.3 |
+| 18 | Main Street | nm7-tower | TOWER | in order | 11 | Normal | 10/10 | 0.773 | 16.0 |
+| 19 | Main Street | nm8-cinema | CINEMA | in order | 11 | Normal | 9/10 | 0.771 | 16.3 |
+| 20 | Main Street | nm9-bakery | BAKERY | in order | 12 | Normal | 10/10 | 0.813 | 16.5 |
+| 21 | Main Street | nm10-street | STREET | in order | 12 | Normal | 11/11 | 0.777 | 17.4 |
+| 22 | Sunny Beach | lv1-bus | BUS | in order | 10 | Hard | 7/8 | 0.59 | 18.6 |
+| 23 | Sunny Beach | lv2-car | CAR | in order | 13 | Hard | 2/8 | 0.316 | 33.0 |
+| 24 | Sunny Beach | lv3-planet | PLANET | in order | 17 | Hard | 2/7 | 0.451 | 37.8 |
+| 25 | Sunny Beach | sc2-jungle | JUNGLE | **Scramble** | 17 | Hard | 7/9 | 0.618 | 30.7 |
+| 26 | Sunny Beach | lv4-apple | APPLE | in order | 21 | Hard | 3/4 | 0.43 | 45.7 |
+| 27 | Sunny Beach | lv5-garden | GARDEN | in order | 24 | Hard | 4/6 | 0.612 | 43.6 |
+| 28 | Harbor Docks | lv6-rocket | ROCKET | in order | 26 | Super Hard | 2/7 | 0.363 | 61.3 |
+| 29 | Harbor Docks | lv7-ticket | TICKET | in order | 27 | Hard | 2/3 | 0.555 | 52.0 |
+| 30 | Harbor Docks | lv8-mother | MOTHER | in order | 26 | Hard | 5/5 | 0.685 | 42.4 |
+| 31 | Harbor Docks | sc3-dragons | DRAGONS | **Scramble** | 22 | Hard | 3/4 | 0.581 | 41.2 |
+| 32 | Harbor Docks | lv9-busstop | BUS + STOP | in order | 30 | Super Hard | 5/12 | 0.241 | 77.3 |
+| 33 | Harbor Docks | lv10-school | SCHOOL | in order | 36 | Super Hard | 1/2 | 0.441 | 77.8 |
+| 34 | Downtown | dt1-bank | BANK | in order | 14 | Hard | 5/10 | 0.41 | 32.0 |
+| 35 | Downtown | sc4-subway | SUBWAY | **Scramble** | 17 | Hard | 3/5 | 0.682 | 29.0 |
+| 36 | Downtown | dt2-hotel | HOTEL | in order | 20 | Hard | 5/11 | 0.473 | 42.7 |
+| 37 | Downtown | dt3-market | MARKET | in order | 22 | Hard | 5/7 | 0.571 | 41.7 |
+| 38 | Downtown | dt4-square | SQUARE | in order | 33 | Super Hard | 4/8 | 0.328 | 78.9 |
+
 ## Levels
 
-There are 28 levels: the 23 below plus the 5 Downtown key levels (24-28, see v7). The first 23 are **10 starter levels** that teach one idea at a time, then the **10 v2 main levels** (unchanged) with **3 Scramble breathers** inserted at 12, 17 and 22.
+v9 has 38 levels; see [Levels (v9 order)](#levels-v9-order) for the current order with modes, par and tiers. The tables below describe the original sets with their v4 numbers: the **10 starter levels** that teach one idea at a time (still stops 1-10), and the **10 v2 main levels** with **3 Scramble stops** (today stops 22-33 in a new order, with JUNGLE and DRAGONS moved); the 5 Downtown key levels are in v7 and the 10 normal lots in v9.
+
+v4 order:
 
 | # | id | Word | Mode | Par |
 |---|---|---|---|---|
@@ -269,11 +421,11 @@ There are 28 levels: the 23 below plus the 5 Downtown key levels (24-28, see v7)
 | 7 | FROG | 5x5 | 8 | 14 | 3 | 7 | Long trucks | Long trucks move as one piece and slide just like cars. |
 | 8 | TRAIN | 5x5 | 10 | 11 | 3 | 8 | Busier 5x5 lot | A busier lot. Back cars up to make room before you drive out. |
 | 9 | TIGER | 5x5 | 11 | 10 | 3 | 9 | Five letters, more decoys | Plan ahead: which letter can leave first, and what is blocking the next one? |
-| 10 | HOUSE | 5x5 | 12 | 9 | 3 | 9 | Hand-off to level 11 | Last warm-up! Next come the big jammed lots. |
+| 10 | HOUSE | 5x5 | 12 | 9 | 3 | 9 | Hand-off to level 11 | Last warm-up! Next up: Main Street, with lots of ways to win. (v9; was "Next come the big jammed lots.") |
 
-Levels 1-5 have a roomy 4-spot bay and **cannot be lost** at all (checked by the verifier). Level 6 shrinks the bay to 3 and is the first level where a wrong letter can lose; from there on the bay stays at 3. Par climbs 3, 4, 5, 5, 6, 6, 7, 8, 9, 9 and then hands off to level 11 (BUS, par 10).
+Levels 1-5 have a roomy 4-spot bay and **cannot be lost** at all (checked by the verifier). Level 6 shrinks the bay to 3 and is the first level where a wrong letter can lose; from there on the bay stays at 3. Par climbs 3, 4, 5, 5, 6, 6, 7, 8, 9, 9 and then hands off to level 11 (since v9 Main Street's BREAD, par 9; before that BUS, par 10).
 
-### Main levels (11-23)
+### Main levels (v4 numbers 11-23; today 13 and 22-33)
 
 | # | Word | Grid | Cars | Empty | Bay | Par | BFS states | What's new |
 |---|------|------|------|-------|-----|-----|-----------|------------|
@@ -333,7 +485,8 @@ The source of truth is `levels/levels.json` (`{ "format": "...", "levels": [ ...
 | `par` | Fewest moves to win (1 slide or 1 exit = 1 move). It must equal the solver's result |
 | `tip` | Optional player hint shown under the lot |
 | `suggested_level`, `note` | Optional designer notes. The game ignores them |
-| `tier`, `teaches`, `safe` | Optional: `"starter"` marks a beginner level (default `"core"`); `teaches` names the mechanic it introduces; `safe` asserts it can't be lost. They select the verifier's checks; the game only uses `tier` for the save migration |
+| `tier`, `teaches`, `safe` | Optional: `"starter"` marks a beginner level, `"normal"` (v9) a forgiving Main Street lot (default `"core"`); `teaches` names the mechanic it introduces; `safe` asserts it can't be lost. They select the verifier's checks; the game only uses `tier` for the save migration and the "new stops" hint |
+| `difficulty` | GENERATED by `tools/difficulty.js --write` (v9): `{tier 1-5, label, score, par, first "k/n", track}`. The game shows it as the difficulty badge; the verifier checks it matches the formula |
 | `cars[].l` | Letter. It can also be a 2-letter chunk such as `"TH"`, or `"?"` for the wildcard |
 | `cars[].r`, `cars[].c` | The car's **front (head)** cell, 1-indexed. `r1` is the top row and `c1` the left column |
 | `cars[].dir` | `up`, `down`, `left` or `right` (the way the nose points, i.e. the exit direction) |
@@ -369,12 +522,14 @@ For **every** level the verifier checks:
 
 The design checks depend on the level's `tier`:
 - **Bay Words:** each level is also solved with the Bay Word rule off and par must match, so a Bay Word is never needed for par; reachable Bay Words are listed.
-- **Scramble** (`mode: "scramble"`): core tier, needs slides, in-order play of the same lot is impossible or at least 2 moves slower, junk exits are reported; pacing: after the starters, at least 3 in-order levels between Scramble levels, par 60-99% of the in-order level before it, and the first Scramble level has a tip.
+- **Scramble** (`mode: "scramble"`): core tier, needs slides, in-order play of the same lot is impossible or at least 2 moves slower, junk exits are reported; pacing: after the starters, at least 3 in-order levels between Scramble levels, par **in line** with the in-order levels just before and after it (0.8 × min to 1.2 × max; v9, replacing the old "60-99% breather" rule), every district after the starter ramp has a Scramble stop, and the first Scramble level has a tip.
+- **`normal`** (v9, Main Street): the normal-tier thresholds in [v9](#variety-metrics) (par 9-12, first-move slack, on-track share, optimal and par+2 sequence counts, no keys/chunks/taxi, a reachable loss, a tip, gentle par steps).
+- **Variety and difficulty** (v9, every level): the variety metrics are printed for every level, and the stored `difficulty` must match `tools/difficulty.js` (tier and score).
 - **`core`** in-order levels (default; 11-23 except the Scramble levels): every car carrying a word letter starts blocked; the optimal line needs slides; driving forward only is impossible or slower (except the first core level); par never falls below 75% of an earlier core level's.
 - **`starter`** (levels 1-10): the mechanic named in `teaches` must really be needed: `exit` = the best line is taps only; `slide` = it can't be won as fast without partial slides, and needs no reverse and no bay; `reverse` = it can't be won as fast driving forward only, and needs no bay; `bay` = it can't be won as fast without parking a letter; `trucks` = has a long truck; `bay-limit` = a loss is reachable. `"safe": true` means no losing move exists anywhere. Every starter level needs a tip, starter par never goes down, stays below the first core level's par, and the last starter is within 2 of it.
 - `js/levels.js` is in sync with the JSON, and `js/baywords.js` with `levels/baywords.json` (all 3 letters, each with a vowel);
 - the Python solver (`python3 tools/wjb_solver.py levels/levels.json --check`) agrees on every par;
-- v8 map data (`levels/districts.json`): every level is in exactly one district, in levels.json order; each district has 3+ stops and ends with its boss; the boss has the highest par in its district; each district debuts its mechanic (basics = level 1, trucks = the first long truck, scramble = the first Scramble stop, specials = the first chunk truck and wildcard taxi, keys = every padlock level); chest boosters are known kinds ×1-3; paints are known with valid colours; and `js/levels.js` carries the same data.
+- v8 map data (`levels/districts.json`): every level is in exactly one district, in levels.json order; each district has 3+ stops and ends with its boss; the boss has the highest par in its district; each district debuts its mechanic (basics = level 1, trucks = the first long truck, scramble = the first Scramble stop, specials = the first chunk truck and wildcard taxi, keys = every padlock level; v9: mixed = every normal-tier level, biglots = the first in-order core level); chest boosters are known kinds ×1-3; paints are known with valid colours; and `js/levels.js` carries the same data.
 
 It also reports the minimum bay needed, how many positions are reachable and how many of those are dead ends, and how many first moves already lose. It exits with code 1 if anything fails.
 
@@ -384,6 +539,8 @@ It also reports the minimum bay needed, how many positions are reachable and how
 - `tools/level-improve.js in.json out.json` hill-climbs a lot: it swaps which cars carry which letters and flips car directions, keeping a change only if the level stays valid and par goes up (with a cap on solver states so hints stay fast on phones). It writes `out.json` on every improvement.
 
 - `tools/scramble-lab.js` / `tools/scramble-improve.js` generate and hill-climb Scramble lots (single-letter cars only), keeping candidates whose Scramble par is in range and whose in-order par is impossible or clearly higher.
+- `tools/normal-lab.js` / `tools/normal-improve.js` (v9) generate and hill-climb normal-tier lots: random layouts from a spec (word, grid, cars, par and score range, forgiveness minimums) filtered by the normal thresholds, then random edits (move, turn, grow or shrink a car, add or drop a decoy, swap letters) that keep a lot inside the normal-tier limits.
+- `tools/difficulty.js` (v9) prints every level's variety metrics, score and tier; `--write` stores the `difficulty` field, `--check` fails if a stored one is out of date.
 - `tools/starter-lab.js gen spec.json out.json` makes small beginner lots: random layouts filtered by what the level should teach (for example "needs a partial slide but no reverse and no bay", "forward-only impossible", "can't be lost", "at most 2 bay parkings"). It writes candidates as it finds them.
 
 The starter levels CAT and HAT were laid out by hand; the other eight were picked from `starter-lab.js` candidates. The v2 levels were made with `level-lab.js` and `level-improve.js` and then checked with the verifier. Decoy letters were finally spread over a varied set of non-word letters; decoys never fill a seat, so that doesn't change any move, and par was re-proven afterwards.
@@ -398,34 +555,38 @@ python3 -m http.server 8765 &     # from this folder
 node tests/e2e.js                 # phone 390x844 touch, 375x667 check, desktop 1280x800 mouse
 node tests/map-e2e.js             # v8 city map: phone 390x844 touch, 375x667, desktop 1280x800, reduced motion
 node tests/file-url.js            # opens index.html via file://, opens the map and wins level 1
+node tests/flip-orient.js         # a flipped car is drawn facing its new way
+node tools/verify-levels.js       # every level + map rules + the Python cross-check (about 10-15 min since v9)
 ```
 
 `tests/map-e2e.js` covers the map:
-- rendering: 5 themed districts, 28 stops, 5 chests; Scramble, key and BOSS markers; 44 px targets; no sideways overflow; the sticky header; the current stop in view;
+- rendering: 6 themed districts, 38 stops, 6 chests; Scramble, key and BOSS markers; 44 px targets; no sideways overflow; the sticky header; the current stop in view;
 - tapping a stop to play it; a locked stop can't be tapped;
 - the bus: driving after **Next stop** (mid-drive check) and parking at the right stop, which then starts; driving from the last stop played to the current one via the HUD map button, ending within 2 px of its spot; transform-only movement; a tap that drives back, with a second tap skipping;
 - the boss: "Open the chest!", the bus driving to the chest, closed, opening and open states, the claim saved once (coins and inventory), rewards shown, Collect, the gate lifting and the bus parking at the next district's first stop; an opened chest not paying twice (also after a reload); a locked district and a locked chest;
 - the inventory: badges, "Free", the confirm text, used before coins, Undo refunding it to the inventory, a free Tow win capped at 2 stars, coin prices back when empty;
-- migration: a save that beat 1-11 gets two claimable catch-up chests (paint unlocked and worn, Settings paint picker); v2, v3 and all-28 saves land on the right stop;
+- migration: a v8 save that beat 1-10 + BUS gets two claimable catch-up chests (School Street, and Maple Suburbs whose boss is now HOUSE; paint unlocked and worn, Settings paint picker), the Main Street chest stays locked, the title says "New: Main Street, 10 new stops!" and the bus goes on to CAR; v8 saves waiting at BUS or with all 28 won continue at Main Street stop 11; v2 and v3 saves land on the right stop;
+- v9 Main Street: header, boss win, chest (+175, Tow, Nudge, Trolley Green worn), Collect into Sunny Beach; desktop map; a tour of all 6 districts and the full map overview;
 - cheats: Unlock all opens everything and the bus drives to stop 26; chest previews under Unlock all and under Unlimited coins; a boss won while test-opened gives no chest; the real save stays byte-identical; real progress returns when cheats are off;
 - `#map` deep link, reduced motion (the bus jumps, the chest opens at once with no confetti or rays), the 375x667 chest card fit, and desktop centring (820 px);
-- the v8 screenshots, and no console errors.
+- the v8/v9 screenshots, and no console errors.
 
 `tests/e2e.js` moves cars only with real input: touch taps and touch swipes (CDP touch events) on a 390x844 phone with mobile emulation, and mouse clicks, drags and right-clicks at 1280x800. It covers:
-- the level select, which is now the city map: 28 stops, Scramble levels marked, Play goes to the map and then "Play stop 1", 44 px stops, no sideways overflow at 390x844, 375x667 and desktop;
+- v9 difficulty badges: every map stop has a badge with the right tier and aria label, the level-intro banner and the HUD show the badge for one level of each tier, at 390x844 (fresh and on Main Street), 375x667 and 1280x800; three normal lots on the phone;
+- the level select, which is now the city map: 38 stops, Scramble levels marked, Play goes to the map and then "Play stop 1", 44 px stops, no sideways overflow at 390x844, 375x667 and desktop;
 - numbered seats with exactly one glowing next seat that advances, and the fare box (+1, Undo back to +0);
 - coins: 26 for a first par clear of CAT, saved across reload, +6 on replay, no par bonus over par, nothing banked on a loss;
 - Scramble on level 12: the one-time tip card (and not on a second visit), the start banner, purple bus and badge, no seat numbers, out-of-order boarding, only junk to the bay, win at par with 3 stars;
 - boosters (with seeded coins): shop prices, confirm, Cancel spends nothing; Tow refused on a needed car at no charge, Tow of a decoy (150, +1 move), dead-end re-check and an optimal hint after it, Undo refunds; Bay +1 (4 spots that really hold 4 letters), Undo refunds; Nudge exactly one cell, Undo refunds; a booster win capped at 2 stars with no par bonus or best score; a loss after a booster keeps the coins spent; a dead end rescued from the dead-end banner's Boosters button;
 - Bay Word on level 17: three junk letters clear, +10 in the fare box, "Bay Word 10" on the win card, coins banked;
 - v7 keys: badges with the right shape, the first-key tip, a padlocked car tapped and swiped (wiggle, key car call-out, toast, no move), the unlock animation when the key car exits, Undo re-locking, an optimal hint, Tow refusing padlocked and key cars, Nudge/Flip refusing padlocked cars (all greyed in pick mode, no coins charged), Flip on a key car, Bay +1 unaffected, the later key levels and the chain, a desktop click on a padlocked car;
-- all 28 levels won through the UI at par with 3 stars and no boosters, on the phone (taps + swipes) and on desktop (clicks + drags);
-- saved-progress migration with seeded `localStorage`: v3 saves (partial, through BUS, all 20, starters only), a v2 save, a v4 save with coins, and reloading a migrated save;
+- all 38 levels won through the UI at par with 3 stars and no boosters, on the phone (taps + swipes) and on desktop (clicks + drags);
+- saved-progress migration with seeded `localStorage`: v3 saves (partial, through BUS, all 20, starters only), a v2 save, a v4 save with coins, v8 saves waiting at BUS and at PIZZA, and reloading a migrated save (v8 stop numbers are mapped to today's stops by level id);
 - 375x667: levels 17, 22 and 23, the booster bar and the confirm sheet fit; desktop right-click reverse, `R` restart and a click nudge;
 - v6: bus hood/bumper/tailpipe on every bus and inside the screen on every layout check, the bus driving off hood-first; booster bar prices, red prices when poor, Bay +1 "Used", 44 px targets, clear of the lot/bay/tip at 390x844, 375x667 and desktop; Flip (pick mode, a car that then leaves from its former tail end, dead-end + optimal hint after it, Undo turns it back and refunds 120, a Flip win capped at 2 stars); Settings with 4 test toggles (saved apart from the real save, which stays byte-identical; Unlock all with test-opened levels off the record; Unlimited coins free boosters, no banking, ∞; Unlimited hints/undos ∞ badges, extra use keeps a win off the record, a booster refund still works, normal counts back after turning off; TEST MODE tag; Reset with confirm);
 - no console errors, page errors or failed requests.
 
-It saves screenshots to `screenshots/` (`v8-*.png` for the city map from `tests/map-e2e.js`, `v7-*.png` for keys, `v4-*.png`; the `v2-*` and `v3-*` files are from earlier rounds).
+It saves screenshots to `screenshots/` (`v9-*.png` for Main Street, the normal lots and the difficulty badges, `v8-*.png` for the city map from `tests/map-e2e.js`, `v7-*.png` for keys, `v4-*.png`; the `v2-*` and `v3-*` files are from earlier rounds).
 
 ## Files
 
@@ -438,7 +599,7 @@ js/levels.js             GENERATED from levels/levels.json
 js/game.js               UI, animation, touch/mouse input, sound (WebAudio), saving
 levels/levels.json       level data (source of truth)
 levels/baywords.json     321 three-letter Bay Words (each has a vowel)
-levels/districts.json    v8 city map: districts (stops, theme, mechanic, boss, chest) and bus paints
+levels/districts.json    city map (v8/v9): districts (stops, theme, mechanic, boss, chest) and bus paints
 tools/verify-levels.js   Node level verifier
 tools/wjb_solver.py      independent Python reference solver (cross-check)
 tools/level-lab.js       dense-lot generator (dev)
@@ -446,6 +607,9 @@ tools/level-improve.js   level hill-climber (dev)
 tools/starter-lab.js     beginner-level generator/filter (dev)
 tools/scramble-lab.js    Scramble lot generator (dev)
 tools/scramble-improve.js Scramble lot hill-climber (dev)
+tools/normal-lab.js      normal-tier lot generator (dev, v9)
+tools/normal-improve.js  normal-tier lot hill-climber (dev, v9)
+tools/difficulty.js      variety metrics -> difficulty score and tier (v9; --write / --check)
 tests/rules.js           Node rule/solver tests incl. JS-vs-Python fuzz
 tests/e2e.js             Playwright play-test (phone + desktop): levels, Scramble, coins, booster bar, Flip, settings/cheats, bus art
 tests/flip-orient.js     Playwright check that a flipped car is DRAWN facing its new way (phone + desktop; pass a URL to check the live site)

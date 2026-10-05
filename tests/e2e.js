@@ -625,7 +625,7 @@ async function tierPlayCheck(page, n, label) {
   check(await p.locator('#ov-shop.show').count() === 0 && (await S(p)).coins === 900, 'tapping a used Bay +1 does nothing (no confirm, no charge)');
   // --- Flip: a car turns round and drives out of its former tail end ---
   let flipLv = 0, fx = null;
-  for (const n of [13, 14, 11, 15, 16, 18, 19, 20, 23, 9, 10, 8]) { await openLevel(p, n); fx = await findFlipExit(p); if (fx) { flipLv = n; break; } }
+  for (const n of [13, 14, 11, 15, 16, 18, 19, 20, 23, 9, 10, 8].map(OLD)) { await openLevel(p, n); fx = await findFlipExit(p); if (fx) { flipLv = n; break; } }
   check(!!fx, 'found a car on level ' + flipLv + ' that can only leave the other way (car ' + (fx && fx.car) + ', facing ' + (fx && fx.dir) + ')');
   const fb = await S(p);
   await tapEl(p, T, '#bst-flip'); await p.waitForSelector('#ov-shop.show'); await p.waitForTimeout(300);
@@ -671,7 +671,7 @@ async function tierPlayCheck(page, n, label) {
   // --- v6b: the Flip must stay flipped ON SCREEN (the graphic used to turn, then snap back to the old direction) ---
   console.log('\n# Flip: rendered orientation (graphic, not just state)');
   await seeded(p, v4save({ coins: 100000 }));
-  await openLevel(p, OLD(13));
+  await openLevel(p, flipLv || OLD(13));
   const oc = fx ? fx.car : 0, o0 = await orientOf(p, oc);
   check(orientOk(o0) && (await orientBad(p)).length === 0, 'before Flip: every car\'s graphic matches its direction (' + ostr(o0) + ')');
   await flipVia(p, T, oc);
@@ -777,7 +777,7 @@ async function tierPlayCheck(page, n, label) {
   // --- every level winnable through real touch input at par, no boosters ---
   {  /* ----------------------- v7: KEYS AND PADLOCKS ----------------------- */
   console.log('\n# Keys and padlocks');
-  check(KEYS.length >= 4 && KEYS[0] === 24 && LVS[KEYS[0] - 1].teaches === 'keys', 'padlocks appear on ' + KEYS.length + ' levels (' + KEYS.join(', ') + '), introduced on level ' + KEYS[0] + ' after the 23 earlier levels');
+  check(KEYS.length >= 4 && KEYS[0] === AT('dt1-bank') && LVS[KEYS[0] - 1].teaches === 'keys', 'padlocks appear on ' + KEYS.length + ' levels (' + KEYS.join(', ') + '), introduced on level ' + KEYS[0] + ' (BANK) after the ' + (KEYS[0] - 1) + ' earlier levels');
   await seeded(p, v4save({ coins: 1000, unlocked: NLEV - 1, unlockedId: LAST_ID }));
   await openLevel(p, KEYS[0]);
   let li = await lockInfo(p);
@@ -1050,9 +1050,10 @@ async function tierPlayCheck(page, n, label) {
   await tapEl(p, T, '#btn-reset-cancel'); await p.waitForTimeout(150);
   stored = await p.evaluate(() => JSON.parse(localStorage.getItem('wordJamBus.progress.v1')));
   check(stored.coins === 345 && stored.stars['st3-sun'] === 3, 'Cancel keeps the progress');
-  await tapEl(p, T, '#btn-reset'); await p.waitForTimeout(150); await tapEl(p, T, '#btn-reset-yes'); await p.waitForTimeout(200);
+  await tapEl(p, T, '#btn-reset'); await p.waitForSelector('#reset-confirm.show'); await p.waitForTimeout(250); await tapEl(p, T, '#btn-reset-yes');
+  await p.waitForFunction(() => { const s = JSON.parse(localStorage.getItem('wordJamBus.progress.v1') || '{}'); return s.coins === 0; }, null, { timeout: 3000 }).catch(() => {});
   stored = await p.evaluate(() => JSON.parse(localStorage.getItem('wordJamBus.progress.v1')));
-  check(stored.coins === 0 && Object.keys(stored.stars).length === 0 && stored.unlocked === 0, 'Yes, reset: progress and coins cleared');
+  check(stored.coins === 0 && Object.keys(stored.stars).length === 0 && stored.unlocked === 0, 'Yes, reset: progress and coins cleared (coins ' + stored.coins + ', ' + Object.keys(stored.stars).length + ' stars, unlocked ' + stored.unlocked + ')');
   await tapEl(p, T, '#btn-howto'); await p.waitForSelector('#ov-howto.show');
   check(true, 'How to play opens from settings');
   await tapEl(p, T, '#btn-howto-close'); await p.waitForTimeout(150);
