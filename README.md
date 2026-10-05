@@ -473,6 +473,10 @@ The trial keeps its own save under **`wordJamBus.trial.v1`** (coins, stars, inve
 
 `screenshots/v10-title-world-trial.png` (title with the World Trial button), `v10-world-view.png` (the World view), `v10-city1-map.png` (Pencil Park on the trial map) and `v10-trial-level-phone.png` (a Pencil Park level at 390x844), plus `v10-big-chest.png` (the Pencil Park BIG CHEST, previewed under Unlock all).
 
+### Tests at release (0.10.0)
+
+`tools/verify-levels.js` (with the Python cross-check, about 11 min): all 38 main levels proven, Python agrees on every par. `tests/rules.js` 71 passed; `tests/e2e.js` 330 passed; `tests/map-e2e.js` 124 passed; `tests/file-url.js` passed; `tests/trial-e2e.js` 13/13 OK. The main game still loads 38 levels; the trial map has 104 stops. All 89 trial levels re-solved with `js/engine.js` at their stored par.
+
 ### Known limits of this trial
 
 - The generator reuses proven layouts with new letters when random search runs out of attempts, so many city levels share a layout (89 levels, 30 distinct layouts). In Notebook Nook, 17 of the last 21 stops fell back to one 4x4 Very Easy layout (par 6), below the city's band. Some Crayon Creek key levels (par 14) sit above its band.
