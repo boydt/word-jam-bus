@@ -922,8 +922,126 @@ window.WJB_LEVELS = [
   }
  },
  {
-  "id": "nm3-park",
+  "id": "sc1-pizza",
   "suggested_level": 13,
+  "tier": "core",
+  "mode": "scramble",
+  "teaches": "scramble",
+  "word": "PIZZA",
+  "grid": [
+   5,
+   5
+  ],
+  "bay": 3,
+  "par": 9,
+  "tip": "Scramble stop: any order! Letters the word needs board right away. Only wrong letters and extra copies (like a third Z) wait in the junk bay.",
+  "cars": [
+   {
+    "l": "D",
+    "r": 4,
+    "c": 5,
+    "dir": "right"
+   },
+   {
+    "l": "G",
+    "r": 3,
+    "c": 2,
+    "dir": "left",
+    "len": 2
+   },
+   {
+    "l": "Z",
+    "r": 1,
+    "c": 2,
+    "dir": "right"
+   },
+   {
+    "l": "F",
+    "r": 1,
+    "c": 1,
+    "dir": "left"
+   },
+   {
+    "l": "I",
+    "r": 1,
+    "c": 5,
+    "dir": "down"
+   },
+   {
+    "l": "B",
+    "r": 5,
+    "c": 5,
+    "dir": "down"
+   },
+   {
+    "l": "A",
+    "r": 2,
+    "c": 2,
+    "dir": "right"
+   },
+   {
+    "l": "M",
+    "r": 3,
+    "c": 1,
+    "dir": "down"
+   },
+   {
+    "l": "Z",
+    "r": 2,
+    "c": 4,
+    "dir": "up",
+    "len": 2
+   },
+   {
+    "l": "N",
+    "r": 4,
+    "c": 3,
+    "dir": "up",
+    "len": 2
+   },
+   {
+    "l": "B",
+    "r": 1,
+    "c": 3,
+    "dir": "up"
+   },
+   {
+    "l": "P",
+    "r": 5,
+    "c": 4,
+    "dir": "up"
+   },
+   {
+    "l": "K",
+    "r": 1,
+    "c": 4,
+    "dir": "left"
+   },
+   {
+    "l": "F",
+    "r": 4,
+    "c": 4,
+    "dir": "left"
+   },
+   {
+    "l": "Z",
+    "r": 3,
+    "c": 5,
+    "dir": "down"
+   }
+  ],
+  "difficulty": {
+   "tier": 3,
+   "label": "Normal",
+   "score": 13,
+   "par": 9,
+   "first": "10/11",
+   "track": 0.795
+  }
+ },
+ {
+  "id": "nm3-park",
+  "suggested_level": 14,
   "tier": "normal",
   "word": "PARK",
   "grid": [
@@ -1027,7 +1145,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "nm4-music",
-  "suggested_level": 14,
+  "suggested_level": 15,
   "tier": "normal",
   "word": "MUSIC",
   "grid": [
@@ -1150,7 +1268,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "nm5-candy",
-  "suggested_level": 15,
+  "suggested_level": 16,
   "tier": "normal",
   "word": "CANDY",
   "grid": [
@@ -1265,7 +1383,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "nm6-clock",
-  "suggested_level": 16,
+  "suggested_level": 17,
   "tier": "normal",
   "word": "CLOCK",
   "grid": [
@@ -1367,7 +1485,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "nm7-tower",
-  "suggested_level": 17,
+  "suggested_level": 18,
   "tier": "normal",
   "word": "TOWER",
   "grid": [
@@ -1475,7 +1593,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "nm8-cinema",
-  "suggested_level": 18,
+  "suggested_level": 19,
   "tier": "normal",
   "word": "CINEMA",
   "grid": [
@@ -1581,7 +1699,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "nm9-bakery",
-  "suggested_level": 19,
+  "suggested_level": 20,
   "tier": "normal",
   "word": "BAKERY",
   "grid": [
@@ -1704,7 +1822,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "nm10-street",
-  "suggested_level": 20,
+  "suggested_level": 21,
   "tier": "normal",
   "word": "STREET",
   "grid": [
@@ -1802,7 +1920,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "lv1-bus",
-  "suggested_level": 21,
+  "suggested_level": 22,
   "word": "BUS",
   "grid": [
    5,
@@ -1892,124 +2010,6 @@ window.WJB_LEVELS = [
    "par": 10,
    "first": "7/8",
    "track": 0.59
-  }
- },
- {
-  "id": "sc1-pizza",
-  "suggested_level": 22,
-  "tier": "core",
-  "mode": "scramble",
-  "teaches": "scramble",
-  "word": "PIZZA",
-  "grid": [
-   5,
-   5
-  ],
-  "bay": 3,
-  "par": 9,
-  "tip": "Scramble stop: any order! Letters the word needs board right away. Only wrong letters and extra copies (like a third Z) wait in the junk bay.",
-  "cars": [
-   {
-    "l": "D",
-    "r": 4,
-    "c": 5,
-    "dir": "right"
-   },
-   {
-    "l": "G",
-    "r": 3,
-    "c": 2,
-    "dir": "left",
-    "len": 2
-   },
-   {
-    "l": "Z",
-    "r": 1,
-    "c": 2,
-    "dir": "right"
-   },
-   {
-    "l": "F",
-    "r": 1,
-    "c": 1,
-    "dir": "left"
-   },
-   {
-    "l": "I",
-    "r": 1,
-    "c": 5,
-    "dir": "down"
-   },
-   {
-    "l": "B",
-    "r": 5,
-    "c": 5,
-    "dir": "down"
-   },
-   {
-    "l": "A",
-    "r": 2,
-    "c": 2,
-    "dir": "right"
-   },
-   {
-    "l": "M",
-    "r": 3,
-    "c": 1,
-    "dir": "down"
-   },
-   {
-    "l": "Z",
-    "r": 2,
-    "c": 4,
-    "dir": "up",
-    "len": 2
-   },
-   {
-    "l": "N",
-    "r": 4,
-    "c": 3,
-    "dir": "up",
-    "len": 2
-   },
-   {
-    "l": "B",
-    "r": 1,
-    "c": 3,
-    "dir": "up"
-   },
-   {
-    "l": "P",
-    "r": 5,
-    "c": 4,
-    "dir": "up"
-   },
-   {
-    "l": "K",
-    "r": 1,
-    "c": 4,
-    "dir": "left"
-   },
-   {
-    "l": "F",
-    "r": 4,
-    "c": 4,
-    "dir": "left"
-   },
-   {
-    "l": "Z",
-    "r": 3,
-    "c": 5,
-    "dir": "down"
-   }
-  ],
-  "difficulty": {
-   "tier": 3,
-   "label": "Normal",
-   "score": 13,
-   "par": 9,
-   "first": "10/11",
-   "track": 0.795
   }
  },
  {
@@ -2254,8 +2254,148 @@ window.WJB_LEVELS = [
   }
  },
  {
-  "id": "lv4-apple",
+  "id": "sc2-jungle",
   "suggested_level": 25,
+  "tier": "core",
+  "mode": "scramble",
+  "teaches": "bayword",
+  "word": "JUNGLE",
+  "grid": [
+   6,
+   6
+  ],
+  "bay": 3,
+  "par": 17,
+  "tip": "Bay Word: three junk letters that spell a word (any order, like C-A-T) leave the bay for 10 bonus coins.",
+  "cars": [
+   {
+    "l": "M",
+    "r": 3,
+    "c": 2,
+    "dir": "up",
+    "len": 2
+   },
+   {
+    "l": "E",
+    "r": 3,
+    "c": 4,
+    "dir": "left"
+   },
+   {
+    "l": "L",
+    "r": 3,
+    "c": 5,
+    "dir": "down",
+    "len": 3
+   },
+   {
+    "l": "S",
+    "r": 6,
+    "c": 5,
+    "dir": "down"
+   },
+   {
+    "l": "K",
+    "r": 3,
+    "c": 1,
+    "dir": "up"
+   },
+   {
+    "l": "J",
+    "r": 6,
+    "c": 4,
+    "dir": "right"
+   },
+   {
+    "l": "N",
+    "r": 4,
+    "c": 4,
+    "dir": "left",
+    "len": 2
+   },
+   {
+    "l": "L",
+    "r": 1,
+    "c": 3,
+    "dir": "down"
+   },
+   {
+    "l": "W",
+    "r": 5,
+    "c": 3,
+    "dir": "up"
+   },
+   {
+    "l": "G",
+    "r": 6,
+    "c": 3,
+    "dir": "right",
+    "len": 3
+   },
+   {
+    "l": "O",
+    "r": 2,
+    "c": 2,
+    "dir": "up"
+   },
+   {
+    "l": "U",
+    "r": 1,
+    "c": 6,
+    "dir": "down"
+   },
+   {
+    "l": "M",
+    "r": 5,
+    "c": 5,
+    "dir": "left",
+    "len": 2
+   },
+   {
+    "l": "S",
+    "r": 4,
+    "c": 3,
+    "dir": "down",
+    "len": 2
+   },
+   {
+    "l": "R",
+    "r": 4,
+    "c": 1,
+    "dir": "left"
+   },
+   {
+    "l": "K",
+    "r": 5,
+    "c": 2,
+    "dir": "right"
+   },
+   {
+    "l": "F",
+    "r": 2,
+    "c": 4,
+    "dir": "down",
+    "len": 2
+   },
+   {
+    "l": "M",
+    "r": 5,
+    "c": 4,
+    "dir": "right"
+   }
+  ],
+  "difficulty": {
+   "tier": 4,
+   "label": "Hard",
+   "score": 30.7,
+   "par": 17,
+   "first": "7/9",
+   "track": 0.618
+  }
+ },
+ {
+  "id": "lv4-apple",
+  "suggested_level": 26,
   "word": "APPLE",
   "grid": [
    5,
@@ -2372,7 +2512,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "lv5-garden",
-  "suggested_level": 26,
+  "suggested_level": 27,
   "word": "GARDEN",
   "grid": [
    6,
@@ -2538,146 +2678,6 @@ window.WJB_LEVELS = [
    "par": 24,
    "first": "4/6",
    "track": 0.612
-  }
- },
- {
-  "id": "sc2-jungle",
-  "suggested_level": 27,
-  "tier": "core",
-  "mode": "scramble",
-  "teaches": "bayword",
-  "word": "JUNGLE",
-  "grid": [
-   6,
-   6
-  ],
-  "bay": 3,
-  "par": 17,
-  "tip": "Bay Word: three junk letters that spell a word (any order, like C-A-T) leave the bay for 10 bonus coins.",
-  "cars": [
-   {
-    "l": "M",
-    "r": 3,
-    "c": 2,
-    "dir": "up",
-    "len": 2
-   },
-   {
-    "l": "E",
-    "r": 3,
-    "c": 4,
-    "dir": "left"
-   },
-   {
-    "l": "L",
-    "r": 3,
-    "c": 5,
-    "dir": "down",
-    "len": 3
-   },
-   {
-    "l": "S",
-    "r": 6,
-    "c": 5,
-    "dir": "down"
-   },
-   {
-    "l": "K",
-    "r": 3,
-    "c": 1,
-    "dir": "up"
-   },
-   {
-    "l": "J",
-    "r": 6,
-    "c": 4,
-    "dir": "right"
-   },
-   {
-    "l": "N",
-    "r": 4,
-    "c": 4,
-    "dir": "left",
-    "len": 2
-   },
-   {
-    "l": "L",
-    "r": 1,
-    "c": 3,
-    "dir": "down"
-   },
-   {
-    "l": "W",
-    "r": 5,
-    "c": 3,
-    "dir": "up"
-   },
-   {
-    "l": "G",
-    "r": 6,
-    "c": 3,
-    "dir": "right",
-    "len": 3
-   },
-   {
-    "l": "O",
-    "r": 2,
-    "c": 2,
-    "dir": "up"
-   },
-   {
-    "l": "U",
-    "r": 1,
-    "c": 6,
-    "dir": "down"
-   },
-   {
-    "l": "M",
-    "r": 5,
-    "c": 5,
-    "dir": "left",
-    "len": 2
-   },
-   {
-    "l": "S",
-    "r": 4,
-    "c": 3,
-    "dir": "down",
-    "len": 2
-   },
-   {
-    "l": "R",
-    "r": 4,
-    "c": 1,
-    "dir": "left"
-   },
-   {
-    "l": "K",
-    "r": 5,
-    "c": 2,
-    "dir": "right"
-   },
-   {
-    "l": "F",
-    "r": 2,
-    "c": 4,
-    "dir": "down",
-    "len": 2
-   },
-   {
-    "l": "M",
-    "r": 5,
-    "c": 4,
-    "dir": "right"
-   }
-  ],
-  "difficulty": {
-   "tier": 4,
-   "label": "Hard",
-   "score": 30.7,
-   "par": 17,
-   "first": "7/9",
-   "track": 0.618
   }
  },
  {
@@ -3148,8 +3148,151 @@ window.WJB_LEVELS = [
   }
  },
  {
-  "id": "lv9-busstop",
+  "id": "sc3-dragons",
   "suggested_level": 31,
+  "tier": "core",
+  "mode": "scramble",
+  "teaches": "scramble",
+  "word": "DRAGONS",
+  "grid": [
+   6,
+   6
+  ],
+  "bay": 3,
+  "par": 22,
+  "tip": "One last breather before the big finale: any order again. Can your junk letters spell a word?",
+  "cars": [
+   {
+    "l": "G",
+    "r": 6,
+    "c": 4,
+    "dir": "right"
+   },
+   {
+    "l": "S",
+    "r": 2,
+    "c": 3,
+    "dir": "right"
+   },
+   {
+    "l": "D",
+    "r": 4,
+    "c": 3,
+    "dir": "up"
+   },
+   {
+    "l": "O",
+    "r": 2,
+    "c": 4,
+    "dir": "down",
+    "len": 2
+   },
+   {
+    "l": "S",
+    "r": 3,
+    "c": 2,
+    "dir": "right"
+   },
+   {
+    "l": "H",
+    "r": 3,
+    "c": 6,
+    "dir": "up"
+   },
+   {
+    "l": "Y",
+    "r": 4,
+    "c": 4,
+    "dir": "left",
+    "len": 2
+   },
+   {
+    "l": "A",
+    "r": 5,
+    "c": 6,
+    "dir": "up",
+    "len": 2
+   },
+   {
+    "l": "R",
+    "r": 6,
+    "c": 3,
+    "dir": "right",
+    "len": 3
+   },
+   {
+    "l": "P",
+    "r": 5,
+    "c": 1,
+    "dir": "down",
+    "len": 2
+   },
+   {
+    "l": "T",
+    "r": 3,
+    "c": 3,
+    "dir": "left",
+    "len": 2
+   },
+   {
+    "l": "E",
+    "r": 2,
+    "c": 6,
+    "dir": "up"
+   },
+   {
+    "l": "P",
+    "r": 4,
+    "c": 2,
+    "dir": "down"
+   },
+   {
+    "l": "N",
+    "r": 3,
+    "c": 1,
+    "dir": "down",
+    "len": 3
+   },
+   {
+    "l": "W",
+    "r": 3,
+    "c": 5,
+    "dir": "left"
+   },
+   {
+    "l": "H",
+    "r": 5,
+    "c": 4,
+    "dir": "right",
+    "len": 3
+   },
+   {
+    "l": "H",
+    "r": 2,
+    "c": 2,
+    "dir": "down",
+    "len": 2
+   },
+   {
+    "l": "P",
+    "r": 5,
+    "c": 5,
+    "dir": "up",
+    "len": 2
+   }
+  ],
+  "difficulty": {
+   "tier": 4,
+   "label": "Hard",
+   "score": 41.2,
+   "par": 22,
+   "first": "3/4",
+   "track": 0.581
+  }
+ },
+ {
+  "id": "lv9-busstop",
+  "suggested_level": 32,
   "words": [
    "BUS",
    "STOP"
@@ -3325,149 +3468,6 @@ window.WJB_LEVELS = [
    "par": 30,
    "first": "5/12",
    "track": 0.241
-  }
- },
- {
-  "id": "sc3-dragons",
-  "suggested_level": 32,
-  "tier": "core",
-  "mode": "scramble",
-  "teaches": "scramble",
-  "word": "DRAGONS",
-  "grid": [
-   6,
-   6
-  ],
-  "bay": 3,
-  "par": 22,
-  "tip": "One last breather before the big finale: any order again. Can your junk letters spell a word?",
-  "cars": [
-   {
-    "l": "G",
-    "r": 6,
-    "c": 4,
-    "dir": "right"
-   },
-   {
-    "l": "S",
-    "r": 2,
-    "c": 3,
-    "dir": "right"
-   },
-   {
-    "l": "D",
-    "r": 4,
-    "c": 3,
-    "dir": "up"
-   },
-   {
-    "l": "O",
-    "r": 2,
-    "c": 4,
-    "dir": "down",
-    "len": 2
-   },
-   {
-    "l": "S",
-    "r": 3,
-    "c": 2,
-    "dir": "right"
-   },
-   {
-    "l": "H",
-    "r": 3,
-    "c": 6,
-    "dir": "up"
-   },
-   {
-    "l": "Y",
-    "r": 4,
-    "c": 4,
-    "dir": "left",
-    "len": 2
-   },
-   {
-    "l": "A",
-    "r": 5,
-    "c": 6,
-    "dir": "up",
-    "len": 2
-   },
-   {
-    "l": "R",
-    "r": 6,
-    "c": 3,
-    "dir": "right",
-    "len": 3
-   },
-   {
-    "l": "P",
-    "r": 5,
-    "c": 1,
-    "dir": "down",
-    "len": 2
-   },
-   {
-    "l": "T",
-    "r": 3,
-    "c": 3,
-    "dir": "left",
-    "len": 2
-   },
-   {
-    "l": "E",
-    "r": 2,
-    "c": 6,
-    "dir": "up"
-   },
-   {
-    "l": "P",
-    "r": 4,
-    "c": 2,
-    "dir": "down"
-   },
-   {
-    "l": "N",
-    "r": 3,
-    "c": 1,
-    "dir": "down",
-    "len": 3
-   },
-   {
-    "l": "W",
-    "r": 3,
-    "c": 5,
-    "dir": "left"
-   },
-   {
-    "l": "H",
-    "r": 5,
-    "c": 4,
-    "dir": "right",
-    "len": 3
-   },
-   {
-    "l": "H",
-    "r": 2,
-    "c": 2,
-    "dir": "down",
-    "len": 2
-   },
-   {
-    "l": "P",
-    "r": 5,
-    "c": 5,
-    "dir": "up",
-    "len": 2
-   }
-  ],
-  "difficulty": {
-   "tier": 4,
-   "label": "Hard",
-   "score": 41.2,
-   "par": 22,
-   "first": "3/4",
-   "track": 0.581
   }
  },
  {
@@ -3759,8 +3759,160 @@ window.WJB_LEVELS = [
   }
  },
  {
-  "id": "dt2-hotel",
+  "id": "sc4-subway",
   "suggested_level": 35,
+  "mode": "scramble",
+  "word": "SUBWAY",
+  "grid": [
+   6,
+   6
+  ],
+  "bay": 3,
+  "par": 17,
+  "tip": "Scramble stop with a padlock: any order again, but the key still comes first.",
+  "cars": [
+   {
+    "l": "A",
+    "r": 5,
+    "c": 4,
+    "dir": "down",
+    "len": 3
+   },
+   {
+    "l": "T",
+    "r": 1,
+    "c": 3,
+    "dir": "right"
+   },
+   {
+    "l": "R",
+    "r": 6,
+    "c": 5,
+    "dir": "down",
+    "lock": "gold"
+   },
+   {
+    "l": "U",
+    "r": 2,
+    "c": 4,
+    "dir": "down"
+   },
+   {
+    "l": "R",
+    "r": 5,
+    "c": 3,
+    "dir": "left"
+   },
+   {
+    "l": "S",
+    "r": 6,
+    "c": 3,
+    "dir": "left"
+   },
+   {
+    "l": "Y",
+    "r": 4,
+    "c": 2,
+    "dir": "down",
+    "len": 3
+   },
+   {
+    "l": "T",
+    "r": 6,
+    "c": 2,
+    "dir": "right",
+    "len": 2
+   },
+   {
+    "l": "S",
+    "r": 4,
+    "c": 6,
+    "dir": "down"
+   },
+   {
+    "l": "N",
+    "r": 1,
+    "c": 6,
+    "dir": "left"
+   },
+   {
+    "l": "D",
+    "r": 5,
+    "c": 6,
+    "dir": "right",
+    "len": 2,
+    "lock": "gold"
+   },
+   {
+    "l": "Y",
+    "r": 6,
+    "c": 4,
+    "dir": "right"
+   },
+   {
+    "l": "H",
+    "r": 1,
+    "c": 1,
+    "dir": "down"
+   },
+   {
+    "l": "A",
+    "r": 3,
+    "c": 1,
+    "dir": "right"
+   },
+   {
+    "l": "B",
+    "r": 1,
+    "c": 5,
+    "dir": "down"
+   },
+   {
+    "l": "M",
+    "r": 2,
+    "c": 5,
+    "dir": "left",
+    "len": 2
+   },
+   {
+    "l": "F",
+    "r": 3,
+    "c": 3,
+    "dir": "up",
+    "len": 2,
+    "key": "gold"
+   },
+   {
+    "l": "B",
+    "r": 2,
+    "c": 1,
+    "dir": "down"
+   },
+   {
+    "l": "W",
+    "r": 1,
+    "c": 2,
+    "dir": "down"
+   },
+   {
+    "l": "T",
+    "r": 2,
+    "c": 3,
+    "dir": "right"
+   }
+  ],
+  "difficulty": {
+   "tier": 4,
+   "label": "Hard",
+   "score": 29,
+   "par": 17,
+   "first": "3/5",
+   "track": 0.682
+  }
+ },
+ {
+  "id": "dt2-hotel",
+  "suggested_level": 36,
   "word": "HOTEL",
   "grid": [
    6,
@@ -3884,7 +4036,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "dt3-market",
-  "suggested_level": 36,
+  "suggested_level": 37,
   "word": "MARKET",
   "grid": [
    6,
@@ -4033,158 +4185,6 @@ window.WJB_LEVELS = [
    "par": 22,
    "first": "5/7",
    "track": 0.571
-  }
- },
- {
-  "id": "sc4-subway",
-  "suggested_level": 37,
-  "mode": "scramble",
-  "word": "SUBWAY",
-  "grid": [
-   6,
-   6
-  ],
-  "bay": 3,
-  "par": 17,
-  "tip": "Scramble stop with a padlock: any order again, but the key still comes first.",
-  "cars": [
-   {
-    "l": "A",
-    "r": 5,
-    "c": 4,
-    "dir": "down",
-    "len": 3
-   },
-   {
-    "l": "T",
-    "r": 1,
-    "c": 3,
-    "dir": "right"
-   },
-   {
-    "l": "R",
-    "r": 6,
-    "c": 5,
-    "dir": "down",
-    "lock": "gold"
-   },
-   {
-    "l": "U",
-    "r": 2,
-    "c": 4,
-    "dir": "down"
-   },
-   {
-    "l": "R",
-    "r": 5,
-    "c": 3,
-    "dir": "left"
-   },
-   {
-    "l": "S",
-    "r": 6,
-    "c": 3,
-    "dir": "left"
-   },
-   {
-    "l": "Y",
-    "r": 4,
-    "c": 2,
-    "dir": "down",
-    "len": 3
-   },
-   {
-    "l": "T",
-    "r": 6,
-    "c": 2,
-    "dir": "right",
-    "len": 2
-   },
-   {
-    "l": "S",
-    "r": 4,
-    "c": 6,
-    "dir": "down"
-   },
-   {
-    "l": "N",
-    "r": 1,
-    "c": 6,
-    "dir": "left"
-   },
-   {
-    "l": "D",
-    "r": 5,
-    "c": 6,
-    "dir": "right",
-    "len": 2,
-    "lock": "gold"
-   },
-   {
-    "l": "Y",
-    "r": 6,
-    "c": 4,
-    "dir": "right"
-   },
-   {
-    "l": "H",
-    "r": 1,
-    "c": 1,
-    "dir": "down"
-   },
-   {
-    "l": "A",
-    "r": 3,
-    "c": 1,
-    "dir": "right"
-   },
-   {
-    "l": "B",
-    "r": 1,
-    "c": 5,
-    "dir": "down"
-   },
-   {
-    "l": "M",
-    "r": 2,
-    "c": 5,
-    "dir": "left",
-    "len": 2
-   },
-   {
-    "l": "F",
-    "r": 3,
-    "c": 3,
-    "dir": "up",
-    "len": 2,
-    "key": "gold"
-   },
-   {
-    "l": "B",
-    "r": 2,
-    "c": 1,
-    "dir": "down"
-   },
-   {
-    "l": "W",
-    "r": 1,
-    "c": 2,
-    "dir": "down"
-   },
-   {
-    "l": "T",
-    "r": 2,
-    "c": 3,
-    "dir": "right"
-   }
-  ],
-  "difficulty": {
-   "tier": 4,
-   "label": "Hard",
-   "score": 29,
-   "par": 17,
-   "first": "3/5",
-   "track": 0.682
   }
  },
  {
@@ -4412,10 +4412,11 @@ window.WJB_MAP = {
    "name": "Main Street",
    "theme": "mainst",
    "teaches": "mixed",
-   "intro": "Ten forgiving lots with many ways to win",
+   "intro": "Ten new forgiving lots with many ways to win, and the first Scramble stop",
    "levels": [
     "nm1-bread",
     "nm2-shop",
+    "sc1-pizza",
     "nm3-park",
     "nm4-music",
     "nm5-candy",
@@ -4439,13 +4440,13 @@ window.WJB_MAP = {
    "id": "beach",
    "name": "Sunny Beach",
    "theme": "beach",
-   "teaches": "scramble",
-   "intro": "Bigger lots + Scramble stops: letters board in any order",
+   "teaches": "biglots",
+   "intro": "The big jammed lots begin: longer routes, Bay Words and a Scramble stop",
    "levels": [
     "lv1-bus",
-    "sc1-pizza",
     "lv2-car",
     "lv3-planet",
+    "sc2-jungle",
     "lv4-apple",
     "lv5-garden"
    ],
@@ -4464,14 +4465,13 @@ window.WJB_MAP = {
    "name": "Harbor Docks",
    "theme": "harbor",
    "teaches": "specials",
-   "intro": "Bay Words, chunk trucks and the wildcard taxi",
+   "intro": "Chunk trucks, the wildcard taxi and a Scramble stop",
    "levels": [
-    "sc2-jungle",
     "lv6-rocket",
     "lv7-ticket",
     "lv8-mother",
-    "lv9-busstop",
     "sc3-dragons",
+    "lv9-busstop",
     "lv10-school"
    ],
    "boss": "lv10-school",
@@ -4489,12 +4489,12 @@ window.WJB_MAP = {
    "name": "Downtown",
    "theme": "downtown",
    "teaches": "keys",
-   "intro": "Keys and padlocked cars",
+   "intro": "Keys and padlocked cars, and a Scramble stop",
    "levels": [
     "dt1-bank",
+    "sc4-subway",
     "dt2-hotel",
     "dt3-market",
-    "sc4-subway",
     "dt4-square"
    ],
    "boss": "dt4-square",

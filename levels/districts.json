@@ -1,5 +1,5 @@
 {
- "format": "Word Jam Bus city map v8. districts[]: {id, name, theme, teaches, intro, levels: [level ids, in play order], boss: the last level id, chest: {coins, boosters: {tow|bay|nudge|flip: n}, paint?}}. Every level is in exactly one district, in levels.json order. A district is finished when its boss stop is won; that opens the next district and its chest. paints[]: bus paints a chest can award ({id, name, body, dark}); 'classic' is owned from the start.",
+ "format": "Word Jam Bus city map v8/v9. districts[]: {id, name, theme, teaches, intro, levels: [level ids, in play order], boss: the last level id, chest: {coins, boosters: {tow|bay|nudge|flip: n}, paint?}}. Every level is in exactly one district, in levels.json order. A district is finished when its boss stop is won; that opens the next district and its chest. paints[]: bus paints a chest can award ({id, name, body, dark}); 'classic' is owned from the start.",
  "paints": [
   { "id": "classic", "name": "School Yellow", "body": "#f6c026", "dark": "#d99d0b" },
   { "id": "maple", "name": "Maple Red", "body": "#ec5a3c", "dark": "#b8381f" },
@@ -24,29 +24,29 @@
   },
   {
    "id": "mainst", "name": "Main Street", "theme": "mainst", "teaches": "mixed",
-   "intro": "Ten forgiving lots with many ways to win",
-   "levels": ["nm1-bread", "nm2-shop", "nm3-park", "nm4-music", "nm5-candy", "nm6-clock", "nm7-tower", "nm8-cinema", "nm9-bakery", "nm10-street"],
+   "intro": "Ten new forgiving lots with many ways to win, and the first Scramble stop",
+   "levels": ["nm1-bread", "nm2-shop", "sc1-pizza", "nm3-park", "nm4-music", "nm5-candy", "nm6-clock", "nm7-tower", "nm8-cinema", "nm9-bakery", "nm10-street"],
    "boss": "nm10-street",
    "chest": { "coins": 175, "boosters": { "tow": 1, "nudge": 1 }, "paint": "trolley" }
   },
   {
-   "id": "beach", "name": "Sunny Beach", "theme": "beach", "teaches": "scramble",
-   "intro": "Bigger lots + Scramble stops: letters board in any order",
-   "levels": ["lv1-bus", "sc1-pizza", "lv2-car", "lv3-planet", "lv4-apple", "lv5-garden"],
+   "id": "beach", "name": "Sunny Beach", "theme": "beach", "teaches": "biglots",
+   "intro": "The big jammed lots begin: longer routes, Bay Words and a Scramble stop",
+   "levels": ["lv1-bus", "lv2-car", "lv3-planet", "sc2-jungle", "lv4-apple", "lv5-garden"],
    "boss": "lv5-garden",
    "chest": { "coins": 200, "boosters": { "nudge": 2, "bay": 1 }, "paint": "surf" }
   },
   {
    "id": "harbor", "name": "Harbor Docks", "theme": "harbor", "teaches": "specials",
-   "intro": "Bay Words, chunk trucks and the wildcard taxi",
-   "levels": ["sc2-jungle", "lv6-rocket", "lv7-ticket", "lv8-mother", "lv9-busstop", "sc3-dragons", "lv10-school"],
+   "intro": "Chunk trucks, the wildcard taxi and a Scramble stop",
+   "levels": ["lv6-rocket", "lv7-ticket", "lv8-mother", "sc3-dragons", "lv9-busstop", "lv10-school"],
    "boss": "lv10-school",
    "chest": { "coins": 250, "boosters": { "tow": 1, "flip": 1, "bay": 1} }
   },
   {
    "id": "downtown", "name": "Downtown", "theme": "downtown", "teaches": "keys",
-   "intro": "Keys and padlocked cars",
-   "levels": ["dt1-bank", "dt2-hotel", "dt3-market", "sc4-subway", "dt4-square"],
+   "intro": "Keys and padlocked cars, and a Scramble stop",
+   "levels": ["dt1-bank", "sc4-subway", "dt2-hotel", "dt3-market", "dt4-square"],
    "boss": "dt4-square",
    "chest": { "coins": 400, "boosters": { "tow": 2, "flip": 2 }, "paint": "neon" }
   }

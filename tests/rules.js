@@ -188,11 +188,17 @@ console.log('# v8 city map data (levels/districts.json)');
   check(D.every(d => at(d.boss).par === maxPar(d)), 'each boss is the hardest lot of its district (pars ' + D.map(d => at(d.boss).par).join(', ') + ')');
   const firstOf = pred => LV.findIndex(pred), inD = (d, i) => d.levels.includes(LV[i].id);
   const debut = { basics: () => 0, trucks: () => firstOf(l => l.cars.some(c => c.len === 3 || (c.l && c.l.length === 1 && c.len > 2))), scramble: () => firstOf(l => l.mode === 'scramble'),
-    specials: () => firstOf(l => l.cars.some(c => c.l === '?')), keys: () => firstOf(l => l.cars.some(c => c.lock)), mixed: () => firstOf(l => l.tier === 'normal') };
+    specials: () => firstOf(l => l.cars.some(c => c.l === '?')), keys: () => firstOf(l => l.cars.some(c => c.lock)), mixed: () => firstOf(l => l.tier === 'normal'), biglots: () => firstOf(l => (l.tier || 'core') === 'core' && l.mode !== 'scramble') };
   check(D.every(d => debut[d.teaches] && inD(d, debut[d.teaches]())), 'each district debuts its mechanic (' + D.map(d => d.name + ': ' + d.teaches).join(', ') + ')');
   const normalIdx = LV.map((l, i) => l.tier === 'normal' ? i : -1).filter(i => i >= 0), ms = D.find(d => d.teaches === 'mixed');
-  check(normalIdx.length === 10 && ms && normalIdx.every(i => inD(ms, i)) && ms.levels.length === 10 && LV[normalIdx[0] - 1].id === 'st10-house' && LV[normalIdx[9] + 1].id === 'lv1-bus',
-    'v9: the 10 normal levels sit together between HOUSE and BUS, all in ' + (ms ? ms.name : '?') + ' (stops ' + (normalIdx[0] + 1) + '-' + (normalIdx[normalIdx.length - 1] + 1) + ')');
+  check(normalIdx.length === 10 && ms && normalIdx.every(i => inD(ms, i)) && LV[normalIdx[0] - 1].id === 'st10-house' && LV[normalIdx[9] + 1].id === 'lv1-bus',
+    'v9: the 10 normal levels sit between HOUSE and BUS, all in ' + (ms ? ms.name : '?') + ' (stops ' + (normalIdx[0] + 1) + '-' + (normalIdx[normalIdx.length - 1] + 1) + ')');
+  const scrOf = d => d.levels.filter(id => at(id).mode === 'scramble');
+  check(D.every(d => d.levels.every(id => at(id).tier === 'starter') || scrOf(d).length >= 1), 'v9 Scramble spread: every district after the starter ramp has a Scramble stop (' + D.map(d => d.name + ': ' + (scrOf(d).join(',') || '-')).join('; ') + ')');
+  const route = LV.map((l, i) => ({ l, i })).filter(x => x.l.mode !== 'scramble');
+  const inLine = LV.map((l, i) => ({ l, i })).filter(x => x.l.mode === 'scramble').map(x => { const pv = route.filter(r => r.i < x.i).pop(), nx = route.find(r => r.i > x.i);
+    const lo = Math.min(pv.l.par, nx ? nx.l.par : pv.l.par), hi = Math.max(pv.l.par, nx ? nx.l.par : pv.l.par); return { id: x.l.id, par: x.l.par, ok: x.l.par >= Math.ceil(lo * 0.8) && x.l.par <= Math.floor(hi * 1.2), lo, hi }; });
+  check(inLine.every(x => x.ok), 'v9 Scramble par in line with its neighbours (0.8*min..1.2*max of the route levels around it): ' + inLine.map(x => x.id + ' ' + x.par + ' in ' + x.lo + '/' + x.hi).join(', '));
   const TN = ['', 'Very Easy', 'Easy', 'Normal', 'Hard', 'Super Hard'];
   check(LV.every(l => l.difficulty && l.difficulty.tier >= 1 && l.difficulty.tier <= 5 && l.difficulty.label === TN[l.difficulty.tier]), 'v9: every level carries a generated difficulty tier 1-5 with its label');
   const tierOfId = id => at(id).difficulty.tier;

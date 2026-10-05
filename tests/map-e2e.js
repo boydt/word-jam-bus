@@ -43,7 +43,9 @@ const KEY = 'wordJamBus.progress.v1', TKEY = 'wordJamBus.test.v1';
 const DK = id => D.findIndex(d => d.id === id), MSK = DK('mainst'), BEACH = DK('beach');
 const NORMAL = LVS.map((l, i) => l.tier === 'normal' ? i + 1 : 0).filter(Boolean);
 const AT = id => idx(id) + 1;
-const V8 = LVS.filter(l => l.tier !== 'normal');   // the 28 levels a v8 save knew
+const V8 = ['st1-cat', 'st2-dog', 'st3-sun', 'st4-hat', 'st5-fish', 'st6-milk', 'st7-frog', 'st8-train', 'st9-tiger', 'st10-house', 'lv1-bus', 'sc1-pizza', 'lv2-car', 'lv3-planet',
+  'lv4-apple', 'lv5-garden', 'sc2-jungle', 'lv6-rocket', 'lv7-ticket', 'lv8-mother', 'lv9-busstop', 'sc3-dragons', 'lv10-school', 'dt1-bank', 'dt2-hotel', 'dt3-market', 'sc4-subway', 'dt4-square']
+  .map(id => LVS.find(l => l.id === id));   // the 28 levels a v8 save knew, in v8 order
 /** A save from before v9: won the first n of the v8 levels (no Main Street stars). */
 const wonV8 = (n, extra) => { const st = {}, be = {}; V8.slice(0, n).forEach(l => { st[l.id] = 3; be[l.id] = l.par; });
   const next = V8[Math.min(n, V8.length - 1)];
@@ -260,8 +262,8 @@ async function mapBasics(page, ctx, label) {
   check(/2 chests to open/.test(tr) && /Sunny Beach/.test(tr) && /New: Main Street, 10 new stops!/.test(tr), 'migrated v8 save (won 1-10 + BUS): title says Sunny Beach, "2 chests to open on the map!" and "New: Main Street, 10 new stops!"');
   await tapEl(p, T, '#btn-play'); await mapOpen(p); await notDriving(p);
   f = await mapFacts(p); bi = await busInfo(p);
-  check(bi.at === 'sc1-pizza' && f.current === AT('sc1-pizza') && same(f.lockedSecs, ['harbor', 'downtown']) && same(f.chestStates, ['ready', 'ready', 'locked', 'locked', 'locked', 'locked']),
-    'map: the bus waits at stop ' + AT('sc1-pizza') + ' (PIZZA, Sunny Beach); School Street and Maple Suburbs (boss now HOUSE) chests ready; the Main Street chest locked until its boss is won');
+  check(bi.at === 'lv2-car' && f.current === AT('lv2-car') && same(f.lockedSecs, ['harbor', 'downtown']) && same(f.chestStates, ['ready', 'ready', 'locked', 'locked', 'locked', 'locked']),
+    'map: the v8 save waited at PIZZA (now stop ' + AT('sc1-pizza') + ' in Main Street), so the bus goes on to stop ' + AT('lv2-car') + ' (CAR, Sunny Beach); School Street and Maple Suburbs (boss now HOUSE) chests ready; the Main Street chest locked until its boss is won (bus at ' + bi.at + ')');
   check(NORMAL.every(n => f.open.includes(n)) && /New: 10 new stops!/.test(await p.textContent('.d-sec[data-district="mainst"] .dh-intro')), 'v9: Main Street is open to a player past BUS (offered, not forced): its header says "New: 10 new stops! ..."');
   check(/2 chests to open/.test(await p.textContent('#btn-map-chest')) && await p.locator('#btn-map-chest').isVisible(), 'foot button: "2 chests to open!"');
   await tapEl(p, T, '#btn-map-chest'); await p.waitForSelector('#ov-chest.show'); await tapEl(p, T, '#chest-big'); await p.waitForSelector('#ov-chest.open', { timeout: 3000 }); await p.waitForTimeout(500);

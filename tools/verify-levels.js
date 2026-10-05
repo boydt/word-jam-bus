@@ -32,10 +32,13 @@
  *  - mode "scramble" (v4 breather levels; any order): solved under the
  *    Scramble rule; single-letter cars only; word letters start blocked;
  *    the optimal line needs slides; any-order really matters (the same lot
- *    played in order is impossible or at least 2 moves slower); it is a
- *    breather (par below the previous route level's par, but at least 60% of
- *    it); at least 3 route levels sit between Scramble levels, the first one
- *    has a tip and comes after the starter levels.
+ *    played in order is impossible or at least 2 moves slower); v9 "par in
+ *    line": its par sits within 80%-120% of the range spanned by the route
+ *    levels just before and after it (0.8 * min .. 1.2 * max), so a Scramble
+ *    stop is neither a free pass nor a spike; at least 3 route levels sit
+ *    between Scramble levels; the first one has a tip and comes after the
+ *    starter levels; and (v9 spread) every district after the starter ramp
+ *    has at least one Scramble stop.
  * Keys and padlocks (v7, any level with a "lock"): the locks really matter
  *    (ignoring them the lot is at least 2 moves faster, so the padlocks block
  *    the naive line); the first level with padlocks has teaches "keys" and a
@@ -75,7 +78,8 @@
  *    mechanic it "teaches" debuts inside it (basics = level 1, trucks = the
  *    first long truck, scramble = the first Scramble level, specials = the
  *    first chunk truck and the first wildcard taxi, keys = every padlock
- *    level, mixed = every normal-tier level); chests give known boosters (1-3 each), coins >= 0 and a known
+ *    level, mixed = every normal-tier level, biglots = the first core
+ *    in-order level); chests give known boosters (1-3 each), coins >= 0 and a known
  *    paint. --districts runs only these checks (fast, no solving).
  * It also checks js/levels.js matches levels/levels.json, js/baywords.js
  * matches levels/baywords.json (every word 3 letters with a vowel), and
@@ -177,12 +181,19 @@ function checkDistricts() {
     scramble: [firstWhere(function (l) { return l.mode === 'scramble'; })],
     specials: [firstWhere(function (l) { return l.cars.some(function (c) { return c.l.length > 1; }); }), firstWhere(function (l) { return l.cars.some(function (c) { return c.l === '?'; }); })],
     keys: levels.filter(function (l) { return l.cars.some(function (c) { return c.lock; }); }),
-    mixed: levels.filter(function (l) { return l.tier === 'normal'; })
+    mixed: levels.filter(function (l) { return l.tier === 'normal'; }),
+    biglots: [firstWhere(function (l) { return (l.tier || 'core') === 'core' && l.mode !== 'scramble'; })]
   };
   map.districts.forEach(function (d) {
     var need = debut[d.teaches];
     if (!need) { bad.push(d.id + ': unknown mechanic "' + d.teaches + '"'); return; }
     need.forEach(function (l) { if (!l || distOf[l.id] !== d) bad.push(d.id + ' teaches ' + d.teaches + ', but ' + (l ? l.id + ' (where it debuts) is in ' + distOf[l.id].id : 'no level uses it')); });
+  });
+  // v9: Scramble spread - every district after the starter ramp has a Scramble stop
+  map.districts.forEach(function (d) {
+    var lv = d.levels.map(function (id) { return levels[ids.indexOf(id)]; }).filter(Boolean);
+    var starterOnly = lv.every(function (l) { return l.tier === 'starter'; });
+    if (!starterOnly && !lv.some(function (l) { return l.mode === 'scramble'; })) bad.push(d.id + ': no Scramble stop (every district after the starter ramp needs one)');
   });
   if (bad.length) { failures += bad.length; bad.forEach(function (b) { console.log('[FAIL] map: ' + b); }); }
   else map.districts.forEach(function (d, k) {
@@ -376,20 +387,25 @@ normals.forEach(function (r, k) {
 if (normals.length) console.log('[OK] normal set: par ' + normals.map(function (r) { return r.par; }).join(' -> ') + ', tiers ' + normals.map(function (r) { return r.difficulty ? r.difficulty.label : '?'; }).join(', '));
 console.log('[OK] difficulty tiers: ' + table.map(function (r) { return 'L' + r.n + ' ' + r.word + ' ' + (r.difficulty ? r.difficulty.tier : '?'); }).join(', '));
 
-// scramble pacing: breathers after the starter ramp, >= 3 route levels between them, below the previous route par
+// scramble pacing: after the starter ramp, >= 3 route levels between them, par in line with the route levels around it
 var lastScr = -1, scrCount = 0;
 table.forEach(function (r, k) {
   if (r.mode !== 'scramble') return;
-  var prev = null;
+  var prev = null, next = null;
   for (var j = k - 1; j >= 0; j--) if (table[j].mode === 'route') { prev = table[j]; break; }
+  for (var j2 = k + 1; j2 < table.length; j2++) if (table[j2].mode === 'route') { next = table[j2]; break; }
   var bad = [];
   if (!prev) bad.push('no route level before it');
-  else if (r.par >= prev.par || r.par < Math.ceil(prev.par * 0.6)) bad.push('par ' + r.par + ' is not a breather after L' + prev.n + ' par ' + prev.par + ' (want ' + Math.ceil(prev.par * 0.6) + '..' + (prev.par - 1) + ')');
+  else {
+    var lo = Math.min(prev.par, next ? next.par : prev.par), hi = Math.max(prev.par, next ? next.par : prev.par);
+    r.inLine = [Math.ceil(lo * 0.8), Math.floor(hi * 1.2)];
+    if (r.par < r.inLine[0] || r.par > r.inLine[1]) bad.push('par ' + r.par + ' is out of line with L' + prev.n + ' par ' + prev.par + (next ? ' and L' + next.n + ' par ' + next.par : '') + ' (want ' + r.inLine[0] + '..' + r.inLine[1] + ')');
+  }
   if (starters.length && k <= table.indexOf(starters[starters.length - 1])) bad.push('comes before the end of the starter ramp');
   if (lastScr >= 0 && k - lastScr < 4) bad.push('only ' + (k - lastScr - 1) + ' route level(s) since the last Scramble level');
   if (scrCount === 0 && !levels[k].tip) bad.push('the first Scramble level needs a tip');
   if (bad.length) { failures++; console.log('[FAIL] Scramble L' + r.n + ': ' + bad.join('; ')); }
-  else console.log('[OK] Scramble L' + r.n + ' ' + r.word + ' par ' + r.par + ' is a breather after L' + prev.n + ' ' + prev.word + ' par ' + prev.par + ' (in order this lot: ' + r.routePar + ')');
+  else console.log('[OK] Scramble L' + r.n + ' ' + r.word + ' par ' + r.par + ' is in line with L' + prev.n + ' ' + prev.word + ' par ' + prev.par + (next ? ' and L' + next.n + ' ' + next.word + ' par ' + next.par : '') + ' (allowed ' + r.inLine.join('..') + '; ' + (lastScr >= 0 ? (k - lastScr - 1) + ' route levels since the last Scramble; ' : '') + 'in order this lot: ' + r.routePar + ')');
   lastScr = k; scrCount++;
 });
 

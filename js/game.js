@@ -63,6 +63,8 @@
     p.unlocked = Math.max(0, Math.min(LEVELS.length - 1, u));
     // the furthest open level was already won (e.g. it was the last level before new ones were added): open the next
     while (p.unlocked + 1 < LEVELS.length && p.stars[LEVELS[p.unlocked].id]) p.unlocked++;
+    // v9: levels can move (Scramble stops were spread over the districts), so a won level always opens the one after it
+    for (var w = LEVELS.length - 2; w >= 0; w--) if (p.stars[LEVELS[w].id]) { if (p.unlocked < w + 1) p.unlocked = w + 1; break; }
     if (p.sound === undefined) p.sound = true;
     p.coins = Math.max(0, p.coins | 0);
     p.seen = p.seen || {};
@@ -148,7 +150,7 @@
   var DIST_OF = [];
   DISTRICTS.forEach(function (d, k) { d.k = k; d.first = indexOfId(d.levels[0]); d.last = indexOfId(d.boss); for (var i = d.first; i <= d.last; i++) DIST_OF[i] = k; });
   for (var dl = 0; dl < LEVELS.length; dl++) if (DIST_OF[dl] === undefined) DIST_OF[dl] = DISTRICTS.length - 1;
-  var MECH = { basics: 'Driving basics', trucks: 'Long trucks', scramble: 'Bigger lots + Scramble stops', specials: 'Bay Words, chunks, taxi', keys: 'Keys and padlocks', mixed: 'Many ways to win' };
+  var MECH = { basics: 'Driving basics', trucks: 'Long trucks', scramble: 'Scramble stops', specials: 'Chunk trucks and the taxi', keys: 'Keys and padlocks', mixed: 'Many ways to win + Scramble', biglots: 'Big jammed lots + Bay Words' };
 
   /* v9 difficulty tiers: generated per level by tools/difficulty.js from solver data (levels.json "difficulty").
      Shown as a coloured badge with 1-5 filled pips (so it never relies on colour alone). */
@@ -353,7 +355,7 @@
         '<div class="d-bg" aria-hidden="true">' + deco + '</div>' +
         '<header class="d-head" aria-label="District ' + (k + 1) + ': ' + d.name + ', ' + stars + ' of ' + max + ' stars, chest ' + cs + '">' +
           '<span class="dh-badge">' + (k + 1) + '</span>' +
-          '<span class="dh-text"><b class="dh-name">' + d.name + '</b><small class="dh-intro">' + (open ? (newsDistrict() === d ? 'New: ' + d.levels.length + ' new stops! ' + (MECH[d.teaches] || d.intro) : 'New: ' + (MECH[d.teaches] || d.intro)) : LOCK_SVG + ' Win stop ' + (DISTRICTS[k - 1].last + 1) + ' (boss) to open') + '</small>' +
+          '<span class="dh-text"><b class="dh-name">' + d.name + '</b><small class="dh-intro">' + (open ? (newsDistrict() === d ? 'New: ' + newStops(d).length + ' new stops! ' + (MECH[d.teaches] || d.intro) : 'New: ' + (MECH[d.teaches] || d.intro)) : LOCK_SVG + ' Win stop ' + (DISTRICTS[k - 1].last + 1) + ' (boss) to open') + '</small>' +
           '<span class="dh-bar"><i style="transform:scaleX(' + (won / d.levels.length).toFixed(3) + ')"></i></span></span>' +
           '<span class="dh-side"><span class="dh-stars" data-stars="' + stars + '" data-max="' + max + '">' + starSvg(true) + ' ' + stars + '/' + max + '</span>' + chip + '</span>' +
         '</header></section>';
@@ -414,11 +416,12 @@
     if (!M.driving) placeBus(M.busNode !== null ? M.busNode : nodeOfLevel[cf], true);
     renderMapChrome();
   }
-  /** v9: a district added in an update that the player skipped past (open, no stars yet, but a later stop is won). */
+  /** v9: a district added in an update that the player skipped past (open, none of its new stops won yet, but a later stop is). */
+  function newStops(d) { return d.levels.filter(function (id) { var l = LEVELS[indexOfId(id)]; return l && l.tier === 'normal'; }); }
   function newsDistrict() {
     for (var k = 0; k < DISTRICTS.length; k++) {
       var d = DISTRICTS[k];
-      if (d.teaches !== 'mixed' || !districtOpen(k) || d.levels.some(function (id) { return progress.stars[id]; })) continue;
+      if (d.teaches !== 'mixed' || !districtOpen(k) || newStops(d).some(function (id) { return progress.stars[id]; })) continue;
       for (var j = d.last + 1; j < LEVELS.length; j++) if (progress.stars[LEVELS[j].id]) return d;
     }
     return null;
@@ -435,7 +438,7 @@
     cbtn.hidden = !rc.length || testOn();
     cbtn.innerHTML = CHEST_SVG + ' ' + (rc.length > 1 ? rc.length + ' chests' : 'Chest') + ' to open!';
     $('title-route').innerHTML = '<b>' + d.name + '</b> \u00b7 district ' + (d.k + 1) + ' of ' + DISTRICTS.length + ' \u00b7 stop ' + (cf + 1) + (rc.length && !testOn() ? '<br><span class="tr-chest">' + CHEST_SVG + ' ' + rc.length + ' chest' + (rc.length > 1 ? 's' : '') + ' to open on the map!</span>' : '') +
-      (newsDistrict() ? '<br><span class="tr-news">New: ' + newsDistrict().name + ', ' + newsDistrict().levels.length + ' new stops!</span>' : '');
+      (newsDistrict() ? '<br><span class="tr-news">New: ' + newsDistrict().name + ', ' + newStops(newsDistrict()).length + ' new stops!</span>' : '');
   }
   function drawBus(L, dir) {
     var p = pointAt(L), q = pointAt(L + (dir || 1) * 4), bus = $('map-bus');

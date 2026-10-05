@@ -236,11 +236,13 @@ const NLEV = LVS.length;
 const SCR = LVS.map((l, i) => l.mode === 'scramble' ? i + 1 : 0).filter(Boolean);
 const KEYS = LVS.map((l, i) => l.cars.some(c => c.lock) ? i + 1 : 0).filter(Boolean);   // levels with padlocks
 const LAST_ID = LVS[NLEV - 1].id;
-// v9 inserted Main Street (10 normal levels) at stops 11-20: the v8 stops 11-28 (BUS ... SQUARE) moved up by 10.
-// OLD(n) maps a v8 stop number to today's, so the checks below keep testing the same lots.
-const OLD = n => n <= 10 ? n : n + 10;
+// v9 inserted Main Street (10 normal levels + PIZZA) at stops 11-21 and spread the Scramble stops over the districts,
+// so OLD(n) maps a v8 stop number to today's stop by level id: the checks below keep testing the same lots.
+const V8_ORDER = ['st1-cat', 'st2-dog', 'st3-sun', 'st4-hat', 'st5-fish', 'st6-milk', 'st7-frog', 'st8-train', 'st9-tiger', 'st10-house', 'lv1-bus', 'sc1-pizza', 'lv2-car', 'lv3-planet',
+  'lv4-apple', 'lv5-garden', 'sc2-jungle', 'lv6-rocket', 'lv7-ticket', 'lv8-mother', 'lv9-busstop', 'sc3-dragons', 'lv10-school', 'dt1-bank', 'dt2-hotel', 'dt3-market', 'sc4-subway', 'dt4-square'];
+const OLD = n => AT(V8_ORDER[n - 1]);
 const AT = id => LVS.findIndex(l => l.id === id) + 1;
-if (AT('lv1-bus') !== OLD(11) || AT('sc1-pizza') !== OLD(12) || AT('dt4-square') !== OLD(28)) throw new Error('level order changed: update OLD()');
+if (V8_ORDER.some((id, k) => !OLD(k + 1))) throw new Error('a v8 level id is missing: update V8_ORDER');
 const NORMAL = LVS.map((l, i) => l.tier === 'normal' ? i + 1 : 0).filter(Boolean);
 const MSFIRST = NORMAL[0];
 async function winAll(page, ctx, label) {
@@ -486,6 +488,14 @@ async function tierPlayCheck(page, n, label) {
   await p.waitForTimeout(2000);
   check(await p.locator('#banner.show').count() === 0, 'the level-intro banner hides by itself');
   await shot(p, 'v9-play-header-tier-390x844.png');
+  // three of the new normal lots on the phone (fresh, and one a few moves in with letters on the bus)
+  for (const [n, moves] of [[NORMAL[0], 0], [NORMAL[5], 0], [NORMAL[9], 4]]) {
+    await openLevel(p, n); await p.waitForTimeout(1900);
+    if (moves) { const sol = await p.evaluate(() => window.WJB.solution()); for (const m of sol.slice(0, moves)) { await inputMove(p, T, m.car, m.which, m.which === 1 ? 'swipe' : 'tap'); await settle(p); } await p.waitForTimeout(400); }
+    const lv = LVS[n - 1];
+    check(await p.locator('#hud-tier .tier').count() === 1 && await p.getAttribute('#hud-tier .tier', 'data-tier') === '3' && /normal/i.test(await p.getAttribute('#hud-tier .tier', 'aria-label') || ''), 'normal lot ' + n + ' (' + lv.word + ', ' + lv.grid.join('x') + ', par ' + lv.par + ') shows the Normal badge in the HUD' + (moves ? ', ' + moves + ' moves in' : ''));
+    await shot(p, 'v9-normal-' + lv.id + '-390x844.png');
+  }
 
   // --- boosters (coins seeded) ---
   console.log('\n# Boosters');
@@ -884,21 +894,23 @@ async function tierPlayCheck(page, n, label) {
 
   /* ----------------------- PROGRESS MIGRATION ----------------------- */
   console.log('\n# Saved-progress migration (seeded localStorage)');
-  const v8ids = LV.filter(l => l.tier !== 'normal').map(l => l.id);                   // the 28 levels a v8 save knew (no Main Street)
-  const v3ids = LV.filter(l => l.tier !== 'normal').slice(0, 23).filter(l => l.mode !== 'scramble').map(l => l.id);   // the 20 levels a v3 save knew
+  const v8ids = V8_ORDER;                                                                  // the 28 levels a v8 save knew, in v8 order (no Main Street)
+  const v3ids = V8_ORDER.slice(0, 23).filter(id => !/^sc/.test(id));                      // the 20 levels a v3 save knew
   const MS = NORMAL, msUnplayed = t => MS.every(n => t.open.includes(n) && t.stars[n - 1] === '\u2606\u2606\u2606');
   const starsFor = ids => { const o = {}; ids.forEach(id => { o[id] = 3; }); return o; };
   // A: v3 player who beat the 10 starters + BUS, CAR, PLANET; v3 index 13 = APPLE
   t = await seeded(p, { v: 3, unlocked: 13, stars: starsFor(v3ids.slice(0, 13)), best: { 'lv3-planet': 25 }, sound: true });
-  check(same(t.open, range(1, OLD(15))), 'v3 save (beat 1-13 of the old 20): levels 1-' + OLD(15) + ' open = up to APPLE, incl. Main Street and Scramble ' + OLD(12) + ' (got ' + t.open.join(',') + ')');
-  check(t.stars[OLD(14) - 1] === '\u2605\u2605\u2605' && t.stars[OLD(12) - 1] === '\u2606\u2606\u2606' && t.current === OLD(15) && t.play === 'Continue', 'stars kept by id (PLANET now level ' + OLD(14) + '); Continue = level ' + OLD(15) + ' (APPLE); Scramble ' + OLD(12) + ' open, unplayed');
+  const JUNGLE = AT('sc2-jungle'), PIZZA = AT('sc1-pizza');
+  check(same(t.open, range(1, OLD(15))), 'v3 save (beat 1-13 of the old 20): levels 1-' + OLD(15) + ' open = up to APPLE, incl. Main Street and the Scramble stops ' + PIZZA + ' and ' + JUNGLE + ' (got ' + t.open.join(',') + ')');
+  check(t.stars[OLD(14) - 1] === '\u2605\u2605\u2605' && t.stars[PIZZA - 1] === '\u2606\u2606\u2606' && t.stars[JUNGLE - 1] === '\u2606\u2606\u2606' && t.current === JUNGLE && t.play === 'Continue',
+    'stars kept by id (PLANET now level ' + OLD(14) + '); Continue = the next stop after PLANET, Scramble JUNGLE (' + JUNGLE + '); PIZZA (' + PIZZA + ') open, unplayed (got Continue ' + t.current + ')');
   check(msUnplayed(t) && /New: Main Street, 10 new stops!/.test(await p.textContent('#title-route')), 'v9: Main Street (stops ' + MS[0] + '-' + MS[MS.length - 1] + ') is open but not forced, unplayed; the title says "New: Main Street, 10 new stops!"');
   check(t.stored.v === 4 && t.stored.unlocked === OLD(15) - 1 && t.stored.unlockedId === 'lv4-apple' && t.stored.coins === 0 && t.stored.best['lv3-planet'] === 25, 'stored as v4: unlocked ' + (OLD(15) - 1) + ' / unlockedId lv4-apple, coins 0, best moves kept');
   t = await seeded(p, await p.evaluate(() => JSON.parse(localStorage.getItem('wordJamBus.progress.v1'))));
   check(same(t.open, range(1, OLD(15))), 'reloading a migrated save does not shift it again');
-  // B: v3 player who beat up to BUS: next is the new Scramble level 12
+  // B: v3 player who beat up to BUS: next is CAR (PIZZA now sits inside Main Street, open but not forced)
   t = await seeded(p, { v: 3, unlocked: 11, stars: starsFor(v3ids.slice(0, 11)), best: {}, sound: true });
-  check(same(t.open, range(1, OLD(13))) && t.current === OLD(12) && msUnplayed(t), 'v3 save that beat BUS: levels 1-' + OLD(13) + ' open (Main Street too), Continue = the Scramble level ' + OLD(12));
+  check(same(t.open, range(1, OLD(13))) && t.current === OLD(13) && msUnplayed(t) && t.stars[PIZZA - 1] === '\u2606\u2606\u2606', 'v3 save that beat BUS: levels 1-' + OLD(13) + ' open (Main Street and PIZZA too), Continue = CAR (' + OLD(13) + '; got ' + t.current + ')');
   // C: v3 player who finished all 20
   t = await seeded(p, { v: 3, unlocked: 19, stars: starsFor(v3ids), best: {}, sound: true });
   check(same(t.open, range(1, KEYS[0])) && t.current === KEYS[0], 'v3 save with all 20 beaten: the old 23 open plus the first new level, Continue = level ' + KEYS[0] + ' (the first key level; got ' + t.open.length + ' open, Continue ' + t.current + ')');
@@ -911,12 +923,16 @@ async function tierPlayCheck(page, n, label) {
   t = await seeded(p, v4save({ unlocked: 10, unlockedId: 'lv1-bus', stars: starsFor(v8ids.slice(0, 10)) }));
   check(same(t.open, range(1, AT('lv1-bus'))) && t.current === MS[0] && t.stored.unlockedId === 'lv1-bus' && !/new stops/.test(await p.textContent('#title-route')),
     'v8 save waiting at BUS: stops 1-' + AT('lv1-bus') + ' open (BUS stays open), Continue = Main Street stop ' + MS[0] + ' (got ' + t.current + '); no "new stops" hint needed');
+  // H (v9): a v8 save that beat BUS waits at PIZZA (v8 stop 12, now 13 inside Main Street): a won level always opens the next one, so CAR opens
+  t = await seeded(p, v4save({ unlocked: 11, unlockedId: 'sc1-pizza', stars: starsFor(v8ids.slice(0, 11)) }));
+  check(same(t.open, range(1, OLD(13))) && t.current === OLD(13) && t.stored.unlockedId === 'lv2-car' && msUnplayed(t) && /New: Main Street, 10 new stops!/.test(await p.textContent('#title-route')),
+    'v8 save that beat BUS (waiting at PIZZA): stops 1-' + OLD(13) + ' open, Continue = CAR (' + OLD(13) + '), Main Street + PIZZA open but not forced, title says "New: Main Street, 10 new stops!" (got ' + t.current + ', ' + t.stored.unlockedId + ')');
   // D: v3 starter-only player
   t = await seeded(p, { v: 3, unlocked: 2, stars: { 'st1-cat': 3, 'st2-dog': 3 }, best: {}, sound: true });
   check(same(t.open, [1, 2, 3]) && t.current === 3, 'v3 save (beat starters 1-2): levels 1-3 open, Continue = level 3');
   // E: v2 save (no version): beat BUS, CAR, PLANET
   t = await seeded(p, { unlocked: 3, stars: { 'lv1-bus': 3, 'lv2-car': 2, 'lv3-planet': 1 }, best: {}, sound: true });
-  check(same(t.open, range(1, OLD(15))) && t.current === OLD(15) && msUnplayed(t), 'v2 save (beat BUS, CAR, PLANET): levels 1-' + OLD(15) + ' open, Continue = APPLE (' + OLD(15) + '), Main Street open and unplayed');
+  check(same(t.open, range(1, OLD(15))) && t.current === JUNGLE && msUnplayed(t), 'v2 save (beat BUS, CAR, PLANET): levels 1-' + OLD(15) + ' open, Continue = JUNGLE (' + JUNGLE + ', the stop after PLANET), Main Street open and unplayed (got ' + t.current + ')');
   // F: v4 save keeps coins and the seen flag
   t = await seeded(p, v4save({ unlocked: 5, coins: 321, stars: starsFor(v3ids.slice(0, 5)), unlockedId: 'st6-milk', seen: {} }));
   check(same(t.open, range(1, 6)) && t.stored.coins === 321 && (await p.textContent('#title-coins')).trim() === '321', 'v4 save: coins (321) and progress load unchanged');
