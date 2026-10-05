@@ -217,9 +217,9 @@ async function mapBasics(page, ctx, label) {
   // 2. after a win on a replayed earlier level: the bus is on that level or the one right after it, never the furthest stop
   await tapEl(p, T, '.lvl[data-level="' + R5 + '"]'); await p.waitForSelector('#screen-game.active', { timeout: 4000 });
   check(await solve(p, T), 'v9.1: replayed stop ' + R5 + ' won');
-  await tapEl(p, T, '#btn-win-menu'); await mapOpen(p); await notDriving(p); await p.waitForTimeout(300);
+  await tapEl(p, T, '#btn-win-menu'); await mapOpen(p); await p.waitForTimeout(700); await notDriving(p); await p.waitForTimeout(300);
   bi = await busInfo(p);
-  check([LVS[R5 - 1].id, LVS[R5].id].includes(bi.at) && bi.at !== LVS[FAR - 1].id && !(await p.locator('#screen-game.active').count()), 'v9.1 regression 2a: Map from the win card of replayed stop ' + R5 + ': the bus is at stop ' + (LVS.findIndex(l => l.id === bi.at) + 1) + ' (' + R5 + ' or ' + (R5 + 1) + ', never ' + FAR + ')');
+  check(bi.at === LVS[R5].id && bi.off < 2 && (await stored(p)).lastStop === LVS[R5].id && bi.at !== LVS[FAR - 1].id && !(await p.locator('#screen-game.active').count()), 'v9.1 regression 2a: Map from the win card of replayed stop ' + R5 + ': the bus is at stop ' + (LVS.findIndex(l => l.id === bi.at) + 1) + ' (' + R5 + ' or ' + (R5 + 1) + ', never ' + FAR + ')');
   await tapEl(p, T, '.lvl[data-level="' + R5 + '"]');
   await p.waitForFunction(() => window.WJB.map.driving, null, { timeout: 2000 }).catch(() => {});
   if (!(await p.locator('#screen-game.active').count())) await tapEl(p, T, '.lvl[data-level="' + R5 + '"]').catch(() => {});
