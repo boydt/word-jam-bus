@@ -310,6 +310,37 @@ async function mapBasics(page, ctx, label) {
   bi = await busInfo(p);
   check(bi.at === LVS[FIRST[BEACH] - 1].id && !(await mapFacts(p)).lockedSecs.includes('beach'), 'Collect: the bus drives into Sunny Beach, parking at stop ' + FIRST[BEACH] + ' (BUS) (bus at ' + bi.at + ')');
 
+  // v9 Scramble spread: the first Scramble stop (PIZZA, inside Main Street) with its one-time tip, and a hard-stretch one (DRAGONS, Harbor Docks)
+  console.log('\n# Scramble stops on the map (v9)');
+  const PZ = AT('sc1-pizza'), DG = AT('sc3-dragons');
+  await boot(p, won(PZ - 1, { seen: {}, chests: { school: true, suburbs: true } }));
+  await tapEl(p, T, '#btn-play'); await mapOpen(p); await notDriving(p);
+  f = await mapFacts(p);
+  check(f.current === PZ && D[MSK].levels.includes('sc1-pizza'), 'the first Scramble stop is ' + PZ + ' (PIZZA), inside Main Street; it is next (current ' + f.current + ')');
+  await tapEl(p, T, '#btn-map-play'); await p.waitForSelector('#screen-game.active', { timeout: 5000 });
+  await p.waitForSelector('#ov-coach.show', { timeout: 4000 }).catch(() => {});
+  check(await p.locator('#ov-coach.show').count() === 1 && /any order/i.test(await p.textContent('#ov-coach')), 'first Scramble stop: the one-time Scramble tip card shows ("' + (await p.textContent('#ov-coach')).replace(/\s+/g, ' ').trim().slice(0, 70) + '...")');
+  await p.waitForTimeout(400);
+  await shot(p, 'v9-first-scramble-tip-390x844.png');
+  await tapEl(p, T, '#btn-coach'); await p.waitForSelector('#banner.show', { timeout: 3000 }).catch(() => {});
+  await p.waitForTimeout(300);
+  check(await p.locator('#banner.show .tier').count() === 1 && await p.getAttribute('#banner .tier', 'data-tier') === String(LVS[PZ - 1].difficulty.tier), 'after the tip: the Scramble banner carries the ' + LVS[PZ - 1].difficulty.label + ' badge');
+  await shot(p, 'v9-first-scramble-banner-390x844.png');
+  await boot(p, won(DG - 1, { chests: { school: true, suburbs: true, mainst: true, beach: true } }));
+  await tapEl(p, T, '#btn-play'); await mapOpen(p); await notDriving(p);
+  f = await mapFacts(p);
+  check(f.current === DG && D[DK('harbor')].levels.includes('sc3-dragons'), 'hard stretch: Scramble DRAGONS is stop ' + DG + ' in Harbor Docks, between MOTHER and BUS + STOP (current ' + f.current + ')');
+  await tapEl(p, T, '#btn-map-play'); await p.waitForSelector('#screen-game.active', { timeout: 5000 });
+  await p.waitForSelector('#banner.show', { timeout: 3000 }).catch(() => {});
+  await p.waitForTimeout(300);
+  check(await p.locator('#ov-coach.show').count() === 0 && await p.locator('#banner.show .tier').count() === 1 && await p.getAttribute('#banner .tier', 'data-tier') === String(LVS[DG - 1].difficulty.tier) && /scramble/i.test(await p.textContent('#banner')),
+    'DRAGONS: no tip card the second time; the Scramble banner carries the ' + LVS[DG - 1].difficulty.label + ' badge (par ' + LVS[DG - 1].par + ')');
+  await shot(p, 'v9-hard-scramble-dragons-banner-390x844.png');
+  await p.waitForFunction(() => !document.querySelector('#banner.show'), null, { timeout: 5000 }).catch(() => {});
+  await p.waitForTimeout(300);
+  check(await p.getAttribute('#hud-tier .tier', 'data-tier') === String(LVS[DG - 1].difficulty.tier), 'DRAGONS header: "Level ' + DG + ' of ' + NLEV + '" with the ' + LVS[DG - 1].difficulty.label + ' badge');
+  await shot(p, 'v9-hard-scramble-dragons-header-390x844.png');
+
   // other migrations: v2 / v3 saves land on the right district and stop
   for (const [label, save, stop] of [['v3 save (beat 1-2)', { v: 3, unlocked: 2, stars: { 'st1-cat': 3, 'st2-dog': 3 }, best: {}, sound: true }, 3],
     ['v2 save (beat BUS, CAR, PLANET; next is JUNGLE, the stop after PLANET since v9)', { unlocked: 3, stars: { 'lv1-bus': 3, 'lv2-car': 2, 'lv3-planet': 1 }, best: {}, sound: true }, AT('sc2-jungle')],

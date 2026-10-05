@@ -943,3 +943,8 @@ button.dh-chest::before { content: ''; position: absolute; inset: -8px -2px; }  
 .tier-banner .tier-name { font-size: 15px; }
 @media (max-width: 380px) { .tier-hud .tier-name { font-size: 10px; } .tier-hud { padding: 2px 6px 2px 5px; gap: 4px; } }
 .title-route .tr-news { display: inline-block; margin-top: 4px; padding: 2px 10px; border-radius: 999px; background: #1f8a70; color: #fff; font-weight: 900; box-shadow: 0 2px 0 rgba(0, 0, 0, .2); }
+
+/* v9: five bus paints - the paint swatches get their own line under the label so the label isn't squeezed */
+.set-row.set-paint { flex-wrap: wrap; }
+.set-row.set-paint .set-label { flex: 1 1 100%; }
+.set-row.set-paint .paint-row { flex: 1 1 100%; justify-content: flex-start; margin-top: 6px; }

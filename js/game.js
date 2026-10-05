@@ -1729,7 +1729,11 @@
   $('btn-settings-close').addEventListener('click', function () { overlay('ov-settings', false); renderLevelGrid(); });
   $('set-sound').addEventListener('change', function (e) { progress.sound = e.target.checked; saveProgress(); Sound.unlock(); });
   $('btn-test-off').addEventListener('click', function () { TEST_TOGGLES.forEach(function (o) { test[o.key] = false; }); saveTest(); renderSettings(); renderLevelGrid(); });
-  $('btn-reset').addEventListener('click', function () { $('reset-confirm').classList.add('show'); });
+  $('btn-reset').addEventListener('click', function () {
+    $('reset-confirm').classList.add('show');
+    // v9: the settings card grew (5 paints); make sure the Yes / Cancel buttons are on screen
+    var c = $('reset-confirm'); if (c.scrollIntoView) c.scrollIntoView({ block: 'nearest' });
+  });
   $('btn-reset-cancel').addEventListener('click', function () { $('reset-confirm').classList.remove('show'); });
   $('btn-reset-yes').addEventListener('click', function () {
     progress = { v: PROGRESS_VERSION, unlocked: 0, stars: {}, best: {}, sound: progress.sound, coins: 0, seen: {}, inv: { tow: 0, bay: 0, nudge: 0, flip: 0 }, chests: {}, paints: ['classic'], paint: 'classic' };
