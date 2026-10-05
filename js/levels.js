@@ -3160,7 +3160,7 @@ window.WJB_LEVELS = [
   ],
   "bay": 3,
   "par": 22,
-  "tip": "One last breather before the big finale: any order again. Can your junk letters spell a word?",
+  "tip": "Harbor Scramble stop: any order again. Can your junk letters spell a word?",
   "cars": [
    {
     "l": "G",

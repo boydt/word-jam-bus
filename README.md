@@ -335,6 +335,7 @@ The save format is still `v: 4`. Stars, best scores and chests are kept **by lev
 
 ### Other v9 changes
 
+- DRAGONS' tip no longer calls it a breather ("Harbor Scramble stop: any order again. Can your junk letters spell a word?").
 - HOUSE's tip now hands off to Main Street ("Last warm-up! Next up: Main Street, with lots of ways to win.").
 - Settings: with five bus paints the swatches get their own line under the label, and tapping Reset scrolls the confirm buttons into view on short screens.
 - `package.json` is 0.9.0.
