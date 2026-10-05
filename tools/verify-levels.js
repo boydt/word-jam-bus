@@ -42,6 +42,29 @@
  *    tip that mentions the key; a core level that teaches a new mechanic
  *    starts a new difficulty ramp (it is exempt from the 75% rule and the
  *    ramp continues from its par).
+ *  - tier "normal" (v9, the Main Street levels between the starters and the
+ *    hard set): forgiving, multi-path lots. par 9-12; slides needed; no keys,
+ *    chunk trucks, taxis or Scramble; at most one word letter can leave on
+ *    move 1; a loss is reachable (but rare); a tip; and the variety metrics
+ *    below clear the NORMAL thresholds: first-move slack (par + 1) >= 60%,
+ *    mid-game on-track share (par + 1) >= 72%, at least 4 optimal solutions
+ *    and at least 1000 winning sequences within par + 2. From one normal
+ *    level to the next par rises by at most 2 and never drops by more than 1.
+ * Variety metrics (v9, every level; js/engine.js variety(), exhaustive search of
+ *    every state within par + 2 moves):
+ *    first-move slack  share of legal first moves after which the level can
+ *                      still be won within par + 1 (and within par + 2);
+ *    solutions         distinct winning move sequences of length <= par + 2,
+ *                      and distinct optimal (par-length) solutions (both
+ *                      saturate at 1,000,000; different orders count apart);
+ *    on-track share    mid-game forgiveness: along the optimal line, the
+ *                      average share of legal moves that still allow a win
+ *                      within par + 1 (and par + 2).
+ * Difficulty tier (v9, every level): the generated "difficulty" field must
+ *    equal tools/difficulty.js (score = par * (1 + 2 * (1 - on-track)) +
+ *    3 * (1 - first-move slack), both at par + 1; tiers Very Easy < 7 <= Easy
+ *    < 12 <= Normal < 18 <= Hard < 60 <= Super Hard). Rewrite it with
+ *    node tools/difficulty.js --write.
  * Bay Word (every level): par with the Bay Word rule equals par without it,
  * so a Bay Word is never needed for 3 stars; reachable Bay Words are listed.
  * Boosters are never part of these proofs: every par is booster-free.
@@ -52,7 +75,7 @@
  *    mechanic it "teaches" debuts inside it (basics = level 1, trucks = the
  *    first long truck, scramble = the first Scramble level, specials = the
  *    first chunk truck and the first wildcard taxi, keys = every padlock
- *    level); chests give known boosters (1-3 each), coins >= 0 and a known
+ *    level, mixed = every normal-tier level); chests give known boosters (1-3 each), coins >= 0 and a known
  *    paint. --districts runs only these checks (fast, no solving).
  * It also checks js/levels.js matches levels/levels.json, js/baywords.js
  * matches levels/baywords.json (every word 3 letters with a vowel), and
@@ -64,6 +87,8 @@ var fs = require('fs');
 var path = require('path');
 var cp = require('child_process');
 var E = require('../js/engine.js');
+var D = require('./difficulty.js');
+var NORMAL = { par: [9, 12], first: 0.6, track: 0.72, optimal: 4, within: 1000, maxFree: 1 };
 
 var ROOT = path.join(__dirname, '..');
 var JSON_PATH = path.join(ROOT, 'levels', 'levels.json');
@@ -151,7 +176,8 @@ function checkDistricts() {
     trucks: [firstWhere(function (l) { return l.cars.some(function (c) { return c.len > 1; }); })],
     scramble: [firstWhere(function (l) { return l.mode === 'scramble'; })],
     specials: [firstWhere(function (l) { return l.cars.some(function (c) { return c.l.length > 1; }); }), firstWhere(function (l) { return l.cars.some(function (c) { return c.l === '?'; }); })],
-    keys: levels.filter(function (l) { return l.cars.some(function (c) { return c.lock; }); })
+    keys: levels.filter(function (l) { return l.cars.some(function (c) { return c.lock; }); }),
+    mixed: levels.filter(function (l) { return l.tier === 'normal'; })
   };
   map.districts.forEach(function (d) {
     var need = debut[d.teaches];
@@ -266,7 +292,31 @@ levels.forEach(function (lv, n) {
         if (t === 'bay-limit' && !any.loseReachable) problems.push('teaches the bay limit, but no loss is reachable');
         if (lv.safe && any.loseReachable) problems.push('marked safe, but a losing move is reachable');
         if (!lv.tip) problems.push('starter level without a tip');
+      } else if (tier === 'normal') {
+        var anyN = restricted(g, {}, true);
+        row.canLose = anyN.loseReachable;
+        if (lv.par < NORMAL.par[0] || lv.par > NORMAL.par[1]) problems.push('normal levels have par ' + NORMAL.par.join('-') + ' (this one ' + lv.par + ')');
+        if (slides < 1) problems.push('trivial: optimal solution needs no slides');
+        if (g.hasLocks || g.cars.some(function (c) { return c.l.length > 1 || c.l === '?'; })) problems.push('normal levels use no keys, chunk trucks or taxis');
+        if (freeLetters.length > NORMAL.maxFree) problems.push(freeLetters.length + ' word letters can leave on move 1 (max ' + NORMAL.maxFree + ')');
+        if (!anyN.loseReachable) problems.push('normal levels should be losable (no loss is reachable)');
+        if (!lv.tip) problems.push('normal level without a tip');
       } else problems.push('unknown tier ' + tier);
+      // v9 variety metrics and the difficulty tier
+      var rt = D.rate(lv);
+      if (!rt || !rt.complete) problems.push('variety search capped or failed: cannot rate difficulty');
+      else {
+        var vv = rt.v;
+        row.variety = { firstMoves: vv.firstMoves, firstOk1: vv.firstOkBySlack[1], firstOk2: vv.firstOk, track1: +rt.track.toFixed(3), track2: +vv.midForgive.toFixed(3), optimal: vv.optimal, within2: vv.seqWithin, horizonStates: vv.states };
+        row.difficulty = rt.stored;
+        if (JSON.stringify(lv.difficulty) !== JSON.stringify(rt.stored)) problems.push('stored difficulty ' + JSON.stringify(lv.difficulty) + ' != formula ' + JSON.stringify(rt.stored) + ' (run node tools/difficulty.js --write)');
+        if (tier === 'normal') {
+          if (rt.first < NORMAL.first) problems.push('first-move slack ' + vv.firstOkBySlack[1] + '/' + vv.firstMoves + ' is below ' + NORMAL.first * 100 + '%');
+          if (rt.track < NORMAL.track) problems.push('on-track share ' + rt.track.toFixed(2) + ' is below ' + NORMAL.track);
+          if (vv.optimal < NORMAL.optimal) problems.push('only ' + vv.optimal + ' optimal solution(s) (want >= ' + NORMAL.optimal + ')');
+          if (vv.seqWithin < NORMAL.within) problems.push('only ' + vv.seqWithin + ' winning sequences within par + 2 (want >= ' + NORMAL.within + ')');
+        }
+      }
       row.minBay = E.minBay(g);
       var ex = E.explore(g, 1500000);
       if (ex.complete) { row.reachable = ex.reachable; row.dead = ex.deadStates; row.losingFirstMoves = ex.firstMovesDead + '/' + ex.firstMoves; }
@@ -287,7 +337,10 @@ levels.forEach(function (lv, n) {
     ', losing first moves ' + (row.losingFirstMoves || '?') + (tier === 'starter' ? ', loss possible ' + (row.canLose ? 'yes' : 'no') + ', no-slide par ' + row.noSlidePar + ', no-bay par ' + row.noBayPar : '') +
     (row.locks ? ' | KEYS ' + row.locks + ', par ignoring padlocks ' + row.noLockPar : '') +
     ' | Bay Words reachable: ' + (row.bayWords || 'none') + ', par without Bay Word ' + row.noBayWordPar +
-    ' | BFS-to-win states ' + row.states + ' (' + row.ms + ' ms)');
+    ' | BFS-to-win states ' + row.states +
+    (row.variety ? ' | variety: first-move slack ' + row.variety.firstOk1 + '/' + row.variety.firstMoves + ' (par+1), ' + row.variety.firstOk2 + '/' + row.variety.firstMoves + ' (par+2); on-track ' + row.variety.track1 + ' (par+1), ' + row.variety.track2 +
+      ' (par+2); optimal solutions ' + row.variety.optimal + ', winning sequences within par+2 ' + row.variety.within2 + ' | difficulty ' + row.difficulty.score + ' ' + row.difficulty.label : '') +
+    ' (' + row.ms + ' ms)');
   problems.forEach(function (p) { console.log('   PROBLEM: ' + p); });
 });
 
@@ -312,6 +365,16 @@ if (starters.length && firstCore) {
   else console.log('[OK] starter ramp: par ' + starters.map(function (r) { return r.par; }).join(' -> ') + ', then core L' + firstCore.n + ' par ' + firstCore.par);
 }
 if (starters.length && table.indexOf(starters[starters.length - 1]) > table.indexOf(firstCore)) { failures++; console.log('[FAIL] starter levels must come before the core levels'); }
+
+// normal tier: flat to gently rising
+var normals = table.filter(function (r) { return r.tier === 'normal'; });
+normals.forEach(function (r, k) {
+  if (!k) return;
+  var p = normals[k - 1].par;
+  if (r.par > p + 2 || r.par < p - 1) { failures++; console.log('[FAIL] normal L' + r.n + ' par ' + r.par + ' jumps from the previous normal par ' + p + ' (allowed ' + (p - 1) + '..' + (p + 2) + ')'); }
+});
+if (normals.length) console.log('[OK] normal set: par ' + normals.map(function (r) { return r.par; }).join(' -> ') + ', tiers ' + normals.map(function (r) { return r.difficulty ? r.difficulty.label : '?'; }).join(', '));
+console.log('[OK] difficulty tiers: ' + table.map(function (r) { return 'L' + r.n + ' ' + r.word + ' ' + (r.difficulty ? r.difficulty.tier : '?'); }).join(', '));
 
 // scramble pacing: breathers after the starter ramp, >= 3 route levels between them, below the previous route par
 var lastScr = -1, scrCount = 0;

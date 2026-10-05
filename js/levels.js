@@ -33,7 +33,15 @@ window.WJB_LEVELS = [
     "c": 3,
     "dir": "right"
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 1,
+   "label": "Very Easy",
+   "score": 3,
+   "par": 3,
+   "first": "6/6",
+   "track": 1
+  }
  },
  {
   "id": "st2-dog",
@@ -74,7 +82,15 @@ window.WJB_LEVELS = [
     "c": 1,
     "dir": "up"
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 1,
+   "label": "Very Easy",
+   "score": 4.5,
+   "par": 4,
+   "first": "3/3",
+   "track": 0.938
+  }
  },
  {
   "id": "st3-sun",
@@ -121,7 +137,15 @@ window.WJB_LEVELS = [
     "c": 2,
     "dir": "right"
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 1,
+   "label": "Very Easy",
+   "score": 5.8,
+   "par": 5,
+   "first": "6/6",
+   "track": 0.92
+  }
  },
  {
   "id": "st4-hat",
@@ -168,7 +192,15 @@ window.WJB_LEVELS = [
     "c": 1,
     "dir": "down"
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 1,
+   "label": "Very Easy",
+   "score": 5.4,
+   "par": 5,
+   "first": "6/6",
+   "track": 0.96
+  }
  },
  {
   "id": "st5-fish",
@@ -221,7 +253,15 @@ window.WJB_LEVELS = [
     "c": 2,
     "dir": "right"
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 1,
+   "label": "Very Easy",
+   "score": 6.2,
+   "par": 6,
+   "first": "8/8",
+   "track": 0.983
+  }
  },
  {
   "id": "st6-milk",
@@ -285,7 +325,15 @@ window.WJB_LEVELS = [
     "c": 3,
     "dir": "down"
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 2,
+   "label": "Easy",
+   "score": 8.2,
+   "par": 6,
+   "first": "6/7",
+   "track": 0.852
+  }
  },
  {
   "id": "st7-frog",
@@ -352,7 +400,15 @@ window.WJB_LEVELS = [
     "dir": "right",
     "len": 2
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 2,
+   "label": "Easy",
+   "score": 8.2,
+   "par": 7,
+   "first": "7/7",
+   "track": 0.914
+  }
  },
  {
   "id": "st8-train",
@@ -432,7 +488,15 @@ window.WJB_LEVELS = [
     "dir": "down",
     "len": 2
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 2,
+   "label": "Easy",
+   "score": 9,
+   "par": 8,
+   "first": "8/8",
+   "track": 0.939
+  }
  },
  {
   "id": "st9-tiger",
@@ -518,7 +582,15 @@ window.WJB_LEVELS = [
     "c": 2,
     "dir": "left"
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 3,
+   "label": "Normal",
+   "score": 12.5,
+   "par": 9,
+   "first": "8/8",
+   "track": 0.806
+  }
  },
  {
   "id": "st10-house",
@@ -609,7 +681,15 @@ window.WJB_LEVELS = [
     "c": 1,
     "dir": "right"
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 2,
+   "label": "Easy",
+   "score": 10.8,
+   "par": 9,
+   "first": "11/12",
+   "track": 0.911
+  }
  },
  {
   "id": "lv1-bus",
@@ -695,7 +775,15 @@ window.WJB_LEVELS = [
     "dir": "left",
     "len": 2
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 4,
+   "label": "Hard",
+   "score": 18.6,
+   "par": 10,
+   "first": "7/8",
+   "track": 0.59
+  }
  },
  {
   "id": "sc1-pizza",
@@ -805,7 +893,15 @@ window.WJB_LEVELS = [
     "c": 5,
     "dir": "down"
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 3,
+   "label": "Normal",
+   "score": 13,
+   "par": 9,
+   "first": "10/11",
+   "track": 0.795
+  }
  },
  {
   "id": "lv2-car",
@@ -917,7 +1013,15 @@ window.WJB_LEVELS = [
     "c": 5,
     "dir": "right"
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 4,
+   "label": "Hard",
+   "score": 33,
+   "par": 13,
+   "first": "2/8",
+   "track": 0.316
+  }
  },
  {
   "id": "lv3-planet",
@@ -1030,7 +1134,15 @@ window.WJB_LEVELS = [
     "c": 5,
     "dir": "left"
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 4,
+   "label": "Hard",
+   "score": 37.8,
+   "par": 17,
+   "first": "2/7",
+   "track": 0.451
+  }
  },
  {
   "id": "lv4-apple",
@@ -1139,7 +1251,15 @@ window.WJB_LEVELS = [
     "c": 1,
     "dir": "down"
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 4,
+   "label": "Hard",
+   "score": 45.7,
+   "par": 21,
+   "first": "3/4",
+   "track": 0.43
+  }
  },
  {
   "id": "lv5-garden",
@@ -1301,7 +1421,15 @@ window.WJB_LEVELS = [
     "c": 6,
     "dir": "up"
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 4,
+   "label": "Hard",
+   "score": 43.6,
+   "par": 24,
+   "first": "4/6",
+   "track": 0.612
+  }
  },
  {
   "id": "sc2-jungle",
@@ -1433,7 +1561,15 @@ window.WJB_LEVELS = [
     "c": 4,
     "dir": "right"
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 4,
+   "label": "Hard",
+   "score": 30.7,
+   "par": 17,
+   "first": "7/9",
+   "track": 0.618
+  }
  },
  {
   "id": "lv6-rocket",
@@ -1574,7 +1710,15 @@ window.WJB_LEVELS = [
     "c": 6,
     "dir": "right"
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 5,
+   "label": "Super Hard",
+   "score": 61.3,
+   "par": 26,
+   "first": "2/7",
+   "track": 0.363
+  }
  },
  {
   "id": "lv7-ticket",
@@ -1728,7 +1872,15 @@ window.WJB_LEVELS = [
     "c": 5,
     "dir": "up"
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 4,
+   "label": "Hard",
+   "score": 52,
+   "par": 27,
+   "first": "2/3",
+   "track": 0.555
+  }
  },
  {
   "id": "lv8-mother",
@@ -1876,7 +2028,15 @@ window.WJB_LEVELS = [
     "c": 4,
     "dir": "left"
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 4,
+   "label": "Hard",
+   "score": 42.4,
+   "par": 26,
+   "first": "5/5",
+   "track": 0.685
+  }
  },
  {
   "id": "lv9-busstop",
@@ -2048,7 +2208,15 @@ window.WJB_LEVELS = [
     "dir": "left",
     "len": 2
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 5,
+   "label": "Super Hard",
+   "score": 77.3,
+   "par": 30,
+   "first": "5/12",
+   "track": 0.241
+  }
  },
  {
   "id": "sc3-dragons",
@@ -2183,7 +2351,15 @@ window.WJB_LEVELS = [
     "dir": "up",
     "len": 2
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 4,
+   "label": "Hard",
+   "score": 41.2,
+   "par": 22,
+   "first": "3/4",
+   "track": 0.581
+  }
  },
  {
   "id": "lv10-school",
@@ -2307,7 +2483,15 @@ window.WJB_LEVELS = [
     "dir": "right",
     "len": 2
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 5,
+   "label": "Super Hard",
+   "score": 77.8,
+   "par": 36,
+   "first": "1/2",
+   "track": 0.441
+  }
  },
  {
   "id": "dt1-bank",
@@ -2455,7 +2639,15 @@ window.WJB_LEVELS = [
     "dir": "left",
     "len": 2
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 4,
+   "label": "Hard",
+   "score": 32,
+   "par": 14,
+   "first": "5/10",
+   "track": 0.41
+  }
  },
  {
   "id": "dt2-hotel",
@@ -2571,7 +2763,15 @@ window.WJB_LEVELS = [
     "c": 1,
     "dir": "left"
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 4,
+   "label": "Hard",
+   "score": 42.7,
+   "par": 20,
+   "first": "5/11",
+   "track": 0.473
+  }
  },
  {
   "id": "dt3-market",
@@ -2716,7 +2916,15 @@ window.WJB_LEVELS = [
     "c": 3,
     "dir": "down"
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 4,
+   "label": "Hard",
+   "score": 41.7,
+   "par": 22,
+   "first": "5/7",
+   "track": 0.571
+  }
  },
  {
   "id": "sc4-subway",
@@ -2860,7 +3068,15 @@ window.WJB_LEVELS = [
     "c": 3,
     "dir": "right"
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 4,
+   "label": "Hard",
+   "score": 29,
+   "par": 17,
+   "first": "3/5",
+   "track": 0.682
+  }
  },
  {
   "id": "dt4-square",
@@ -2991,7 +3207,15 @@ window.WJB_LEVELS = [
     "c": 3,
     "dir": "down"
    }
-  ]
+  ],
+  "difficulty": {
+   "tier": 5,
+   "label": "Super Hard",
+   "score": 78.9,
+   "par": 33,
+   "first": "4/8",
+   "track": 0.328
+  }
  }
 ];
 /* GENERATED from levels/districts.json (v8 city map). */

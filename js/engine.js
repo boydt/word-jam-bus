@@ -665,6 +665,101 @@
     return { complete: true, reachable: N, deadStates: dead, firstMoves: edgesFrom[0].length, firstMovesDead: firstBad, bayWords: bayWords };
   }
 
+  /**
+   * v9 solution-variety ("forgiveness") metrics. Breadth-first search of every state within
+   * L = par + slack moves of the start (slack defaults to 2), then a backward pass for the fewest
+   * moves to a win from each of those states (counted inside that horizon, which is exact for the
+   * question "can the rest still be won within L moves?"). Returns
+   *   par, L, states            horizon size (states within L moves);
+   *   firstMoves, firstOk, firstSlack   legal first moves (any move that isn't a bump, losing
+   *                             moves included), how many of them still win within L, and the fraction;
+   *   seqWithin                 distinct winning move sequences of length <= L (a sequence ends at
+   *                             the win; different orders count separately; saturates at cap);
+   *   optimal                   distinct optimal (par-length) solutions (saturates at cap);
+   *   midForgive                along the solver's optimal line, the average fraction of legal moves
+   *                             that keep a win within L (first move included);
+   *   complete                  false if the horizon passed opts.maxStates (then only par/states).
+   */
+  function variety(game, opts) {
+    opts = opts || {};
+    var slack = opts.slack === undefined ? 2 : opts.slack, cap = opts.cap || 1e6, maxStates = opts.maxStates || 2500000;
+    var sol = solve(game);
+    if (sol.par === null) return null;
+    var par = sol.par, L = par + slack, n = game.n;
+    var seen = new Map(), st = [initialState(game)], depth = [0], won = [0], eStart = [], eTo = [];
+    seen.set(stateKey(st[0]), 0);
+    var grid = new Int16Array(game.rows * game.cols);
+    for (var h = 0; h < st.length; h++) {
+      eStart.push(eTo.length);
+      if (st.length > maxStates) return { par: par, L: L, states: st.length, complete: false };
+      var s = st[h];
+      if (won[h] || depth[h] >= L) { st[h] = null; continue; }
+      buildGrid(game, s.pos, grid);
+      for (var i = 0; i < n; i++) for (var w = 0; w < 2; w++) {
+        var t = step(game, s, i, w, null, grid);
+        if (t.result === 'gone' || t.result === 'bump') continue;
+        if (t.result === 'lose') { eTo.push(-1); continue; }
+        var k = stateKey(t.state), id = seen.get(k);
+        if (id === undefined) { id = st.length; seen.set(k, id); st.push(t.state); depth.push(depth[h] + 1); won.push(isWon(game, t.state) ? 1 : 0); }
+        eTo.push(id);
+      }
+      st[h] = null;
+    }
+    var N = st.length;
+    eStart.push(eTo.length);
+    // reverse edges (CSR) and the fewest moves to win inside the horizon
+    var rc = new Int32Array(N + 1), e, x;
+    for (e = 0; e < eTo.length; e++) if (eTo[e] >= 0) rc[eTo[e] + 1]++;
+    for (x = 0; x < N; x++) rc[x + 1] += rc[x];
+    var rFrom = new Int32Array(rc[N]), fill = rc.slice(0, N);
+    for (x = 0; x < N; x++) for (e = eStart[x]; e < eStart[x + 1]; e++) if (eTo[e] >= 0) rFrom[fill[eTo[e]]++] = x;
+    var INF = 1 << 20, dw = new Int32Array(N).fill(INF), q = new Int32Array(N), qh = 0, qt = 0;
+    for (x = 0; x < N; x++) if (won[x]) { dw[x] = 0; q[qt++] = x; }
+    while (qh < qt) { var y = q[qh++]; for (e = rc[y]; e < rc[y + 1]; e++) { var p = rFrom[e]; if (dw[p] === INF) { dw[p] = dw[y] + 1; q[qt++] = p; } } }
+    // useful states: on some winning line of length <= L
+    var useful = [];
+    for (x = 0; x < N; x++) if (depth[x] + dw[x] <= L) useful.push(x);
+    // F_b(s): winning sequences from s within b moves (saturating), for b = 0..L
+    var F = new Float64Array(N), G;
+    for (var ui = 0; ui < useful.length; ui++) if (won[useful[ui]]) F[useful[ui]] = 1;
+    for (var b = 1; b <= L; b++) {
+      G = new Float64Array(N);
+      for (ui = 0; ui < useful.length; ui++) {
+        x = useful[ui];
+        if (won[x]) { G[x] = 1; continue; }
+        if (dw[x] > b) continue;
+        var sum = 0;
+        for (e = eStart[x]; e < eStart[x + 1]; e++) { var to = eTo[e]; if (to >= 0) sum += F[to]; }
+        G[x] = sum > cap ? cap : sum;
+      }
+      F = G;
+    }
+    var seqWithin = F[0];
+    // optimal solutions: shortest paths, in order of increasing distance-to-win
+    var opt = new Float64Array(N), order = useful.slice().sort(function (a2, b2) { return dw[a2] - dw[b2]; });
+    order.forEach(function (z) {
+      if (won[z]) { opt[z] = 1; return; }
+      var c = 0;
+      for (var e2 = eStart[z]; e2 < eStart[z + 1]; e2++) { var t2 = eTo[e2]; if (t2 >= 0 && dw[t2] === dw[z] - 1) c += opt[t2]; }
+      opt[z] = c > cap ? cap : c;
+    });
+    // a legal move is "on track" with slack k if the level can still be won within par + k moves
+    function okMoves(z, done, k) { var all = 0, ok = 0; for (var e3 = eStart[z]; e3 < eStart[z + 1]; e3++) { all++; var t3 = eTo[e3]; if (t3 >= 0 && done + 1 + dw[t3] <= par + k) ok++; } return { all: all, ok: ok }; }
+    var firstBy = [], midBy = [];
+    for (var kk = 0; kk <= slack; kk++) {
+      var f0 = okMoves(0, 0, kk), sum2 = 0, s2 = initialState(game), at = 0;
+      sol.path.forEach(function (m, j) {
+        var r = okMoves(at, j, kk); sum2 += r.all ? r.ok / r.all : 1;
+        s2 = step(game, s2, m.car, m.which).state; at = seen.get(stateKey(s2));
+      });
+      firstBy.push(f0); midBy.push(par ? sum2 / par : 1);
+    }
+    var fL = firstBy[slack];
+    return { par: par, L: L, slack: slack, states: N, complete: true, firstMoves: fL.all, firstOk: fL.ok, firstSlack: fL.all ? fL.ok / fL.all : 0,
+      firstOkBySlack: firstBy.map(function (f) { return f.ok; }), midBySlack: midBy,
+      seqWithin: seqWithin, optimal: opt[0], midForgive: midBy[slack], cap: cap };
+  }
+
   /** ASCII picture of a state (or the start). */
   function ascii(game, pos) {
     var AR = { up: '^', down: 'v', left: '<', right: '>' };
@@ -702,7 +797,7 @@
     DIRS: DIRS, FWD: FWD, BACK: BACK, targetOf: targetOf, prepare: prepare,
     initialState: initialState, cloneState: cloneState, buildGrid: buildGrid, probe: probe,
     step: step, createSearch: createSearch, solve: solve, explore: explore, minBay: minBay,
-    stateKey: stateKey, ascii: ascii, cellAt: cellAt, headCell: headCell,
+    stateKey: stateKey, ascii: ascii, variety: variety, cellAt: cellAt, headCell: headCell,
     isWon: isWon, sweepBay: sweepBay, eligibleBay: eligibleBay, needOf: needOf, seatFor: seatFor,
     towable: towable, applyBooster: applyBooster, nudgeTo: nudgeTo, boosted: boosted, capOf: capOf,
     flippable: flippable, flipCar: flipCar,
