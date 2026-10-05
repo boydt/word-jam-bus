@@ -1,0 +1,539 @@
+{
+ "format": "wjb-shipped-trial/1",
+ "levels": {
+  "c01-r1-l01": {
+   "hash": "1915fa6ad8f2b757",
+   "city": "c01",
+   "route": "c01-r1",
+   "par": 4
+  },
+  "c01-r1-l02": {
+   "hash": "d44bd2b9487fc3f8",
+   "city": "c01",
+   "route": "c01-r1",
+   "par": 4
+  },
+  "c01-r1-l03": {
+   "hash": "162b498dbc12bdf1",
+   "city": "c01",
+   "route": "c01-r1",
+   "par": 5
+  },
+  "c01-r1-l04": {
+   "hash": "1eb702849c13238b",
+   "city": "c01",
+   "route": "c01-r1",
+   "par": 6
+  },
+  "c01-r1-l05": {
+   "hash": "598acf6c2178f9d0",
+   "city": "c01",
+   "route": "c01-r1",
+   "par": 6
+  },
+  "c01-r1-l06": {
+   "hash": "1ccb53673fe52252",
+   "city": "c01",
+   "route": "c01-r1",
+   "par": 6
+  },
+  "c01-r2-l01": {
+   "hash": "57b9dbfdd3a78ae2",
+   "city": "c01",
+   "route": "c01-r2",
+   "par": 6
+  },
+  "c01-r2-l02": {
+   "hash": "6bde210756ccb6a6",
+   "city": "c01",
+   "route": "c01-r2",
+   "par": 9
+  },
+  "c01-r2-l03": {
+   "hash": "79daea171807b37a",
+   "city": "c01",
+   "route": "c01-r2",
+   "par": 8
+  },
+  "c01-r2-l04": {
+   "hash": "ecaec29815b646cd",
+   "city": "c01",
+   "route": "c01-r2",
+   "par": 8
+  },
+  "c01-r2-l05": {
+   "hash": "9eaf4eeca3c5daad",
+   "city": "c01",
+   "route": "c01-r2",
+   "par": 8
+  },
+  "c01-r2-l06": {
+   "hash": "1b6c59f04b3ed567",
+   "city": "c01",
+   "route": "c01-r2",
+   "par": 8
+  },
+  "c01-r3-l01": {
+   "hash": "43d0fd872e1376d9",
+   "city": "c01",
+   "route": "c01-r3",
+   "par": 7
+  },
+  "c01-r3-l02": {
+   "hash": "88b41aa0ada6291f",
+   "city": "c01",
+   "route": "c01-r3",
+   "par": 8
+  },
+  "c01-r3-l03": {
+   "hash": "473245020ea2b331",
+   "city": "c01",
+   "route": "c01-r3",
+   "par": 9
+  },
+  "c01-r3-l04": {
+   "hash": "348a959e3758d708",
+   "city": "c01",
+   "route": "c01-r3",
+   "par": 8
+  },
+  "c01-r3-l05": {
+   "hash": "082c44b2983cbdfa",
+   "city": "c01",
+   "route": "c01-r3",
+   "par": 8
+  },
+  "c01-r3-l06": {
+   "hash": "135c05dd8ca4808e",
+   "city": "c01",
+   "route": "c01-r3",
+   "par": 8
+  },
+  "c01-r4-l01": {
+   "hash": "56786db4fca165ee",
+   "city": "c01",
+   "route": "c01-r4",
+   "par": 8
+  },
+  "c01-r4-l02": {
+   "hash": "81535cb82dec1de3",
+   "city": "c01",
+   "route": "c01-r4",
+   "par": 8
+  },
+  "c01-r4-l03": {
+   "hash": "a824f9a6865eb6ce",
+   "city": "c01",
+   "route": "c01-r4",
+   "par": 9
+  },
+  "c01-r4-l04": {
+   "hash": "5e5b6ad0ef435bd4",
+   "city": "c01",
+   "route": "c01-r4",
+   "par": 8
+  },
+  "c01-r4-l05": {
+   "hash": "03e2c1830ecad189",
+   "city": "c01",
+   "route": "c01-r4",
+   "par": 9
+  },
+  "c01-r4-l06": {
+   "hash": "b4854ae4aa01adfd",
+   "city": "c01",
+   "route": "c01-r4",
+   "par": 9
+  },
+  "c02-r1-l01": {
+   "hash": "60fe6ec7514198d3",
+   "city": "c02",
+   "route": "c02-r1",
+   "par": 7
+  },
+  "c02-r1-l02": {
+   "hash": "dce83af76af1b53d",
+   "city": "c02",
+   "route": "c02-r1",
+   "par": 14
+  },
+  "c02-r1-l03": {
+   "hash": "5bb9f2d2fedc20ff",
+   "city": "c02",
+   "route": "c02-r1",
+   "par": 9
+  },
+  "c02-r1-l04": {
+   "hash": "2c32a77ac4137481",
+   "city": "c02",
+   "route": "c02-r1",
+   "par": 8
+  },
+  "c02-r1-l05": {
+   "hash": "142f2a86c7aa0cc0",
+   "city": "c02",
+   "route": "c02-r1",
+   "par": 9
+  },
+  "c02-r1-l06": {
+   "hash": "6927718f92e143ea",
+   "city": "c02",
+   "route": "c02-r1",
+   "par": 10
+  },
+  "c02-r2-l01": {
+   "hash": "07a70e95380e2d8f",
+   "city": "c02",
+   "route": "c02-r2",
+   "par": 9
+  },
+  "c02-r2-l02": {
+   "hash": "bfa969478f22cc86",
+   "city": "c02",
+   "route": "c02-r2",
+   "par": 14
+  },
+  "c02-r2-l03": {
+   "hash": "67ed5c1ba25e21ba",
+   "city": "c02",
+   "route": "c02-r2",
+   "par": 11
+  },
+  "c02-r2-l04": {
+   "hash": "5c4efe699d1d2def",
+   "city": "c02",
+   "route": "c02-r2",
+   "par": 9
+  },
+  "c02-r2-l05": {
+   "hash": "ae924bde5b060798",
+   "city": "c02",
+   "route": "c02-r2",
+   "par": 9
+  },
+  "c02-r2-l06": {
+   "hash": "6e4dffce817ff4e0",
+   "city": "c02",
+   "route": "c02-r2",
+   "par": 11
+  },
+  "c02-r3-l01": {
+   "hash": "536a2d9cad259fda",
+   "city": "c02",
+   "route": "c02-r3",
+   "par": 9
+  },
+  "c02-r3-l02": {
+   "hash": "87cf3e8a5218e5c2",
+   "city": "c02",
+   "route": "c02-r3",
+   "par": 11
+  },
+  "c02-r3-l03": {
+   "hash": "adb25660b9bce7a3",
+   "city": "c02",
+   "route": "c02-r3",
+   "par": 10
+  },
+  "c02-r3-l04": {
+   "hash": "00a7fb0108500054",
+   "city": "c02",
+   "route": "c02-r3",
+   "par": 10
+  },
+  "c02-r3-l05": {
+   "hash": "e4d84dc567e00de6",
+   "city": "c02",
+   "route": "c02-r3",
+   "par": 11
+  },
+  "c02-r3-l06": {
+   "hash": "ac78cabe6dfab415",
+   "city": "c02",
+   "route": "c02-r3",
+   "par": 11
+  },
+  "c02-r4-l01": {
+   "hash": "b15ae740330c339a",
+   "city": "c02",
+   "route": "c02-r4",
+   "par": 11
+  },
+  "c02-r4-l02": {
+   "hash": "f11f0605603afeb1",
+   "city": "c02",
+   "route": "c02-r4",
+   "par": 10
+  },
+  "c02-r4-l03": {
+   "hash": "7273c340272bc735",
+   "city": "c02",
+   "route": "c02-r4",
+   "par": 11
+  },
+  "c02-r4-l04": {
+   "hash": "7ba62cca9e8f1dbe",
+   "city": "c02",
+   "route": "c02-r4",
+   "par": 12
+  },
+  "c02-r4-l05": {
+   "hash": "e349b1b2edf5ec98",
+   "city": "c02",
+   "route": "c02-r4",
+   "par": 11
+  },
+  "c02-r4-l06": {
+   "hash": "3a22f5ff49da29b3",
+   "city": "c02",
+   "route": "c02-r4",
+   "par": 11
+  },
+  "c02-r5-l01": {
+   "hash": "ac7046d895074aa4",
+   "city": "c02",
+   "route": "c02-r5",
+   "par": 10
+  },
+  "c02-r5-l02": {
+   "hash": "a5b876487377a872",
+   "city": "c02",
+   "route": "c02-r5",
+   "par": 11
+  },
+  "c02-r5-l03": {
+   "hash": "cabf8c0a3feec57e",
+   "city": "c02",
+   "route": "c02-r5",
+   "par": 11
+  },
+  "c02-r5-l04": {
+   "hash": "e0a6b3ac778730bb",
+   "city": "c02",
+   "route": "c02-r5",
+   "par": 10
+  },
+  "c02-r5-l05": {
+   "hash": "77a6e99b36051167",
+   "city": "c02",
+   "route": "c02-r5",
+   "par": 11
+  },
+  "c02-r5-l06": {
+   "hash": "36c58a797a4ad117",
+   "city": "c02",
+   "route": "c02-r5",
+   "par": 11
+  },
+  "c03-r1-l01": {
+   "hash": "344d6235140479e0",
+   "city": "c03",
+   "route": "c03-r1",
+   "par": 10
+  },
+  "c03-r1-l02": {
+   "hash": "622a6a8e98018b7a",
+   "city": "c03",
+   "route": "c03-r1",
+   "par": 10
+  },
+  "c03-r1-l03": {
+   "hash": "4bd42096c4f62c55",
+   "city": "c03",
+   "route": "c03-r1",
+   "par": 11
+  },
+  "c03-r1-l04": {
+   "hash": "b48ca9a6049a161b",
+   "city": "c03",
+   "route": "c03-r1",
+   "par": 11
+  },
+  "c03-r1-l05": {
+   "hash": "4f03866e1efd48e7",
+   "city": "c03",
+   "route": "c03-r1",
+   "par": 11
+  },
+  "c03-r1-l06": {
+   "hash": "276ea3e87ecda305",
+   "city": "c03",
+   "route": "c03-r1",
+   "par": 11
+  },
+  "c03-r1-l07": {
+   "hash": "3804df8629bc52d6",
+   "city": "c03",
+   "route": "c03-r1",
+   "par": 11
+  },
+  "c03-r2-l01": {
+   "hash": "06f1a1c2e1664e8e",
+   "city": "c03",
+   "route": "c03-r2",
+   "par": 11
+  },
+  "c03-r2-l02": {
+   "hash": "de3e31bfd1194d2e",
+   "city": "c03",
+   "route": "c03-r2",
+   "par": 11
+  },
+  "c03-r2-l03": {
+   "hash": "cf71dcbd6f6c87d9",
+   "city": "c03",
+   "route": "c03-r2",
+   "par": 11
+  },
+  "c03-r2-l04": {
+   "hash": "54bfab67fad75f8b",
+   "city": "c03",
+   "route": "c03-r2",
+   "par": 11
+  },
+  "c03-r2-l05": {
+   "hash": "90c6c1c41cabce24",
+   "city": "c03",
+   "route": "c03-r2",
+   "par": 11
+  },
+  "c03-r2-l06": {
+   "hash": "3fa6f4b8246bde4c",
+   "city": "c03",
+   "route": "c03-r2",
+   "par": 11
+  },
+  "c03-r2-l07": {
+   "hash": "69f1f1aa8147320e",
+   "city": "c03",
+   "route": "c03-r2",
+   "par": 11
+  },
+  "c03-r3-l01": {
+   "hash": "6f3fc077233d8479",
+   "city": "c03",
+   "route": "c03-r3",
+   "par": 11
+  },
+  "c03-r3-l02": {
+   "hash": "391d8d711afc062b",
+   "city": "c03",
+   "route": "c03-r3",
+   "par": 11
+  },
+  "c03-r3-l03": {
+   "hash": "8d0bc7f51a45401b",
+   "city": "c03",
+   "route": "c03-r3",
+   "par": 11
+  },
+  "c03-r3-l04": {
+   "hash": "ef6272fac31356e7",
+   "city": "c03",
+   "route": "c03-r3",
+   "par": 11
+  },
+  "c03-r3-l05": {
+   "hash": "680add3fb0535a00",
+   "city": "c03",
+   "route": "c03-r3",
+   "par": 6
+  },
+  "c03-r3-l06": {
+   "hash": "3024b6c36f49d0f3",
+   "city": "c03",
+   "route": "c03-r3",
+   "par": 6
+  },
+  "c03-r3-l07": {
+   "hash": "78344d607acb6a09",
+   "city": "c03",
+   "route": "c03-r3",
+   "par": 6
+  },
+  "c03-r4-l01": {
+   "hash": "1558889ff5b39051",
+   "city": "c03",
+   "route": "c03-r4",
+   "par": 6
+  },
+  "c03-r4-l02": {
+   "hash": "c702a5303a9e18ef",
+   "city": "c03",
+   "route": "c03-r4",
+   "par": 6
+  },
+  "c03-r4-l03": {
+   "hash": "0562695ec4b533ef",
+   "city": "c03",
+   "route": "c03-r4",
+   "par": 6
+  },
+  "c03-r4-l04": {
+   "hash": "80876effd356bea4",
+   "city": "c03",
+   "route": "c03-r4",
+   "par": 6
+  },
+  "c03-r4-l05": {
+   "hash": "51412d5c5fbaa80c",
+   "city": "c03",
+   "route": "c03-r4",
+   "par": 6
+  },
+  "c03-r4-l06": {
+   "hash": "17dc21f40ac50633",
+   "city": "c03",
+   "route": "c03-r4",
+   "par": 6
+  },
+  "c03-r4-l07": {
+   "hash": "d820b0b459783798",
+   "city": "c03",
+   "route": "c03-r4",
+   "par": 6
+  },
+  "c03-r5-l01": {
+   "hash": "5408b6cd5a23df71",
+   "city": "c03",
+   "route": "c03-r5",
+   "par": 6
+  },
+  "c03-r5-l02": {
+   "hash": "04a20b57f0b556b1",
+   "city": "c03",
+   "route": "c03-r5",
+   "par": 6
+  },
+  "c03-r5-l03": {
+   "hash": "41ce9b28697bb17b",
+   "city": "c03",
+   "route": "c03-r5",
+   "par": 6
+  },
+  "c03-r5-l04": {
+   "hash": "644d437e39b0db46",
+   "city": "c03",
+   "route": "c03-r5",
+   "par": 6
+  },
+  "c03-r5-l05": {
+   "hash": "1e86522005239b7b",
+   "city": "c03",
+   "route": "c03-r5",
+   "par": 6
+  },
+  "c03-r5-l06": {
+   "hash": "a8ce14c17c7c341d",
+   "city": "c03",
+   "route": "c03-r5",
+   "par": 6
+  },
+  "c03-r5-l07": {
+   "hash": "1aca6624de53811a",
+   "city": "c03",
+   "route": "c03-r5",
+   "par": 6
+  }
+ }
+}
