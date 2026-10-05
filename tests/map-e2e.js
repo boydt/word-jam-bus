@@ -39,6 +39,16 @@ const KEYS = LVS.map((l, i) => l.cars.some(c => c.lock) ? i + 1 : 0).filter(Bool
 const idx = id => LVS.findIndex(l => l.id === id);
 const FIRST = D.map(d => idx(d.levels[0]) + 1), BOSS = D.map(d => idx(d.boss) + 1);
 const KEY = 'wordJamBus.progress.v1', TKEY = 'wordJamBus.test.v1';
+// v9: Main Street (10 normal levels) sits at stops 11-20; the v8 stops 11-28 moved up by 10
+const DK = id => D.findIndex(d => d.id === id), MSK = DK('mainst'), BEACH = DK('beach');
+const NORMAL = LVS.map((l, i) => l.tier === 'normal' ? i + 1 : 0).filter(Boolean);
+const AT = id => idx(id) + 1;
+const V8 = LVS.filter(l => l.tier !== 'normal');   // the 28 levels a v8 save knew
+/** A save from before v9: won the first n of the v8 levels (no Main Street stars). */
+const wonV8 = (n, extra) => { const st = {}, be = {}; V8.slice(0, n).forEach(l => { st[l.id] = 3; be[l.id] = l.par; });
+  const next = V8[Math.min(n, V8.length - 1)];
+  return Object.assign({ v: 4, unlocked: Math.min(n, V8.length - 1), unlockedId: next.id, stars: st, best: be, sound: false, coins: 0, seen: { scramble: true } }, extra || {}); };
+const CLOSED = Array(D.length - 1).fill(false), ALL_LOCKED = Array(D.length).fill('locked');
 /** A v4 save that has won the first n levels (3 stars each, at par). */
 const won = (n, extra) => { const st = {}, be = {}; LVS.slice(0, n).forEach(l => { st[l.id] = 3; be[l.id] = l.par; });
   return Object.assign({ v: 4, unlocked: Math.min(n, NLEV - 1), unlockedId: LVS[Math.min(n, NLEV - 1)].id, stars: st, best: be, sound: false, coins: 0, seen: { scramble: true } }, extra || {}); };
@@ -116,7 +126,7 @@ async function mapBasics(page, ctx, label) {
   check(f.noHScroll && f.stopsInside && f.head.left && f.head.right, label + ': no horizontal overflow; every stop and chest inside the map (map ' + f.worldW + 'px wide)');
   check(f.head.top <= 2 && f.head.h >= 60 && /School Street/.test(f.head.text) && /0\/18/.test(f.head.text), label + ': sticky district header at the top with name and progress ("' + f.head.text.replace(/\s+/g, ' ').trim().slice(0, 60) + '")');
   check(f.current === 1 && f.currentInView && same(f.open, [1]), label + ': fresh save: stop 1 is current and in view (auto-scroll); only stop 1 open');
-  check(same(f.lockedSecs, D.slice(1).map(d => d.id)) && same(f.gatesOpen, [false, false, false, false]) && same(f.chestStates, ['locked', 'locked', 'locked', 'locked', 'locked']), label + ': districts 2-5 locked behind closed gates; all chests locked');
+  check(same(f.lockedSecs, D.slice(1).map(d => d.id)) && same(f.gatesOpen, CLOSED) && same(f.chestStates, ALL_LOCKED), label + ': districts 2-' + D.length + ' locked behind closed gates; all chests locked');
   return f;
 }
 
@@ -207,8 +217,9 @@ async function mapBasics(page, ctx, label) {
   check(await p.locator('#ov-chest.show').count() === 0 && /Already opened/.test(await p.textContent('#toast')) && (await stored(p)).coins === coinsBefore + 100, 'tapping the opened chest again: "Already opened", nothing granted twice');
   await p.reload(); await mapOpen(p); await notDriving(p);
   check((await mapFacts(p)).chestStates[0] === 'claimed' && await p.locator('#btn-map-chest').isHidden(), 'after a reload (#map opens the map) the chest stays claimed (no "Chest to open" button)');
-  const locked = await p.evaluate(() => { const s = document.querySelector('.d-sec[data-district="beach"]'); return { locked: s.classList.contains('locked'), txt: s.querySelector('.dh-intro').textContent }; });
-  check(locked.locked && /Win stop 11/.test(locked.txt), 'Sunny Beach still locked: "' + locked.txt.trim() + '"');
+  const locked = await p.evaluate(() => [...document.querySelectorAll('.d-sec')].map(s => ({ id: s.getAttribute('data-district'), locked: s.classList.contains('locked'), txt: s.querySelector('.dh-intro').textContent })));
+  check(locked[MSK].locked && new RegExp('Win stop ' + BOSS[MSK - 1] + ' ').test(locked[MSK].txt) && locked[BEACH].locked && new RegExp('Win stop ' + BOSS[BEACH - 1] + ' ').test(locked[BEACH].txt),
+    'Main Street and Sunny Beach still locked: "' + locked[MSK].txt.trim() + '", "' + locked[BEACH].txt.trim() + '"');
   await scrollToDistrict(p, 2); await p.waitForTimeout(200);
   await shot(p, 'v8-district-locked.png');
   await tapEl(p, T, '.chest-node[data-chest="2"]'); await p.waitForTimeout(300);
@@ -244,11 +255,14 @@ async function mapBasics(page, ctx, label) {
 
   // paints from chests
   console.log('\n# Chest paint + catch-up chests (migration)');
-  await boot(p, won(11, { coins: 120 }));   // an older save that already beat districts 1 and 2 (no chests field)
-  check(/2 chests to open/.test(await p.textContent('#title-route')) && /Sunny Beach/.test(await p.textContent('#title-route')), 'migrated save (won 1-11): title says Sunny Beach, "2 chests to open on the map!"');
+  await boot(p, wonV8(11, { coins: 120 }));   // a v8 save that beat the old districts 1 and 2 (starters + BUS; no chests field)
+  const tr = await p.textContent('#title-route');
+  check(/2 chests to open/.test(tr) && /Sunny Beach/.test(tr) && /New: Main Street, 10 new stops!/.test(tr), 'migrated v8 save (won 1-10 + BUS): title says Sunny Beach, "2 chests to open on the map!" and "New: Main Street, 10 new stops!"');
   await tapEl(p, T, '#btn-play'); await mapOpen(p); await notDriving(p);
   f = await mapFacts(p); bi = await busInfo(p);
-  check(bi.at === LVS[11].id && f.current === 12 && same(f.lockedSecs, ['harbor', 'downtown']) && same(f.chestStates, ['ready', 'ready', 'locked', 'locked', 'locked']), 'map: the bus waits at stop 12 (Sunny Beach), districts 1-3 open, School Street and Maple Suburbs chests ready to open');
+  check(bi.at === 'sc1-pizza' && f.current === AT('sc1-pizza') && same(f.lockedSecs, ['harbor', 'downtown']) && same(f.chestStates, ['ready', 'ready', 'locked', 'locked', 'locked', 'locked']),
+    'map: the bus waits at stop ' + AT('sc1-pizza') + ' (PIZZA, Sunny Beach); School Street and Maple Suburbs (boss now HOUSE) chests ready; the Main Street chest locked until its boss is won');
+  check(NORMAL.every(n => f.open.includes(n)) && /New: 10 new stops!/.test(await p.textContent('.d-sec[data-district="mainst"] .dh-intro')), 'v9: Main Street is open to a player past BUS (offered, not forced): its header says "New: 10 new stops! ..."');
   check(/2 chests to open/.test(await p.textContent('#btn-map-chest')) && await p.locator('#btn-map-chest').isVisible(), 'foot button: "2 chests to open!"');
   await tapEl(p, T, '#btn-map-chest'); await p.waitForSelector('#ov-chest.show'); await tapEl(p, T, '#chest-big'); await p.waitForSelector('#ov-chest.open', { timeout: 3000 }); await p.waitForTimeout(500);
   await tapEl(p, T, '#btn-chest-collect'); await p.waitForTimeout(300);
@@ -263,14 +277,43 @@ async function mapBasics(page, ctx, label) {
   await tapEl(p, T, '#btn-map-home'); await p.waitForSelector('#screen-title.active');
   await tapEl(p, T, '#btn-settings'); await p.waitForSelector('#ov-settings.show'); await p.waitForTimeout(250);
   const paints = await p.evaluate(() => [...document.querySelectorAll('.paint-sw')].map(b => b.getAttribute('data-paint') + (b.disabled ? ':locked' : '') + (b.classList.contains('on') ? ':on' : '')));
-  check(same(paints, ['classic', 'maple:on', 'surf:locked', 'neon:locked']), 'Settings > Bus paint: ' + paints.join(', '));
+  check(same(paints, ['classic', 'maple:on', 'trolley:locked', 'surf:locked', 'neon:locked']), 'Settings > Bus paint: ' + paints.join(', '));
   await p.locator('.paint-sw[data-paint="classic"]').scrollIntoViewIfNeeded(); await tapEl(p, T, '.paint-sw[data-paint="classic"]'); await p.waitForTimeout(150);
   check((await stored(p)).paint === 'classic' && (await p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--bus').trim())).toLowerCase() === '#f6c026', 'switching back to School Yellow works');
   await tapEl(p, T, '#btn-settings-close'); await p.waitForTimeout(200);
+  // v9: the Main Street chest (175 coins, Tow, Nudge, Trolley Green paint) after its boss
+  console.log('\n# Main Street (v9)');
+  await boot(p, won(BOSS[MSK] - 1, { coins: 40, chests: { school: true, suburbs: true }, paints: ['classic', 'maple'], paint: 'maple' }));
+  await tapEl(p, T, '#btn-play'); await mapOpen(p); await notDriving(p);
+  f = await mapFacts(p);
+  const msHead = await p.textContent('.d-sec[data-district="mainst"] .d-head');
+  check(f.current === BOSS[MSK] && /Main Street/.test(msHead) && /New: Many ways to win/.test(msHead) && /Play the boss lot/.test(await p.textContent('#btn-map-play')), 'Main Street: stops ' + FIRST[MSK] + '-' + BOSS[MSK] + ', header "New: Many ways to win", the boss (' + LVS[BOSS[MSK] - 1].word + ', par ' + LVS[BOSS[MSK] - 1].par + ') is next');
+  await scrollToDistrict(p, MSK); await p.waitForTimeout(250);
+  await shot(p, 'v9-mainst-district.png');
+  await tapEl(p, T, '#btn-map-play'); await p.waitForSelector('#screen-game.active', { timeout: 4000 });
+  check(await solve(p, T), 'Main Street boss lot won by real input at par');
+  check(/Main Street complete/.test(await p.textContent('#win-district')) && (await p.textContent('#btn-next')).trim() === 'Open the chest!', 'boss win: "Main Street complete!", "Open the chest!"');
+  const msCoins = (await stored(p)).coins;
+  await tapEl(p, T, '#btn-next'); await mapOpen(p); await p.waitForSelector('#ov-chest.show', { timeout: 5000 });
+  await tapEl(p, T, '#chest-big'); await p.waitForSelector('#ov-chest.open', { timeout: 3000 }); await p.waitForTimeout(900);
+  sv = await stored(p);
+  const msRw = await p.evaluate(() => [...document.querySelectorAll('#chest-rewards .reward')].map(e => e.textContent.replace(/\s+/g, ' ').trim()));
+  check(sv.chests.mainst === true && sv.coins === msCoins + 175 && sv.inv.tow === 1 && sv.inv.nudge === 1 && sv.paints.includes('trolley') && sv.paint === 'trolley' && msRw.length === 4 && /Trolley Green/.test(msRw.join()),
+    'Main Street chest claimed once: +175 coins, Tow x1, Nudge x1, Trolley Green paint (worn): ' + msRw.join(' | '));
+  await shot(p, 'v9-mainst-chest-rewards.png');
+  await tapEl(p, T, '#btn-chest-collect');
+  await p.waitForFunction(() => window.WJB.map.driving, null, { timeout: 2500 }).catch(() => {});
+  await page_wait_gate(p);
+  await notDriving(p); await p.waitForTimeout(300);
+  bi = await busInfo(p);
+  check(bi.at === LVS[FIRST[BEACH] - 1].id && !(await mapFacts(p)).lockedSecs.includes('beach'), 'Collect: the bus drives into Sunny Beach, parking at stop ' + FIRST[BEACH] + ' (BUS) (bus at ' + bi.at + ')');
+
   // other migrations: v2 / v3 saves land on the right district and stop
   for (const [label, save, stop] of [['v3 save (beat 1-2)', { v: 3, unlocked: 2, stars: { 'st1-cat': 3, 'st2-dog': 3 }, best: {}, sound: true }, 3],
-    ['v2 save (beat BUS, CAR, PLANET)', { unlocked: 3, stars: { 'lv1-bus': 3, 'lv2-car': 2, 'lv3-planet': 1 }, best: {}, sound: true }, 15],
-    ['v4 save at stage-1 end (won all 28)', won(NLEV), NLEV]]) {
+    ['v2 save (beat BUS, CAR, PLANET)', { unlocked: 3, stars: { 'lv1-bus': 3, 'lv2-car': 2, 'lv3-planet': 1 }, best: {}, sound: true }, AT('lv4-apple')],
+    ['v8 save waiting at BUS (unlockedId lv1-bus)', wonV8(10), NORMAL[0]],
+    ['v8 save that won all 28 (Main Street new)', wonV8(28), NORMAL[0]],
+    ['v9 save that won all ' + NLEV, won(NLEV), NLEV]]) {
     await boot(p, save); await tapEl(p, T, '#btn-play'); await mapOpen(p); await notDriving(p);
     f = await mapFacts(p); bi = await busInfo(p);
     const dk = D.findIndex(d => d.levels.includes(LVS[stop - 1].id));
@@ -286,14 +329,15 @@ async function mapBasics(page, ctx, label) {
   await p.evaluate(TK => localStorage.setItem(TK, JSON.stringify({ unlockAll: true })), TKEY); await p.reload(); await p.waitForTimeout(300);
   await tapEl(p, T, '#btn-play'); await mapOpen(p); await notDriving(p);
   f = await mapFacts(p);
-  check(same(f.open, range(1, NLEV)) && same(f.cheat, range(4, NLEV)) && f.lockedSecs.length === 0 && f.gatesOpen.every(Boolean) && await p.locator('.d-sec.cheat').count() === 4 && await p.locator('#screen-map .test-badge').isVisible(),
+  check(same(f.open, range(1, NLEV)) && same(f.cheat, range(4, NLEV)) && f.lockedSecs.length === 0 && f.gatesOpen.every(Boolean) && await p.locator('.d-sec.cheat').count() === D.length - 1 && await p.locator('#screen-map .test-badge').isVisible(),
     'unlock all: every district and stop open (4-' + NLEV + ' dashed as test-opened), gates up, TEST MODE tag on the map');
   await shot(p, 'v8-map-unlock-all.png');
-  await tapEl(p, T, '.lvl[data-level="26"]');
+  const DT = FIRST[DK('downtown')] + 2;
+  await tapEl(p, T, '.lvl[data-level="' + DT + '"]');
   await p.waitForFunction(() => window.WJB.map.driving, null, { timeout: 2000 }).catch(() => {});
   const cheatDrive = (await busInfo(p)).driving;
   await p.waitForSelector('#screen-game.active', { timeout: 5000 });
-  check(cheatDrive && cheatDrive.to === LVS[25].id && (await p.textContent('#hud-level')).trim() === 'Level 26 of ' + NLEV, 'the bus drives anywhere: from stop 3 to stop 26 (Downtown), then it starts');
+  check(cheatDrive && cheatDrive.to === LVS[DT - 1].id && (await p.textContent('#hud-level')).trim() === 'Level ' + DT + ' of ' + NLEV, 'the bus drives anywhere: from stop 3 to stop ' + DT + ' (Downtown), then it starts');
   await tapEl(p, T, '#btn-menu'); await mapOpen(p); await notDriving(p);
   bi = await busInfo(p);
   check(await rawSave(p) === real0, 'real save byte-identical after test-driving (no busAt, no gate flags)');
@@ -323,9 +367,9 @@ async function mapBasics(page, ctx, label) {
   await boot(p, null); await p.evaluate(([K, sv]) => localStorage.setItem(K, sv), [KEY, real0]); await p.reload(); await p.waitForTimeout(300);
   await tapEl(p, T, '#btn-play'); await mapOpen(p); await notDriving(p);
   f = await mapFacts(p); bi = await busInfo(p);
-  check(same(f.open, [1, 2, 3]) && f.cheat.length === 0 && f.lockedSecs.length === 4 && same(f.chestStates, ['locked', 'locked', 'locked', 'locked', 'locked']) && bi.at === LVS[2].id && (await p.textContent('#map-coins')).trim() === '345' && await (async () => { const s = await stored(p), r = JSON.parse(real0);
+  check(same(f.open, [1, 2, 3]) && f.cheat.length === 0 && f.lockedSecs.length === D.length - 1 && same(f.chestStates, ALL_LOCKED) && bi.at === LVS[2].id && (await p.textContent('#map-coins')).trim() === '345' && await (async () => { const s = await stored(p), r = JSON.parse(real0);
       return same(s.stars, r.stars) && same(s.best, r.best) && s.unlocked === r.unlocked && s.coins === 345 && same(s.chests, {}) && same(s.inv, { tow: 0, bay: 0, nudge: 0, flip: 0 }) && s.paint === 'classic'; })(),
-    'cheats off: stops 1-3 open, districts 2-5 locked, all chests locked, the bus back at stop 3, 345 coins; stars, chests, inventory and paint exactly as before');
+    'cheats off: stops 1-3 open, districts 2-' + D.length + ' locked, all chests locked, the bus back at stop 3, 345 coins; stars, chests, inventory and paint exactly as before');
   // the gate: first entry into a district lifts its barrier
   await boot(p, won(BOSS[0], { chests: { school: true } }));
   await tapEl(p, T, '#btn-play'); await mapOpen(p); await notDriving(p);
@@ -384,6 +428,9 @@ async function mapBasics(page, ctx, label) {
   await boot(d, won(16, { coins: 260, chests: { school: true, suburbs: true }, paints: ['classic', 'maple'], paint: 'maple' }));
   await d.click('#btn-play'); await mapOpen(d); await notDriving(d);
   await shot(d, 'v8-desktop-map.png');
+  f = await mapFacts(d);
+  check(f.current === 17 && D[MSK].levels.includes(LVS[16].id) && f.currentInView, 'desktop: a save on stop 17 shows Main Street with stop 17 current and in view');
+  await shot(d, 'v9-desktop-map.png');
   await desk.close();
 
   /* ------------------------------ SCREENSHOTS: themes + full overview ------------------------------ */
@@ -400,12 +447,12 @@ async function mapBasics(page, ctx, label) {
     await scrollToDistrict(cp, k); await cp.waitForTimeout(200);
     const h = await cp.evaluate(k => document.querySelectorAll('.d-head')[k].textContent.replace(/\s+/g, ' ').trim(), k);
     check(new RegExp(D[k].name).test(h) && /\d+\/\d+/.test(h), 'district ' + (k + 1) + ' header: "' + h + '"');
-    await shot(cp, 'v8-district-' + (k + 1) + '-' + D[k].id + '.png');
+    await shot(cp, 'v9-district-' + (k + 1) + '-' + D[k].id + '.png');
   }
   const full = await cp.evaluate(() => document.getElementById('map-world').offsetHeight);
   await cp.setViewportSize({ width: 390, height: full + 160 }); await cp.waitForTimeout(600);
   await cp.evaluate(() => { document.getElementById('map-scroll').scrollTop = 0; });
-  await shot(cp, 'v8-map-overview-full.png');
+  await shot(cp, 'v9-map-overview-full.png');
   await cam.close();
   await browser.close();
 

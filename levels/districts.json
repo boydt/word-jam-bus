@@ -3,6 +3,7 @@
  "paints": [
   { "id": "classic", "name": "School Yellow", "body": "#f6c026", "dark": "#d99d0b" },
   { "id": "maple", "name": "Maple Red", "body": "#ec5a3c", "dark": "#b8381f" },
+  { "id": "trolley", "name": "Trolley Green", "body": "#2fa36b", "dark": "#1d7a4d" },
   { "id": "surf", "name": "Surf Teal", "body": "#22c3b4", "dark": "#14907f" },
   { "id": "neon", "name": "Midnight Neon", "body": "#3a4bb8", "dark": "#232f80" }
  ],
@@ -12,19 +13,26 @@
    "intro": "Driving school: tap, slide, back up and park",
    "levels": ["st1-cat", "st2-dog", "st3-sun", "st4-hat", "st5-fish", "st6-milk"],
    "boss": "st6-milk",
-   "chest": { "coins": 100, "boosters": { "nudge": 1, "tow": 1 } }
+   "chest": { "coins": 100, "boosters": { "nudge": 1, "tow": 1} }
   },
   {
    "id": "suburbs", "name": "Maple Suburbs", "theme": "suburbs", "teaches": "trucks",
    "intro": "Long trucks and busier lots",
-   "levels": ["st7-frog", "st8-train", "st9-tiger", "st10-house", "lv1-bus"],
-   "boss": "lv1-bus",
+   "levels": ["st7-frog", "st8-train", "st9-tiger", "st10-house"],
+   "boss": "st10-house",
    "chest": { "coins": 150, "boosters": { "bay": 1, "flip": 1 }, "paint": "maple" }
   },
   {
+   "id": "mainst", "name": "Main Street", "theme": "mainst", "teaches": "mixed",
+   "intro": "Ten forgiving lots with many ways to win",
+   "levels": ["nm1-bread", "nm2-shop", "nm3-park", "nm4-music", "nm5-candy", "nm6-clock", "nm7-tower", "nm8-cinema", "nm9-bakery", "nm10-street"],
+   "boss": "nm10-street",
+   "chest": { "coins": 175, "boosters": { "tow": 1, "nudge": 1 }, "paint": "trolley" }
+  },
+  {
    "id": "beach", "name": "Sunny Beach", "theme": "beach", "teaches": "scramble",
-   "intro": "Scramble stops: letters board in any order",
-   "levels": ["sc1-pizza", "lv2-car", "lv3-planet", "lv4-apple", "lv5-garden"],
+   "intro": "Bigger lots + Scramble stops: letters board in any order",
+   "levels": ["lv1-bus", "sc1-pizza", "lv2-car", "lv3-planet", "lv4-apple", "lv5-garden"],
    "boss": "lv5-garden",
    "chest": { "coins": 200, "boosters": { "nudge": 2, "bay": 1 }, "paint": "surf" }
   },
@@ -33,7 +41,7 @@
    "intro": "Bay Words, chunk trucks and the wildcard taxi",
    "levels": ["sc2-jungle", "lv6-rocket", "lv7-ticket", "lv8-mother", "lv9-busstop", "sc3-dragons", "lv10-school"],
    "boss": "lv10-school",
-   "chest": { "coins": 250, "boosters": { "tow": 1, "flip": 1, "bay": 1 } }
+   "chest": { "coins": 250, "boosters": { "tow": 1, "flip": 1, "bay": 1} }
   },
   {
    "id": "downtown", "name": "Downtown", "theme": "downtown", "teaches": "keys",

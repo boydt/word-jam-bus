@@ -657,6 +657,7 @@ body.on-map #app { max-width: 820px; }
 .d-sec .dk2 { opacity: .8; }
 .th-school.d-sec { background: radial-gradient(circle at 20% 30%, rgba(255, 255, 255, .14) 0 40px, transparent 41px), linear-gradient(180deg, #84cc62, #6dbb5a); background-size: 140px 140px, auto; }
 .th-suburbs.d-sec { background: repeating-linear-gradient(90deg, rgba(255, 255, 255, .08) 0 26px, transparent 26px 52px), linear-gradient(180deg, #9fdc78, #7cc65e); }
+.th-mainst.d-sec { background: repeating-linear-gradient(0deg, rgba(120, 50, 30, .1) 0 2px, transparent 2px 14px), repeating-linear-gradient(90deg, rgba(120, 50, 30, .08) 0 2px, transparent 2px 28px), linear-gradient(90deg, #d9b48c 0, #ead2b0 10%, #a7d98a 16%, #8fcf72 84%, #ead2b0 90%, #d9b48c 100%); }
 .th-beach.d-sec { background: radial-gradient(circle, rgba(196, 150, 70, .25) 1.5px, transparent 2px) 0 0 / 18px 18px, linear-gradient(90deg, #4dc4e8 0, #8ee0ef 9%, #f6e3a8 15%, #f3d58e 85%, #8ee0ef 91%, #4dc4e8 100%); }
 .th-harbor.d-sec { background: repeating-linear-gradient(0deg, rgba(255, 255, 255, .1) 0 2px, transparent 2px 22px), linear-gradient(90deg, #2d79b0 0, #4f93c0 12%, #a8a397 17%, #b5afa2 83%, #4f93c0 88%, #2d79b0 100%); }
 .th-downtown.d-sec { background: radial-gradient(circle, rgba(255, 255, 255, .7) 1px, transparent 1.6px) 0 0 / 46px 53px, linear-gradient(180deg, #1c2150, #2f2a6b 60%, #3a2c6e); }
@@ -669,6 +670,7 @@ body.on-map #app { max-width: 820px; }
 }
 .th-school { --dk: #e8573f; --dk2: #f6c026; }
 .th-suburbs { --dk: #e8622c; --dk2: #4a6fb5; }
+.th-mainst { --dk: #1f8a70; --dk2: #f08c00; }
 .th-beach { --dk: #12a6c9; --dk2: #ffd43b; }
 .th-harbor { --dk: #2d6fa3; --dk2: #ef7f2c; }
 .th-downtown { --dk: #ff4fd8; --dk2: #7ff3ff; }
@@ -713,6 +715,9 @@ button.dh-chest::before { content: ''; position: absolute; inset: -8px -2px; }  
 .road.th-suburbs .rd-edge { stroke: #f7f3e8; }
 .road.th-suburbs .rd-top { stroke: #5d6475; }
 .road.th-suburbs .rd-mid { stroke: #ffd43b; stroke-dasharray: 18 10; }
+.road.th-mainst .rd-edge { stroke: #c9b79c; }
+.road.th-mainst .rd-top { stroke: #575e6e; }
+.road.th-mainst .rd-mid { stroke: #a9b0bb; stroke-width: 16px; stroke-dasharray: 3 8; stroke-linecap: butt; }   /* trolley-track ties */
 .road.th-beach .rd-edge { stroke: #8a6235; }
 .road.th-beach .rd-top { stroke: #d1a463; }
 .road.th-beach .rd-mid { stroke: #9c7140; stroke-width: 28px; stroke-dasharray: 2.5 9; stroke-linecap: butt; }   /* boardwalk planks */
@@ -885,6 +890,7 @@ button.dh-chest::before { content: ''; position: absolute; inset: -8px -2px; }  
 /* themed play-screen backdrop: a soft tint of the district being driven */
 #screen-game[data-theme="school"] { background: linear-gradient(180deg, rgba(255, 214, 120, .22), rgba(255, 214, 120, 0) 45%); }
 #screen-game[data-theme="suburbs"] { background: linear-gradient(180deg, rgba(232, 98, 44, .2), rgba(232, 98, 44, 0) 45%); }
+#screen-game[data-theme="mainst"] { background: linear-gradient(180deg, rgba(31, 138, 112, .22), rgba(240, 140, 0, .06) 50%, rgba(31, 138, 112, 0)); }
 #screen-game[data-theme="beach"] { background: linear-gradient(180deg, rgba(48, 214, 230, .35), rgba(246, 227, 168, .25) 70%, rgba(246, 210, 140, .45)); }
 #screen-game[data-theme="harbor"] { background: linear-gradient(180deg, rgba(20, 70, 120, .3), rgba(20, 70, 120, .08) 60%, rgba(20, 70, 120, .3)); }
 #screen-game[data-theme="downtown"] { background: linear-gradient(180deg, rgba(40, 30, 110, .55), rgba(80, 40, 140, .25) 60%, rgba(255, 79, 216, .18)); }
@@ -909,3 +915,31 @@ button.dh-chest::before { content: ''; position: absolute; inset: -8px -2px; }  
   .chest-ov.open .cb-lid { animation: none; transform: translate(-8px, -8px) rotate(-34deg); }
   .gate .g-arm, .chest-node .cn-lid, .d-sec.locked::after, .chest-rays { transition: none; }
 }
+
+/* ---------- v9: difficulty tier badges (colour + 1-5 filled pips, so colour is never the only cue) ---------- */
+.tier { --tc: #1c7ed6; display: inline-flex; align-items: center; gap: 5px; background: var(--tc); color: #fff; border-radius: 999px; line-height: 1; vertical-align: middle; text-shadow: none; box-shadow: 0 2px 0 rgba(0, 0, 0, .22); white-space: nowrap; }
+.tier.t1 { --tc: #2b8a3e; } .tier.t2 { --tc: #0b7285; } .tier.t3 { --tc: #1971c2; } .tier.t4 { --tc: #d9480f; } .tier.t5 { --tc: #c92a2a; }
+.tier .pips { display: inline-flex; gap: 2px; }
+.tier .pip { width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, .28); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .55); }
+.tier .pip.on { background: #fff; box-shadow: none; }
+.tier .tier-name { font-weight: 900; font-size: 11px; letter-spacing: .2px; }
+/* map stop: a tiny pip pill under the stars */
+.lvl.stop .tier-stop { position: absolute; left: 50%; bottom: -25px; transform: translateX(-50%); padding: 2px 5px; gap: 0; box-shadow: 0 1px 0 rgba(0, 0, 0, .3), 0 0 0 1.5px #fff; pointer-events: none; }
+.lvl.stop .tier-stop .pip { width: 5px; height: 5px; }
+.lvl.stop .tier-stop .pips { gap: 2px; }
+.lvl.stop.locked .tier-stop { bottom: -10px; opacity: .85; }
+/* play header: next to "Level n of N" */
+.hud-tier { display: block; line-height: 0; margin: 2px 0 3px; }
+.hud-tier:empty { display: none; }
+.tier-hud { padding: 3px 7px 3px 6px; font-size: 11px; }
+.tier-hud .pip { width: 5px; height: 5px; }
+/* level-intro / Scramble start banner */
+.banner.intro { background: #fff; color: var(--ink); box-shadow: 0 8px 0 rgba(31, 42, 68, .25), 0 12px 30px rgba(0, 0, 0, .3); min-width: 220px; padding: 12px 20px; }
+.banner.intro .bn-sub { margin: 2px 0 8px; color: #55607a; }
+.bn-tier { display: flex; justify-content: center; margin-top: 8px; }
+.banner.intro .bn-tier { margin-top: 0; }
+.tier-banner { padding: 5px 12px 5px 10px; gap: 7px; }
+.tier-banner .pip { width: 8px; height: 8px; }
+.tier-banner .tier-name { font-size: 15px; }
+@media (max-width: 380px) { .tier-hud .tier-name { font-size: 10px; } .tier-hud { padding: 2px 6px 2px 5px; gap: 4px; } }
+.title-route .tr-news { display: inline-block; margin-top: 4px; padding: 2px 10px; border-radius: 999px; background: #1f8a70; color: #fff; font-weight: 900; box-shadow: 0 2px 0 rgba(0, 0, 0, .2); }

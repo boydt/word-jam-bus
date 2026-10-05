@@ -188,8 +188,16 @@ console.log('# v8 city map data (levels/districts.json)');
   check(D.every(d => at(d.boss).par === maxPar(d)), 'each boss is the hardest lot of its district (pars ' + D.map(d => at(d.boss).par).join(', ') + ')');
   const firstOf = pred => LV.findIndex(pred), inD = (d, i) => d.levels.includes(LV[i].id);
   const debut = { basics: () => 0, trucks: () => firstOf(l => l.cars.some(c => c.len === 3 || (c.l && c.l.length === 1 && c.len > 2))), scramble: () => firstOf(l => l.mode === 'scramble'),
-    specials: () => firstOf(l => l.cars.some(c => c.l === '?')), keys: () => firstOf(l => l.cars.some(c => c.lock)) };
+    specials: () => firstOf(l => l.cars.some(c => c.l === '?')), keys: () => firstOf(l => l.cars.some(c => c.lock)), mixed: () => firstOf(l => l.tier === 'normal') };
   check(D.every(d => debut[d.teaches] && inD(d, debut[d.teaches]())), 'each district debuts its mechanic (' + D.map(d => d.name + ': ' + d.teaches).join(', ') + ')');
+  const normalIdx = LV.map((l, i) => l.tier === 'normal' ? i : -1).filter(i => i >= 0), ms = D.find(d => d.teaches === 'mixed');
+  check(normalIdx.length === 10 && ms && normalIdx.every(i => inD(ms, i)) && ms.levels.length === 10 && LV[normalIdx[0] - 1].id === 'st10-house' && LV[normalIdx[9] + 1].id === 'lv1-bus',
+    'v9: the 10 normal levels sit together between HOUSE and BUS, all in ' + (ms ? ms.name : '?') + ' (stops ' + (normalIdx[0] + 1) + '-' + (normalIdx[normalIdx.length - 1] + 1) + ')');
+  const TN = ['', 'Very Easy', 'Easy', 'Normal', 'Hard', 'Super Hard'];
+  check(LV.every(l => l.difficulty && l.difficulty.tier >= 1 && l.difficulty.tier <= 5 && l.difficulty.label === TN[l.difficulty.tier]), 'v9: every level carries a generated difficulty tier 1-5 with its label');
+  const tierOfId = id => at(id).difficulty.tier;
+  check(tierOfId('st1-cat') === 1 && tierOfId('lv10-school') === 5 && tierOfId('dt4-square') === 5 && normalIdx.filter(i => LV[i].difficulty.tier === 3).length >= 8,
+    'v9 tier sanity: CAT Very Easy, SCHOOL and SQUARE Super Hard, the normal set mostly Normal (' + normalIdx.map(i => LV[i].difficulty.label).join(', ') + ')');
   check(LV.every((l, i) => !l.cars.some(c => c.lock) || inD(D[D.length - 1], i)), 'every padlock level sits in the last district (Downtown keys)');
   const kinds = ['tow', 'bay', 'nudge', 'flip'], PA = {};
   MAP.paints.forEach(p => { PA[p.id] = p; });

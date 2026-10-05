@@ -148,7 +148,23 @@
   var DIST_OF = [];
   DISTRICTS.forEach(function (d, k) { d.k = k; d.first = indexOfId(d.levels[0]); d.last = indexOfId(d.boss); for (var i = d.first; i <= d.last; i++) DIST_OF[i] = k; });
   for (var dl = 0; dl < LEVELS.length; dl++) if (DIST_OF[dl] === undefined) DIST_OF[dl] = DISTRICTS.length - 1;
-  var MECH = { basics: 'Driving basics', trucks: 'Long trucks', scramble: 'Scramble stops', specials: 'Bay Words, chunks, taxi', keys: 'Keys and padlocks' };
+  var MECH = { basics: 'Driving basics', trucks: 'Long trucks', scramble: 'Bigger lots + Scramble stops', specials: 'Bay Words, chunks, taxi', keys: 'Keys and padlocks', mixed: 'Many ways to win' };
+
+  /* v9 difficulty tiers: generated per level by tools/difficulty.js from solver data (levels.json "difficulty").
+     Shown as a coloured badge with 1-5 filled pips (so it never relies on colour alone). */
+  var TIER_NAMES = ['', 'Very Easy', 'Easy', 'Normal', 'Hard', 'Super Hard'];
+  function tierOf(lv) { var d = lv && lv.difficulty; return d && d.tier >= 1 && d.tier <= 5 ? d.tier : 0; }
+  function tierText(lv) { var t = tierOf(lv); return t ? 'Difficulty: ' + TIER_NAMES[t] + ' (' + t + ' of 5)' : ''; }
+  /** kind: 'stop' (pips only, the stop's own label carries the words), 'banner' or 'hud' (pips + name). */
+  function tierBadge(lv, kind) {
+    var t = tierOf(lv);
+    if (!t) return '';
+    var pips = '';
+    for (var k = 1; k <= 5; k++) pips += '<i class="pip' + (k <= t ? ' on' : '') + '"></i>';
+    return '<span class="tier tier-' + kind + ' t' + t + '" data-tier="' + t + '" data-tier-label="' + TIER_NAMES[t] + '"' +
+      (kind === 'stop' ? ' aria-hidden="true"' : ' role="img" aria-label="' + tierText(lv) + '"') + '><span class="pips" aria-hidden="true">' + pips + '</span>' +
+      (kind === 'stop' ? '' : '<b class="tier-name" aria-hidden="true">' + TIER_NAMES[t] + '</b>') + '</span>';
+  }
 
   function applyPaint() {
     var p = PAINTS[progress.paint] || PAINTS.classic, r = document.documentElement.style;
@@ -277,6 +293,13 @@
       '<path d="M4 34h56M4 46h56" stroke="#fff" stroke-width="4"/><path d="M8 26v28M20 26v28M32 26v28M44 26v28M56 26v28" stroke="#fff" stroke-width="5" stroke-linecap="round"/>',
       '<rect x="30" y="30" width="4" height="28" fill="#6b4226"/><rect x="18" y="16" width="28" height="16" rx="8" fill="#3a7bd5"/><rect x="40" y="10" width="3" height="10" fill="#ef4b4b"/>'
     ],
+    mainst: [
+      '<rect x="6" y="22" width="52" height="36" fill="#f3e2c3"/><rect x="6" y="16" width="52" height="8" fill="#b8473a"/><path d="M6 24h52l-4 9H10z" fill="#fff"/><path d="M10 24h8l-1 9h-6zM26 24h8v9h-8zM42 24h8l1 9h-8z" fill="#1f8a70"/><rect x="12" y="38" width="16" height="12" fill="#bfe3ff"/><rect x="36" y="38" width="10" height="20" fill="#7a4a2a"/><rect x="48" y="38" width="6" height="8" fill="#bfe3ff"/>',
+      '<rect x="22" y="18" width="20" height="40" fill="#c96b4a"/><polygon points="20,18 32,4 44,18" fill="#1f8a70"/><circle cx="32" cy="28" r="7" fill="#fff" stroke="#3b2a20" stroke-width="2"/><path d="M32 24v4l3 2" stroke="#3b2a20" stroke-width="2" fill="none" stroke-linecap="round"/><rect x="28" y="44" width="8" height="14" fill="#5a3a26"/>',
+      '<path d="M8 14h48" stroke="#555" stroke-width="2"/><path d="M32 14l-6 8" stroke="#555" stroke-width="3"/><rect x="6" y="22" width="52" height="26" rx="7" fill="#1f8a70"/><rect x="6" y="40" width="52" height="5" fill="#f08c00"/><rect x="11" y="27" width="9" height="9" rx="2" fill="#e6f6ff"/><rect x="23" y="27" width="9" height="9" rx="2" fill="#e6f6ff"/><rect x="35" y="27" width="9" height="9" rx="2" fill="#e6f6ff"/><rect x="47" y="27" width="7" height="9" rx="2" fill="#e6f6ff"/><circle cx="18" cy="50" r="5" fill="#333"/><circle cx="46" cy="50" r="5" fill="#333"/>',
+      '<rect x="30" y="16" width="4" height="42" fill="#2f3642"/><rect x="24" y="54" width="16" height="5" rx="2" fill="#2f3642"/><path d="M24 16h16l-3-8H27z" fill="#2f3642"/><circle cx="32" cy="12" r="5" fill="#ffe27a"/><path d="M20 30h24l-3 9H23z" fill="#8a5a3a"/><circle cx="25" cy="29" r="4" fill="#ef7f9a"/><circle cx="32" cy="27" r="4" fill="#ffd43b"/><circle cx="39" cy="29" r="4" fill="#ef4b4b"/>',
+      '<path d="M8 26a24 12 0 0 1 48 0z" fill="#e8573f"/><path d="M20 26a12 12 0 0 1 24 0z" fill="#fff"/><path d="M32 26v24" stroke="#555" stroke-width="3"/><ellipse cx="32" cy="50" rx="14" ry="4" fill="#8a5a3a"/><path d="M22 50l-3 9M42 50l3 9" stroke="#8a5a3a" stroke-width="3"/><circle cx="10" cy="52" r="5" fill="#3fae4a"/><circle cx="54" cy="52" r="5" fill="#3fae4a"/>'
+    ],
     beach: [
       '<path d="M33 60c-2-18 0-30 6-42" stroke="#a0703c" stroke-width="5" fill="none"/><path d="M39 18c-10-8-22-6-28 2 10-4 18-3 28-2zM39 18c4-10 14-14 22-12-9 2-16 6-22 12zM39 18c10-2 18 4 20 12-6-6-13-9-20-12zM39 18c-6 4-10 12-10 20 2-8 5-14 10-20z" fill="#2faa5a"/>',
       '<path d="M32 22v36" stroke="#666" stroke-width="3"/><path d="M6 24a26 18 0 0 1 52 0z" fill="#ef4b4b"/><path d="M19 24a13 18 0 0 1 26 0z" fill="#fff"/><rect x="14" y="52" width="36" height="8" rx="3" fill="#4dabf7"/>',
@@ -330,7 +353,7 @@
         '<div class="d-bg" aria-hidden="true">' + deco + '</div>' +
         '<header class="d-head" aria-label="District ' + (k + 1) + ': ' + d.name + ', ' + stars + ' of ' + max + ' stars, chest ' + cs + '">' +
           '<span class="dh-badge">' + (k + 1) + '</span>' +
-          '<span class="dh-text"><b class="dh-name">' + d.name + '</b><small class="dh-intro">' + (open ? 'New: ' + (MECH[d.teaches] || d.intro) : LOCK_SVG + ' Win stop ' + (DISTRICTS[k - 1].last + 1) + ' (boss) to open') + '</small>' +
+          '<span class="dh-text"><b class="dh-name">' + d.name + '</b><small class="dh-intro">' + (open ? (newsDistrict() === d ? 'New: ' + d.levels.length + ' new stops! ' + (MECH[d.teaches] || d.intro) : 'New: ' + (MECH[d.teaches] || d.intro)) : LOCK_SVG + ' Win stop ' + (DISTRICTS[k - 1].last + 1) + ' (boss) to open') + '</small>' +
           '<span class="dh-bar"><i style="transform:scaleX(' + (won / d.levels.length).toFixed(3) + ')"></i></span></span>' +
           '<span class="dh-side"><span class="dh-stars" data-stars="' + stars + '" data-max="' + max + '">' + starSvg(true) + ' ' + stars + '/' + max + '</span>' + chip + '</span>' +
         '</header></section>';
@@ -361,8 +384,9 @@
       b.setAttribute('data-level', i + 1);
       b.style.left = p.x.toFixed(1) + 'px'; b.style.top = p.y.toFixed(1) + 'px';
       b.innerHTML = '<span class="stop-n">' + (locked ? LOCK_SVG : (i + 1)) + '</span>' + (locked ? '<small class="lvl-stars"></small>' : '<small class="lvl-stars" data-stars="' + stars + '">' + starIcons(stars) + '</small>') +
-        (scr ? SHUFFLE_SVG.replace('<svg', '<svg class="lvl-scr"') : '') + (keys ? '<i class="lvl-key">' + keySvg('gold') + '</i>' : '') + (boss ? '<b class="boss-tag">BOSS</b>' : '');
-      b.setAttribute('aria-label', 'Level ' + (i + 1) + ', ' + d.name + (boss ? ' boss lot' : '') + (scr ? ' (Scramble: any order)' : '') + (keys ? ' (keys and padlocks)' : '') + (locked ? ' (locked)' : ', ' + stars + ' of 3 stars') + (cheatOpen ? ', opened by test mode' : ''));
+        (scr ? SHUFFLE_SVG.replace('<svg', '<svg class="lvl-scr"') : '') + (keys ? '<i class="lvl-key">' + keySvg('gold') + '</i>' : '') + (boss ? '<b class="boss-tag">BOSS</b>' : '') + tierBadge(lv, 'stop');
+      if (tierOf(lv)) b.setAttribute('data-tier', tierOf(lv));
+      b.setAttribute('aria-label', 'Level ' + (i + 1) + ', ' + d.name + (boss ? ' boss lot' : '') + (tierOf(lv) ? ', ' + TIER_NAMES[tierOf(lv)].toLowerCase() : '') + (scr ? ' (Scramble: any order)' : '') + (keys ? ' (keys and padlocks)' : '') + (locked ? ' (locked)' : ', ' + stars + ' of 3 stars') + (cheatOpen ? ', opened by test mode' : ''));
       if (locked) b.disabled = true;
       b.addEventListener('click', function () { Sound.unlock(); goToStop(i); });
       layer.appendChild(b);
@@ -390,6 +414,15 @@
     if (!M.driving) placeBus(M.busNode !== null ? M.busNode : nodeOfLevel[cf], true);
     renderMapChrome();
   }
+  /** v9: a district added in an update that the player skipped past (open, no stars yet, but a later stop is won). */
+  function newsDistrict() {
+    for (var k = 0; k < DISTRICTS.length; k++) {
+      var d = DISTRICTS[k];
+      if (d.teaches !== 'mixed' || !districtOpen(k) || d.levels.some(function (id) { return progress.stars[id]; })) continue;
+      for (var j = d.last + 1; j < LEVELS.length; j++) if (progress.stars[LEVELS[j].id]) return d;
+    }
+    return null;
+  }
   /** Top bar, foot buttons and the title-screen route line. */
   function renderMapChrome() {
     var cf = firstUnsolved(), d = DISTRICTS[DIST_OF[cf]], total = 0, max = LEVELS.length * 3;
@@ -401,7 +434,8 @@
     var rc = readyChests(), cbtn = $('btn-map-chest');
     cbtn.hidden = !rc.length || testOn();
     cbtn.innerHTML = CHEST_SVG + ' ' + (rc.length > 1 ? rc.length + ' chests' : 'Chest') + ' to open!';
-    $('title-route').innerHTML = '<b>' + d.name + '</b> \u00b7 district ' + (d.k + 1) + ' of ' + DISTRICTS.length + ' \u00b7 stop ' + (cf + 1) + (rc.length && !testOn() ? '<br><span class="tr-chest">' + CHEST_SVG + ' ' + rc.length + ' chest' + (rc.length > 1 ? 's' : '') + ' to open on the map!</span>' : '');
+    $('title-route').innerHTML = '<b>' + d.name + '</b> \u00b7 district ' + (d.k + 1) + ' of ' + DISTRICTS.length + ' \u00b7 stop ' + (cf + 1) + (rc.length && !testOn() ? '<br><span class="tr-chest">' + CHEST_SVG + ' ' + rc.length + ' chest' + (rc.length > 1 ? 's' : '') + ' to open on the map!</span>' : '') +
+      (newsDistrict() ? '<br><span class="tr-news">New: ' + newsDistrict().name + ', ' + newsDistrict().levels.length + ' new stops!</span>' : '');
   }
   function drawBus(L, dir) {
     var p = pointAt(L), q = pointAt(L + (dir || 1) * 4), bus = $('map-bus');
@@ -756,6 +790,7 @@
     $('fly-layer').innerHTML = '';
     show('screen-game');
     $('hud-level').textContent = 'Level ' + (index + 1) + ' of ' + LEVELS.length;
+    $('hud-tier').innerHTML = tierBadge(level, 'hud');
     $('hud-par').textContent = level.par !== undefined ? level.par : '?';
     $('tip').textContent = level.tip || '';
     buildWord();
@@ -769,14 +804,27 @@
     if (game.scramble) {
       if (!progress.seen.scramble) showCoach();
       else showBanner();
-    } else hideBanner();
+    } else showIntro();
+  }
+
+  /* v9: a short level-intro banner (level, district, par and the difficulty tier) for route levels */
+  function showIntro() {
+    var b = $('banner'), lv = cur.level, d = DISTRICTS[DIST_OF[cur.index]];
+    b.className = 'banner intro';
+    b.innerHTML = '<div class="bn-title">Level ' + (cur.index + 1) + '</div><div class="bn-sub">' + (d ? d.name + ' &middot; ' : '') + 'Par ' + lv.par + '</div>' +
+      (tierOf(lv) ? '<div class="bn-tier">' + tierBadge(lv, 'banner') + '</div>' : '');
+    void b.offsetWidth; b.classList.add('show');
+    clearTimeout(showBanner._t);
+    showBanner._t = setTimeout(hideBanner, 1800);
   }
 
   /* ---------------- Scramble: start banner + first-time coach card ---------------- */
   function showBanner() {
     var b = $('banner');
+    b.className = 'banner';
     b.innerHTML = '<div class="bn-title">' + SHUFFLE_SVG + ' Scramble stop!</div><div class="bn-sub">Letters board in <b>ANY</b> order</div><div class="bn-letters">' +
-      cur.game.target.split('').map(function (ch, k) { return '<span style="animation-delay:' + (k * 60) + 'ms">' + ch + '</span>'; }).join('') + '</div>';
+      cur.game.target.split('').map(function (ch, k) { return '<span style="animation-delay:' + (k * 60) + 'ms">' + ch + '</span>'; }).join('') + '</div>' +
+      (tierOf(cur.level) ? '<div class="bn-tier">' + tierBadge(cur.level, 'banner') + '</div>' : '');
     b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
     clearTimeout(showBanner._t);
     showBanner._t = setTimeout(hideBanner, 2200);

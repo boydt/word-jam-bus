@@ -236,6 +236,13 @@ const NLEV = LVS.length;
 const SCR = LVS.map((l, i) => l.mode === 'scramble' ? i + 1 : 0).filter(Boolean);
 const KEYS = LVS.map((l, i) => l.cars.some(c => c.lock) ? i + 1 : 0).filter(Boolean);   // levels with padlocks
 const LAST_ID = LVS[NLEV - 1].id;
+// v9 inserted Main Street (10 normal levels) at stops 11-20: the v8 stops 11-28 (BUS ... SQUARE) moved up by 10.
+// OLD(n) maps a v8 stop number to today's, so the checks below keep testing the same lots.
+const OLD = n => n <= 10 ? n : n + 10;
+const AT = id => LVS.findIndex(l => l.id === id) + 1;
+if (AT('lv1-bus') !== OLD(11) || AT('sc1-pizza') !== OLD(12) || AT('dt4-square') !== OLD(28)) throw new Error('level order changed: update OLD()');
+const NORMAL = LVS.map((l, i) => l.tier === 'normal' ? i + 1 : 0).filter(Boolean);
+const MSFIRST = NORMAL[0];
 async function winAll(page, ctx, label) {
   for (let n = 1; n <= NLEV; n++) {
     await openLevel(page, n);
@@ -254,7 +261,7 @@ async function winAll(page, ctx, label) {
       sol.filter(m => m.which === 1).length + ' reverses), no boosters, 3 stars [' + (Date.now() - t0) + ' ms]');
   }
 }
-const v4save = extra => Object.assign({ v: 4, unlocked: 22, unlockedId: 'lv10-school', stars: {}, best: {}, sound: false, coins: 0, seen: { scramble: true } }, extra || {});
+const v4save = extra => Object.assign({ v: 4, unlocked: OLD(23) - 1, unlockedId: 'lv10-school', stars: {}, best: {}, sound: false, coins: 0, seen: { scramble: true } }, extra || {});
 async function buy(page, ctx, kind) {
   await tapEl(page, ctx, '#bst-' + kind); await page.waitForSelector('#ov-shop.show'); await page.waitForTimeout(350);
   await tapEl(page, ctx, '#btn-confirm'); await page.waitForTimeout(250);
@@ -307,6 +314,47 @@ async function mapCheck(page) {
   }).then(r => Object.assign(r, { ok: r.n > 0 && r.minH >= 44 && r.noH && r.head && r.play && r.cur }));
 }
 
+/* v9: difficulty tier badges (generated levels.json "difficulty"): on every map stop, in the level-intro banner and the HUD */
+const TIER_NAMES = ['', 'Very Easy', 'Easy', 'Normal', 'Hard', 'Super Hard'];
+const TIER_PICK = [1, 2, 3, 4, 5].map(t => LVS.findIndex(l => l.difficulty.tier === t && l.mode !== 'scramble') + 1);   // the first route level of each tier
+async function tierMapCheck(page, label) {
+  const r = await page.evaluate(() => {
+    const R = e => e.getBoundingClientRect(), hit = (a, b) => a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5;
+    const stops = [...document.querySelectorAll('.lvl.stop')];
+    return stops.map(b => {
+      const t = b.querySelector('.tier-stop'), tr = t ? R(t) : null;
+      const own = [...b.querySelectorAll('.lvl-stars:not(:empty), .boss-tag, .lvl-scr, .lvl-key')].map(R);
+      const others = stops.filter(o => o !== b).map(R);
+      return { n: +b.getAttribute('data-level'), tier: t ? +t.getAttribute('data-tier') : 0, stopTier: +b.getAttribute('data-tier'), pips: t ? t.querySelectorAll('.pip.on').length : -1, all: t ? t.querySelectorAll('.pip').length : -1,
+        w: tr ? tr.width : 0, h: tr ? tr.height : 0, ownHit: tr ? own.some(m => hit(tr, m)) : true, otherHit: tr ? others.some(m => hit(tr, m)) : true,
+        hidden: t ? t.getAttribute('aria-hidden') : null, aria: b.getAttribute('aria-label') || '', bg: t ? getComputedStyle(t).backgroundColor : '', vis: t ? getComputedStyle(t).visibility !== 'hidden' && +getComputedStyle(t).opacity > 0.5 : false };
+    });
+  });
+  const bad = r.filter(x => x.tier !== LVS[x.n - 1].difficulty.tier || x.stopTier !== x.tier || x.pips !== x.tier || x.all !== 5);
+  check(r.length === NLEV && !bad.length, label + ': every stop (' + r.length + ') shows its tier badge, matching levels.json, with 1-5 filled pips of 5' + (bad.length ? ' (bad: ' + bad.map(x => x.n).join(',') + ')' : ''));
+  const small = r.filter(x => x.w < 20 || x.h < 7 || !x.vis), crowd = r.filter(x => x.ownHit || x.otherHit);
+  check(!small.length && !crowd.length, label + ': badges are visible (' + Math.round(Math.min(...r.map(x => x.w))) + 'x' + Math.round(Math.min(...r.map(x => x.h))) + 'px min) and overlap no stars, BOSS, Scramble or key mark and no other stop' +
+    (crowd.length ? ' (crowded: ' + crowd.map(x => x.n).join(',') + ')' : ''));
+  const colours = {}; r.forEach(x => { colours[x.tier] = colours[x.tier] || x.bg; });
+  check(Object.keys(colours).length === 5 && new Set(Object.values(colours)).size === 5 && r.every(x => x.bg === colours[x.tier]), label + ': 5 tiers, 5 distinct badge colours (' + Object.keys(colours).map(k => TIER_NAMES[k] + ' ' + colours[k]).join(', ') + ')');
+  check(r.every(x => x.hidden === 'true' && x.aria.toLowerCase().indexOf(', ' + TIER_NAMES[x.tier].toLowerCase()) !== -1), label + ': screen readers hear the tier in each stop\'s label (e.g. "' + r[MSFIRST - 1].aria + '"); the pips are aria-hidden');
+}
+async function tierPlayCheck(page, n, label) {
+  await openLevel(page, n);
+  const want = LVS[n - 1].difficulty.tier;
+  const r = await page.evaluate(() => {
+    const R = e => e.getBoundingClientRect(), hit = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+    const h = document.querySelector('#hud-tier .tier'), bn = document.querySelector('#banner.show .tier'), hr = h && R(h), mid = R(document.querySelector('.hud-mid'));
+    return { hud: h ? +h.getAttribute('data-tier') : 0, hudPips: h ? h.querySelectorAll('.pip.on').length : -1, hudText: h ? h.textContent.trim() : '', hudAria: h ? h.getAttribute('aria-label') : '', hudRole: h ? h.getAttribute('role') : '',
+      hudIn: !!hr && hr.left >= mid.left - 1 && hr.right <= mid.right + 1 && hr.top >= 0 && hr.width >= 40 && hr.height >= 12,
+      hudFree: !!hr && ['#btn-menu', '#btn-undo', '#btn-restart', '#hud-level', '.hud-moves'].every(q => !hit(hr, R(document.querySelector(q)))),
+      banner: bn ? +bn.getAttribute('data-tier') : 0, bannerText: (document.getElementById('banner').textContent || '').trim(), bannerAria: bn ? bn.getAttribute('aria-label') : '', live: document.getElementById('banner').getAttribute('aria-live') };
+  });
+  const name = TIER_NAMES[want], aria = 'Difficulty: ' + name + ' (' + want + ' of 5)';
+  check(r.banner === want && r.bannerAria === aria && r.live === 'polite' && /Par \d+/.test(r.bannerText) && r.bannerText.indexOf(name) !== -1, label + ' L' + n + ' (' + LVS[n - 1].id + '): the start banner shows its tier "' + name + '" (aria "' + r.bannerAria + '"; banner "' + r.bannerText + '")');
+  check(r.hud === want && r.hudPips === want && r.hudText === name && r.hudAria === aria && r.hudRole === 'img' && r.hudIn && r.hudFree, label + ' L' + n + ': the play header shows the "' + name + '" badge (' + want + ' pips), inside the header, clear of the buttons and text');
+}
+
 (async () => {
   const browser = await chromium.launch();
   const LV = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'levels', 'levels.json'), 'utf8')).levels;
@@ -332,6 +380,7 @@ async function mapCheck(page) {
   await tapEl(p, T, '#btn-play'); await p.waitForSelector('#screen-map.active'); await p.waitForTimeout(500);
   let sel = await mapCheck(p);
   check(sel.ok, 'Play opens the city map: ' + sel.n + ' stops (>= 44px: ' + Math.round(sel.minW) + 'x' + Math.round(sel.minH) + '), no sideways overflow, district header at the top, stop 1 in view');
+  await tierMapCheck(p, 'phone 390x844 map (fresh save)');
   await tapEl(p, T, '#btn-map-play'); await p.waitForSelector('#screen-game.active'); await p.waitForTimeout(700);
   check((await p.textContent('#hud-level')).trim() === 'Level 1 of ' + NLEV, 'map "Play stop 1" opens "Level 1 of ' + NLEV + '"');
   check(await p.locator('#word .tile .seat-n').count() === 3 && (await p.locator('#word .tile.next').count()) === 1 &&
@@ -372,7 +421,7 @@ async function mapCheck(page) {
 
   // --- Scramble: first-time coach card, banner, purple bus, unnumbered seats, any-order boarding ---
   await seeded(p, v4save({ coins: (await S(p)).coins, seen: {} }));
-  await openLevel(p, 12, true);
+  await openLevel(p, OLD(12), true);
   check(await p.locator('#ov-coach.show').count() === 1, 'first Scramble level: one-time coach card "Scramble stop!" shows');
   await shot(p, 'v4-01-phone-first-scramble-tip.png');
   await tapEl(p, T, '#btn-coach'); await p.waitForTimeout(450);
@@ -399,13 +448,13 @@ async function mapCheck(page) {
   await p.waitForSelector('#ov-win.show', { timeout: 5000 }).catch(() => {});
   check(outOfOrder, 'Scramble: a letter boarded a later seat while an earlier seat was still open (any order)');
   check(junked && (await S(p)).bay.every(u => 'PIZA'.indexOf(u) === -1 || u === 'Z'), 'Scramble: only wrong letters / extra copies went to the junk bay');
-  check(await p.locator('#ov-win.show').count() === 1 && await p.getAttribute('#win-stars', 'data-stars') === '3', 'Scramble level 12 won at par (' + sol12.length + ') with 3 stars');
-  await openLevel(p, 12, true);
+  check(await p.locator('#ov-win.show').count() === 1 && await p.getAttribute('#win-stars', 'data-stars') === '3', 'Scramble level ' + OLD(12) + ' (PIZZA) won at par (' + sol12.length + ') with 3 stars');
+  await openLevel(p, OLD(12), true);
   check(await p.locator('#ov-coach.show').count() === 0 && await p.locator('#banner.show').count() === 1, 'second visit: no coach card, just the start banner');
 
   // --- in-order level: numbered seats with the next seat glowing ---
   let seat13 = null, lv13 = 0;
-  for (const n of [14, 11, 18, 19]) {
+  for (const n of [14, 11, 18, 19].map(OLD)) {
     await openLevel(p, n);
     const sol13 = await p.evaluate(() => window.WJB.solution()), wl = await p.evaluate(() => window.WJB.session.game.target.length);
     for (const m of sol13) { await inputMove(p, T, m.car, m.which, m.which ? 'swipe' : 'tap'); await settle(p); const q = await S(p); if (q.idx >= wl || q.ended) break; if (q.idx >= 2) { lv13 = n; break; } }
@@ -414,7 +463,7 @@ async function mapCheck(page) {
   check(seat13 && seat13.nums === range(1, seat13.len).join(',') && seat13.n === 1 && +seat13.next === seat13.idx && seat13.glow !== 'none', 'in-order level ' + lv13 + ': seats numbered ' + (seat13 && seat13.nums) + '; exactly one seat glows, the next one (' + (seat13 && seat13.idx + 1) + ')');
   await shot(p, 'v4-04-phone-route-numbered-seats.png');
   // bus art: hood + bumper at the front (right, the driving direction), tailpipe at the back
-  for (const [n, name] of [[11, 'v6-bus-closeup.png'], [12, 'v6-bus-scramble-closeup.png']]) {
+  for (const [n, name] of [[OLD(11), 'v6-bus-closeup.png'], [OLD(12), 'v6-bus-scramble-closeup.png']]) {
     await openLevel(p, n);
     const art = await p.evaluate(() => { const R = q => document.querySelector(q).getBoundingClientRect(), b = R('#bus'), h = R('#bus .hood'), u = R('#bus .bumper'), t = R('#bus .pipe');
       return { front: h.left > b.left + b.width / 2 && u.right >= h.right - 1 && h.height < b.height && h.bottom >= b.bottom - 1, back: t.right <= b.left + 3, hoodBg: getComputedStyle(document.querySelector('#bus .hood')).backgroundColor, busBg: getComputedStyle(document.getElementById('bus')).backgroundColor, puff: document.querySelectorAll('#bus .puff').length,
@@ -423,13 +472,28 @@ async function mapCheck(page) {
     await busShot(p, name);
   }
 
+  // --- v9 difficulty tiers: map (Main Street current), start banner and HUD for one level of each tier ---
+  console.log('\n# Difficulty tiers (phone 390x844)');
+  await seeded(p, v4save({ unlocked: MSFIRST + 3, unlockedId: LVS[MSFIRST + 3].id, stars: Object.fromEntries(LVS.slice(0, MSFIRST + 3).map(l => [l.id, 3])), chests: { school: true, suburbs: true } }));
+  await tapEl(p, T, '#btn-play'); await p.waitForSelector('#screen-map.active'); await p.waitForTimeout(900);
+  await tierMapCheck(p, 'phone 390x844 map (on Main Street)');
+  check(/New: Many ways to win/.test(await p.textContent('.th-mainst .dh-intro')), 'Main Street header: "New: Many ways to win"');
+  await shot(p, 'v9-map-tier-badges-390x844.png');
+  await seeded(p, v4save({ unlocked: NLEV - 1, unlockedId: LAST_ID }));
+  for (const n of TIER_PICK) await tierPlayCheck(p, n, 'phone 390x844');
+  await openLevel(p, NORMAL[4]); await p.waitForTimeout(100);
+  await shot(p, 'v9-start-banner-tier-390x844.png');
+  await p.waitForTimeout(2000);
+  check(await p.locator('#banner.show').count() === 0, 'the level-intro banner hides by itself');
+  await shot(p, 'v9-play-header-tier-390x844.png');
+
   // --- boosters (coins seeded) ---
   console.log('\n# Boosters');
   await seeded(p, v4save({ coins: 1000 }));
-  await openLevel(p, 13);
+  await openLevel(p, OLD(13));
   const prices = await p.evaluate(() => ['tow', 'bay', 'nudge', 'flip'].map(k => document.querySelector('#bst-' + k + ' .bst-price').textContent.trim()).join(','));
   check((await p.textContent('#coin-count')).trim() === '1000' && prices === '150,100,60,120', 'booster bar shows the balance (1000) and Tow 150, Bay +1 100, Nudge 60, Flip 120 (' + prices + ')');
-  await barCheck(p, 'phone 390x844 L13');
+  await barCheck(p, 'phone 390x844 L' + OLD(13));
   await shot(p, 'v6-play-booster-bar-390x844.png');
   await tapEl(p, T, '#bst-tow'); await p.waitForSelector('#ov-shop.show'); await p.waitForTimeout(300);
   check(/Spend 150 coins on Tow truck\?/.test(await p.textContent('#confirm-title')), 'tapping Tow in the bar goes straight to "Spend 150 coins on Tow truck?"');
@@ -465,7 +529,7 @@ async function mapCheck(page) {
   cs = await S(p);
   check(cs.cap === 4 && cs.coins === 900 && cs.moves === pre.moves && await p.locator('#bay .slot').count() === 4 && await p.locator('#bay .slot.plus').count() === 1 && /\/4\)/.test(await p.textContent('#bay-count')),
     'Bay +1: a 4th (gold) bay spot, 100 coins, no move');
-  await openLevel(p, 13); // fresh lot, then fill the bay past 3 with the extra spot
+  await openLevel(p, OLD(13)); // fresh lot, then fill the bay past 3 with the extra spot
   await buy(p, T, 'bay');
   const four = await p.evaluate(() => { // a line that parks 4 letters (needs the 4th spot)
     const s = window.WJB.session, E = window.WJBEngine, g = s.game, q = [{ st: s.state, path: [] }], seen = new Set([E.stateKey(s.state)]);
@@ -477,13 +541,13 @@ async function mapCheck(page) {
   cs = await S(p);
   check(four && cs.bay.length === 4 && !cs.ended, 'the extra spot really holds a 4th parked letter');
   await shot(p, 'v4-08-phone-bay-plus-one.png');
-  await openLevel(p, 13);
+  await openLevel(p, OLD(13));
   await buy(p, T, 'bay');
   await tapEl(p, T, '#btn-undo'); await settle(p);
   cs = await S(p);
   check(cs.cap === 3 && await p.locator('#bay .slot').count() === 3 && cs.used.bay === 0, 'Undo after Bay +1: back to 3 spots, coins refunded (' + cs.coins + ')');
   // Nudge (swipe back one cell), with the preview mid-swipe
-  await openLevel(p, 13);
+  await openLevel(p, OLD(13));
   await buy(p, T, 'nudge');
   const nud = await p.evaluate(() => { const s = window.WJB.session, E = window.WJBEngine, g = s.game, grid = E.buildGrid(g, s.state.pos);
     for (let i = 0; i < g.n; i++) { if (s.state.pos[i] < 0) continue; const to = E.nudgeTo(g, s.state, i, 1), pr = E.probe(g, grid, s.state.pos, i, 1); if (to !== null && pr.kind === 'slide' && pr.dist >= 2) return i; }
@@ -499,7 +563,7 @@ async function mapCheck(page) {
   check(cs.pos[nud] === nb.pos[nud] && cs.coins === nb.coins, 'Undo after the nudge: car back, 60 coins refunded');
   // booster win: at most 2 stars, no par bonus, best moves not recorded
   await seeded(p, v4save({ coins: 500 }));
-  await openLevel(p, 11);
+  await openLevel(p, OLD(11));
   await buy(p, T, 'tow');
   const tw = await p.evaluate(() => { const s = window.WJB.session, E = window.WJBEngine; for (let i = 0; i < s.game.n; i++) if (s.state.pos[i] >= 0 && E.towable(s.game, s.state, i)) return i; return -1; });
   await inputMove(p, T, tw, 0, 'tap'); await settle(p);
@@ -507,18 +571,18 @@ async function mapCheck(page) {
   await p.waitForSelector('#ov-win.show', { timeout: 6000 }).catch(() => {});
   cs = await S(p);
   const st11 = await p.getAttribute('#win-stars', 'data-stars'), stored11 = await p.evaluate(() => JSON.parse(localStorage.getItem('wordJamBus.progress.v1')));
-  check(await p.locator('#ov-win.show').count() === 1 && st11 === '2' && /Booster used/.test(await p.textContent('#win-detail')) && cs.moves <= LV[10].par,
+  check(await p.locator('#ov-win.show').count() === 1 && st11 === '2' && /Booster used/.test(await p.textContent('#win-detail')) && cs.moves <= LV[OLD(11) - 1].par,
     'win with a booster at/under par (' + cs.moves + ' moves): capped at 2 stars, "Booster used"');
   check(cs.coins === 500 - 150 + 3 + 20 && stored11.best['lv1-bus'] === undefined, 'booster win: fares 3 + first clear 20, no par bonus, best moves not recorded');
   // lose after a booster: coins stay spent, nothing banked
   await seeded(p, v4save({ coins: 500 }));
-  await openLevel(p, 13);
+  await openLevel(p, OLD(13));
   await buy(p, T, 'bay');
   const lb = await pathTo(p, 'lose');
   if (lb) { await playPath(p, T, lb); await p.waitForSelector('#ov-lose.show', { timeout: 5000 }).catch(() => {}); }
   check(lb && await p.locator('#ov-lose.show').count() === 1 && (await S(p)).coins === 400 && (await S(p)).bay.length === 4, 'Bay +1 then a 5th junk letter: "Bay full!" loss, coins stay spent (400)');
   // dead end -> boosters button in the banner
-  await openLevel(p, 13);
+  await openLevel(p, OLD(13));
   const dp = await pathTo(p, 'dead');
   if (dp) await playPath(p, T, dp);
   await p.waitForSelector('#deadend.show', { timeout: 15000 }).catch(() => {});
@@ -531,20 +595,20 @@ async function mapCheck(page) {
   const rescued = await p.evaluate(() => window.WJBEngine.solve(window.WJB.session.game, window.WJB.session.state, { maxStates: 2000000 }).par !== null);
   cs = await S(p);
   check(cs.dead === !rescued && (await p.locator('#deadend.show').count() === 1) === !rescued, 'after Bay +1 in a dead end the dead-end check re-ran: ' + (rescued ? 'rescued, banner gone' : 'still dead, banner stays'));
-  await layoutOk(p, 'phone L13 with boosters');
+  await layoutOk(p, 'phone L' + OLD(13) + ' with boosters');
 
-  // --- Bay Word on level 17 (JUNGLE): junk letters spell a word, clear, pay 10 ---
+  // --- Bay Word on JUNGLE (v8 level 17): junk letters spell a word, clear, pay 10 ---
   // --- booster bar states: red price when too poor, Bay +1 "Used" ---
   console.log('\n# Booster bar states + Flip');
   await seeded(p, v4save({ coins: 80 }));
-  await openLevel(p, 13);
+  await openLevel(p, OLD(13));
   const poor = await p.evaluate(() => ['tow', 'bay', 'nudge', 'flip'].map(k => document.getElementById('bst-' + k).classList.contains('poor') ? 1 : 0).join(''));
   const red = await p.evaluate(() => getComputedStyle(document.querySelector('#bst-tow .bst-price')).color);
   check(poor === '1101' && red === 'rgb(224, 49, 49)', 'with 80 coins: Tow, Bay +1 and Flip show their price in red, Nudge (60) does not (' + poor + ', ' + red + ')');
   await tapEl(p, T, '#bst-tow'); await p.waitForTimeout(350);
   check(await p.locator('#ov-shop.show').count() === 0 && (await S(p)).coins === 80 && /Need 150 coins/.test(await p.textContent('#toast')), 'tapping an unaffordable booster: no confirm, "Need 150 coins" toast, nothing spent');
   await seeded(p, v4save({ coins: 1000 }));
-  await openLevel(p, 13);
+  await openLevel(p, OLD(13));
   await buy(p, T, 'bay');
   check(await p.locator('#bst-bay.off').count() === 1 && (await p.textContent('#bst-bay .bst-price')).trim() === 'Used', 'after Bay +1 its button greys out and reads "Used"');
   await tapEl(p, T, '#bst-bay'); await p.waitForTimeout(300);
@@ -586,7 +650,7 @@ async function mapCheck(page) {
   const fu = await p.evaluate(id => ({ game: window.WJB.session.game.cars[id].dir, el: document.querySelector('.car[data-id="' + id + '"]').getAttribute('data-dir') }), fx.car);
   check(fu.game === fx.dir && fu.el === fx.dir && fa.coins === fb.coins && fa.used.flip === 0 && fa.pos[fx.car] === fb.pos[fx.car] && fa.moves === fb.moves, 'Undo x2: the car is back and faces ' + fx.dir + ' again; Flip\'s 120 coins refunded (' + fa.coins + ')');
   // a win that used Flip is capped at 2 stars
-  await openLevel(p, 11);
+  await openLevel(p, OLD(11));
   await buy(p, T, 'flip');
   const fc = await p.evaluate(() => { const s = window.WJB.session, E = window.WJBEngine; let best = -1, bp = 99; for (let i = 0; i < s.game.n; i++) { if (s.state.pos[i] < 0) continue; const g2 = E.flipCar(s.game, i), st = E.applyBooster(s.game, s.state, 'flip', i), q = E.solve(g2, st).par; if (q !== null && q < bp) { bp = q; best = i; } } return best; });
   await inputMove(p, T, fc, 0, 'tap'); await p.waitForTimeout(600); await settle(p);
@@ -597,7 +661,7 @@ async function mapCheck(page) {
   // --- v6b: the Flip must stay flipped ON SCREEN (the graphic used to turn, then snap back to the old direction) ---
   console.log('\n# Flip: rendered orientation (graphic, not just state)');
   await seeded(p, v4save({ coins: 100000 }));
-  await openLevel(p, 13);
+  await openLevel(p, OLD(13));
   const oc = fx ? fx.car : 0, o0 = await orientOf(p, oc);
   check(orientOk(o0) && (await orientBad(p)).length === 0, 'before Flip: every car\'s graphic matches its direction (' + ostr(o0) + ')');
   await flipVia(p, T, oc);
@@ -639,11 +703,11 @@ async function mapCheck(page) {
   check(orientOk(o3) && o3.arrow === o0.arrow && (await orientBad(p)).length === 0, 'after Restart: original look (' + ostr(o3) + ')');
   // flip, then move on to the next level: a fresh lot, every car drawn the way it faces
   await flipVia(p, T, oc);
-  await openLevel(p, 14);
+  await openLevel(p, OLD(14));
   check((await orientBad(p)).length === 0, 'next level after a Flip: every car\'s graphic matches its direction');
   // every kind of car: horizontal / vertical, 1-, 2-, 3-cell trucks, chunk trucks, the taxi
   const kinds = {};
-  for (const n of [13, 15, 16, 20, 21]) { // between them: 1/2/3-cell both ways, the TH chunk truck (20) and the taxi (21)
+  for (const n of [13, 15, 16, 20, 21].map(OLD)) { // between them: 1/2/3-cell both ways, the TH chunk truck (20) and the taxi (21)
     await openLevel(p, n);
     const list = await p.evaluate(() => { const s = window.WJB.session; return s.game.cars.map((c, i) => ({ i: i, k: (c.l === '?' ? 'taxi' : c.l.length > 1 ? 'chunk' : c.len + '-cell') + (c.horiz ? ' horizontal' : ' vertical'), on: s.state.pos[i] >= 0 })); });
     const todo = list.filter(c => c.on && !kinds[c.k]);
@@ -666,7 +730,7 @@ async function mapCheck(page) {
     const rc = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2, reducedMotion: 'reduce' });
     const rp = await rc.newPage(); watch(rp, 'reduced-motion');
     await seeded(rp, v4save({ coins: 1000 }));
-    await openLevel(rp, 13);
+    await openLevel(rp, OLD(13));
     const r0 = await orientOf(rp, oc);
     await flipVia(rp, T, oc, 60);
     const r1 = await orientOf(rp, oc);
@@ -678,10 +742,10 @@ async function mapCheck(page) {
 
   console.log('\n# Bay Word');
   await seeded(p, v4save({ coins: 0 }));
-  await openLevel(p, 17);
-  check((await p.textContent('#tip')).includes('Bay Word'), 'level 17 tip introduces the Bay Word');
+  await openLevel(p, OLD(17));
+  check((await p.textContent('#tip')).includes('Bay Word'), 'level ' + OLD(17) + ' (JUNGLE) tip introduces the Bay Word');
   const bw = await pathTo(p, 'bayword');
-  check(!!bw, 'found a line to a Bay Word on level 17 (' + (bw ? bw.length : '-') + ' moves)');
+  check(!!bw, 'found a line to a Bay Word on level ' + OLD(17) + ' (' + (bw ? bw.length : '-') + ' moves)');
   await playPath(p, T, bw.slice(0, -1));
   const bwBefore = await S(p);
   const lastM = bw[bw.length - 1];
@@ -820,32 +884,39 @@ async function mapCheck(page) {
 
   /* ----------------------- PROGRESS MIGRATION ----------------------- */
   console.log('\n# Saved-progress migration (seeded localStorage)');
-  const v3ids = LV.slice(0, 23).filter(l => l.mode !== 'scramble').map(l => l.id);   // the 20 levels a v3 save knew
+  const v8ids = LV.filter(l => l.tier !== 'normal').map(l => l.id);                   // the 28 levels a v8 save knew (no Main Street)
+  const v3ids = LV.filter(l => l.tier !== 'normal').slice(0, 23).filter(l => l.mode !== 'scramble').map(l => l.id);   // the 20 levels a v3 save knew
+  const MS = NORMAL, msUnplayed = t => MS.every(n => t.open.includes(n) && t.stars[n - 1] === '\u2606\u2606\u2606');
   const starsFor = ids => { const o = {}; ids.forEach(id => { o[id] = 3; }); return o; };
   // A: v3 player who beat the 10 starters + BUS, CAR, PLANET; v3 index 13 = APPLE
   t = await seeded(p, { v: 3, unlocked: 13, stars: starsFor(v3ids.slice(0, 13)), best: { 'lv3-planet': 25 }, sound: true });
-  check(same(t.open, range(1, 15)), 'v3 save (beat 1-13 of the old 20): levels 1-15 open = up to APPLE, incl. Scramble 12 (got ' + t.open.join(',') + ')');
-  check(t.stars[13] === '\u2605\u2605\u2605' && t.stars[11] === '\u2606\u2606\u2606' && t.current === 15 && t.play === 'Continue', 'stars kept by id (PLANET now level 14); Continue = level 15 (APPLE); Scramble 12 open, unplayed');
-  check(t.stored.v === 4 && t.stored.unlocked === 14 && t.stored.unlockedId === 'lv4-apple' && t.stored.coins === 0 && t.stored.best['lv3-planet'] === 25, 'stored as v4: unlocked 14 / unlockedId lv4-apple, coins 0, best moves kept');
+  check(same(t.open, range(1, OLD(15))), 'v3 save (beat 1-13 of the old 20): levels 1-' + OLD(15) + ' open = up to APPLE, incl. Main Street and Scramble ' + OLD(12) + ' (got ' + t.open.join(',') + ')');
+  check(t.stars[OLD(14) - 1] === '\u2605\u2605\u2605' && t.stars[OLD(12) - 1] === '\u2606\u2606\u2606' && t.current === OLD(15) && t.play === 'Continue', 'stars kept by id (PLANET now level ' + OLD(14) + '); Continue = level ' + OLD(15) + ' (APPLE); Scramble ' + OLD(12) + ' open, unplayed');
+  check(msUnplayed(t) && /New: Main Street, 10 new stops!/.test(await p.textContent('#title-route')), 'v9: Main Street (stops ' + MS[0] + '-' + MS[MS.length - 1] + ') is open but not forced, unplayed; the title says "New: Main Street, 10 new stops!"');
+  check(t.stored.v === 4 && t.stored.unlocked === OLD(15) - 1 && t.stored.unlockedId === 'lv4-apple' && t.stored.coins === 0 && t.stored.best['lv3-planet'] === 25, 'stored as v4: unlocked ' + (OLD(15) - 1) + ' / unlockedId lv4-apple, coins 0, best moves kept');
   t = await seeded(p, await p.evaluate(() => JSON.parse(localStorage.getItem('wordJamBus.progress.v1'))));
-  check(same(t.open, range(1, 15)), 'reloading a migrated save does not shift it again');
+  check(same(t.open, range(1, OLD(15))), 'reloading a migrated save does not shift it again');
   // B: v3 player who beat up to BUS: next is the new Scramble level 12
   t = await seeded(p, { v: 3, unlocked: 11, stars: starsFor(v3ids.slice(0, 11)), best: {}, sound: true });
-  check(same(t.open, range(1, 13)) && t.current === 12, 'v3 save that beat BUS: levels 1-13 open, Continue = the new Scramble level 12');
+  check(same(t.open, range(1, OLD(13))) && t.current === OLD(12) && msUnplayed(t), 'v3 save that beat BUS: levels 1-' + OLD(13) + ' open (Main Street too), Continue = the Scramble level ' + OLD(12));
   // C: v3 player who finished all 20
   t = await seeded(p, { v: 3, unlocked: 19, stars: starsFor(v3ids), best: {}, sound: true });
   check(same(t.open, range(1, KEYS[0])) && t.current === KEYS[0], 'v3 save with all 20 beaten: the old 23 open plus the first new level, Continue = level ' + KEYS[0] + ' (the first key level; got ' + t.open.length + ' open, Continue ' + t.current + ')');
   // F2: a v4 save that finished the old last level (lv10-school, then the end of the list) gets the first new level
-  t = await seeded(p, v4save({ unlocked: 22, unlockedId: 'lv10-school', stars: starsFor(LVS.slice(0, 23).map(l => l.id)) }));
+  t = await seeded(p, v4save({ unlocked: 22, unlockedId: 'lv10-school', stars: starsFor(v8ids.slice(0, 23)) }));
   check(same(t.open, range(1, KEYS[0])) && t.current === KEYS[0] && t.stored.unlockedId === LVS[KEYS[0] - 1].id, 'v4 save that beat all 23 old levels: level ' + KEYS[0] + ' (new) opens and is Continue; migrated by id (' + t.stored.unlockedId + ')');
-  t = await seeded(p, v4save({ unlocked: 22, unlockedId: 'lv10-school', stars: starsFor(LVS.slice(0, 22).map(l => l.id)) }));
-  check(same(t.open, range(1, 23)) && t.current === 23, 'v4 save that has NOT beaten level 23 yet: still stops at 23');
+  t = await seeded(p, v4save({ unlocked: 22, unlockedId: 'lv10-school', stars: starsFor(v8ids.slice(0, 22)) }));
+  check(same(t.open, range(1, OLD(23))) && t.current === OLD(23), 'v4 save that has NOT beaten SCHOOL (now ' + OLD(23) + ') yet: still stops at ' + OLD(23));
+  // G (v9): a v8 save that stopped at BUS (unlockedId lv1-bus): Continue goes to Main Street stop 11
+  t = await seeded(p, v4save({ unlocked: 10, unlockedId: 'lv1-bus', stars: starsFor(v8ids.slice(0, 10)) }));
+  check(same(t.open, range(1, AT('lv1-bus'))) && t.current === MS[0] && t.stored.unlockedId === 'lv1-bus' && !/new stops/.test(await p.textContent('#title-route')),
+    'v8 save waiting at BUS: stops 1-' + AT('lv1-bus') + ' open (BUS stays open), Continue = Main Street stop ' + MS[0] + ' (got ' + t.current + '); no "new stops" hint needed');
   // D: v3 starter-only player
   t = await seeded(p, { v: 3, unlocked: 2, stars: { 'st1-cat': 3, 'st2-dog': 3 }, best: {}, sound: true });
   check(same(t.open, [1, 2, 3]) && t.current === 3, 'v3 save (beat starters 1-2): levels 1-3 open, Continue = level 3');
   // E: v2 save (no version): beat BUS, CAR, PLANET
   t = await seeded(p, { unlocked: 3, stars: { 'lv1-bus': 3, 'lv2-car': 2, 'lv3-planet': 1 }, best: {}, sound: true });
-  check(same(t.open, range(1, 15)) && t.current === 15, 'v2 save (beat BUS, CAR, PLANET): levels 1-15 open, Continue = APPLE (15)');
+  check(same(t.open, range(1, OLD(15))) && t.current === OLD(15) && msUnplayed(t), 'v2 save (beat BUS, CAR, PLANET): levels 1-' + OLD(15) + ' open, Continue = APPLE (' + OLD(15) + '), Main Street open and unplayed');
   // F: v4 save keeps coins and the seen flag
   t = await seeded(p, v4save({ unlocked: 5, coins: 321, stars: starsFor(v3ids.slice(0, 5)), unlockedId: 'st6-milk', seen: {} }));
   check(same(t.open, range(1, 6)) && t.stored.coins === 321 && (await p.textContent('#title-coins')).trim() === '321', 'v4 save: coins (321) and progress load unchanged');
@@ -879,9 +950,9 @@ async function mapCheck(page) {
   sel = await mapCheck(p);
   check(sel.ok && await p.locator('.lvl.stop:not([disabled])').count() === NLEV, 'city map with unlock-all: all ' + NLEV + ' stops open, still fits sideways');
   // a test-opened level: playable, but off the record (the bus drives there first)
-  await p.locator('.lvl[data-level="12"]').scrollIntoViewIfNeeded();
-  await tapEl(p, T, '.lvl[data-level="12"]'); await p.waitForSelector('#screen-game.active', { timeout: 5000 }); await p.waitForTimeout(500);
-  check(await p.locator('#ov-coach.show').count() === 1 && await p.locator('.hud-mid .test-badge').isVisible(), 'test-opened level 12 starts (Scramble tip shows); TEST MODE tag in the HUD');
+  await p.locator('.lvl[data-level="' + OLD(12) + '"]').scrollIntoViewIfNeeded();
+  await tapEl(p, T, '.lvl[data-level="' + OLD(12) + '"]'); await p.waitForSelector('#screen-game.active', { timeout: 5000 }); await p.waitForTimeout(500);
+  check(await p.locator('#ov-coach.show').count() === 1 && await p.locator('.hud-mid .test-badge').isVisible(), 'test-opened level ' + OLD(12) + ' starts (Scramble tip shows); TEST MODE tag in the HUD');
   await tapEl(p, T, '#btn-coach'); await p.waitForTimeout(300);
   await playPath(p, T, await p.evaluate(() => window.WJB.solution()));
   await p.waitForSelector('#ov-win.show', { timeout: 8000 }).catch(() => {});
@@ -982,14 +1053,19 @@ async function mapCheck(page) {
   await tapEl(sp, ST, '#btn-play'); await sp.waitForSelector('#screen-map.active'); await sp.waitForTimeout(500);
   sel = await mapCheck(sp);
   check(sel.ok, '375x667: city map stops >= 44px (' + Math.round(sel.minW) + 'x' + Math.round(sel.minH) + '), no sideways overflow, header + Play on screen, current stop in view');
+  await tierMapCheck(sp, '375x667 map');
+  await shot(sp, 'v9-map-tier-badges-375x667.png');
   await seeded(sp, v4save({ coins: 400, stars: starsFor(v3ids.slice(0, 12)), unlocked: NLEV - 1, unlockedId: LAST_ID }));
-  for (const n of [17, 22, 23].concat(KEYS)) {
+  for (const n of [17, 22, 23].map(OLD).concat(KEYS)) {
     await openLevel(sp, n);
     const r = await layoutOk(sp, '375x667 L' + n);
-    if (n === 23) await shot(sp, 'v4-13-small-phone-375x667-level23.png');
+    if (n === OLD(23)) await shot(sp, 'v4-13-small-phone-375x667-level23.png');
     check(r.minCar >= 34, '375x667 L' + n + ': cars are >= 34px targets (' + Math.round(r.minCar) + 'px)');
   }
-  for (const n of [22, 23]) { await openLevel(sp, n); await barCheck(sp, '375x667 L' + n); }
+  for (const n of [22, 23].map(OLD)) { await openLevel(sp, n); await barCheck(sp, '375x667 L' + n); }
+  for (const n of TIER_PICK) await tierPlayCheck(sp, n, '375x667');
+  await openLevel(sp, OLD(23)); await sp.waitForTimeout(2000);
+  await shot(sp, 'v9-play-header-tier-375x667.png');
   await shot(sp, 'v6-play-booster-bar-375x667.png');
   await tapEl(sp, ST, '#bst-flip'); await sp.waitForSelector('#ov-shop.show'); await sp.waitForTimeout(300);
   check(await sp.evaluate(() => { const r = document.querySelector('.shop-card').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }), '375x667: booster confirm sheet fits on screen');
@@ -1013,6 +1089,7 @@ async function mapCheck(page) {
   await d.click('#btn-play'); await d.waitForSelector('#screen-map.active'); await d.waitForTimeout(400);
   sel = await mapCheck(d);
   check(sel.ok && t.open.length === 1, 'desktop city map: ' + sel.n + ' stops, only stop 1 open, header + Play on screen');
+  await tierMapCheck(d, 'desktop 1280x800 map');
   await d.click('#btn-map-play'); await d.waitForSelector('#screen-game.active'); await d.waitForTimeout(750);
   await layoutOk(d, 'desktop L1');
   await openLevel(d, 3);
@@ -1039,11 +1116,14 @@ async function mapCheck(page) {
   await winAll(d, M, 'desktop');
   t = await seeded(d, await d.evaluate(() => JSON.parse(localStorage.getItem('wordJamBus.progress.v1'))));
   check(same(t.open, range(1, NLEV)) && t.stars.every(x => x === '\u2605\u2605\u2605'), 'desktop: after winning all ' + NLEV + ' every stop is open with 3 stars');
-  await openLevel(d, 22);
+  for (const n of TIER_PICK) await tierPlayCheck(d, n, 'desktop 1280x800');
+  await openLevel(d, OLD(23)); await d.waitForTimeout(100);
+  await shot(d, 'v9-start-banner-tier-desktop.png');
+  await openLevel(d, OLD(22));
   const sol22 = await d.evaluate(() => window.WJB.solution());
   for (const m of sol22.slice(0, 6)) { await inputMove(d, M, m.car, m.which, m.which === 1 ? 'drag' : 'click'); await settle(d); }
   await shot(d, 'v4-16-desktop-scramble-midplay.png');
-  await barCheck(d, 'desktop L22');
+  await barCheck(d, 'desktop L' + OLD(22));
   await shot(d, 'v6-play-booster-bar-desktop.png');
   await d.click('#bst-nudge'); await d.waitForSelector('#ov-shop.show');
   await shot(d, 'v4-17-desktop-booster-confirm.png');
@@ -1055,7 +1135,7 @@ async function mapCheck(page) {
   check(dna.pos[dn] === dnb.pos[dn] + (await d.evaluate(id => window.WJB.session.game.cars[id].sign, dn)) && dna.coins === dnb.coins - 60, 'desktop: a click nudges a car exactly one cell forward (60 coins)');
   // v6b: desktop Flip keeps its new look too (mouse)
   await seeded(d, v4save({ coins: 1000 }));
-  await openLevel(d, 13);
+  await openLevel(d, OLD(13));
   const dq0 = await orientOf(d, 0);
   await flipVia(d, M, 0);
   const dq1 = await orientOf(d, 0);

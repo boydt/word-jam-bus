@@ -1,4 +1,4 @@
-// Flip orientation check (v6b): flips level-13 car 0 at phone 390x844 (touch) and desktop 1280x800 (mouse) and measures the
+// Flip orientation check (v6b): flips level-23 (CAR, level 13 before v9) car 0 at phone 390x844 (touch) and desktop 1280x800 (mouse) and measures the
 // RENDERED direction of its nose arrow, headlights, windshield and tail lights before, mid-turn, settled, and after Undo.
 // Usage: node tests/flip-orient.js [baseURL, default http://127.0.0.1:8765/index.html] [screenshot prefix, or - for none]
 const { chromium } = require('playwright');
@@ -15,7 +15,7 @@ const ORIENT = id => { const el = document.querySelector('.car[data-id="' + id +
     const c = await b.newContext(mode === 'phone' ? { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 } : { viewport: { width: 1280, height: 800 } });
     const p = await c.newPage(), errs = []; p.on('pageerror', e => errs.push(String(e))); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
     await p.goto(BASE); await p.evaluate(() => localStorage.setItem('wordJamBus.progress.v1', JSON.stringify({ v: 4, unlocked: 22, unlockedId: 'lv10-school', stars: {}, best: {}, sound: false, coins: 1000, seen: { 'sc1-pizza': 1, 'sc2-jungle': 1, 'sc3-dragons': 1 } })));
-    await p.goto(BASE + '#level-13'); await p.reload(); await p.waitForSelector('#screen-game.active'); await p.waitForTimeout(900);
+    await p.goto(BASE + '#level-23'); await p.reload(); await p.waitForSelector('#screen-game.active'); await p.waitForTimeout(900);
     if (await p.locator('#ov-coach.show').count()) await p.click('#btn-coach');
     const act = async sel => mode === 'phone' ? p.tap(sel) : p.click(sel);
     const before = await p.evaluate(ORIENT, 0);

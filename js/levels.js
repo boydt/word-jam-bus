@@ -604,7 +604,7 @@ window.WJB_LEVELS = [
   ],
   "bay": 3,
   "par": 9,
-  "tip": "Last warm-up! Next come the big jammed lots.",
+  "tip": "Last warm-up! Next up: Main Street, with lots of ways to win.",
   "cars": [
    {
     "l": "X",
@@ -692,8 +692,1117 @@ window.WJB_LEVELS = [
   }
  },
  {
-  "id": "lv1-bus",
+  "id": "nm1-bread",
   "suggested_level": 11,
+  "tier": "normal",
+  "word": "BREAD",
+  "grid": [
+   6,
+   6
+  ],
+  "bay": 3,
+  "par": 9,
+  "tip": "Main Street! These lots have lots of ways to win: if one plan stalls, try another order.",
+  "cars": [
+   {
+    "l": "B",
+    "r": 3,
+    "c": 1,
+    "dir": "left"
+   },
+   {
+    "l": "V",
+    "r": 6,
+    "c": 3,
+    "dir": "up"
+   },
+   {
+    "l": "A",
+    "r": 5,
+    "c": 3,
+    "dir": "up"
+   },
+   {
+    "l": "Y",
+    "r": 5,
+    "c": 4,
+    "dir": "left",
+    "len": 2
+   },
+   {
+    "l": "R",
+    "r": 3,
+    "c": 2,
+    "dir": "left",
+    "len": 2
+   },
+   {
+    "l": "Q",
+    "r": 2,
+    "c": 3,
+    "dir": "right",
+    "len": 2
+   },
+   {
+    "l": "D",
+    "r": 4,
+    "c": 4,
+    "dir": "down"
+   },
+   {
+    "l": "J",
+    "r": 6,
+    "c": 2,
+    "dir": "down"
+   },
+   {
+    "l": "N",
+    "r": 4,
+    "c": 1,
+    "dir": "up"
+   },
+   {
+    "l": "Q",
+    "r": 5,
+    "c": 2,
+    "dir": "down",
+    "len": 2
+   },
+   {
+    "l": "E",
+    "r": 5,
+    "c": 6,
+    "dir": "left"
+   },
+   {
+    "l": "J",
+    "r": 2,
+    "c": 4,
+    "dir": "left"
+   },
+   {
+    "l": "Z",
+    "r": 1,
+    "c": 2,
+    "dir": "left",
+    "len": 2
+   },
+   {
+    "l": "Y",
+    "r": 6,
+    "c": 5,
+    "dir": "up"
+   },
+   {
+    "l": "Y",
+    "r": 2,
+    "c": 5,
+    "dir": "left",
+    "len": 2
+   },
+   {
+    "l": "F",
+    "r": 3,
+    "c": 5,
+    "dir": "down"
+   }
+  ],
+  "difficulty": {
+   "tier": 3,
+   "label": "Normal",
+   "score": 12.7,
+   "par": 9,
+   "first": "10/10",
+   "track": 0.796
+  }
+ },
+ {
+  "id": "nm2-shop",
+  "suggested_level": 12,
+  "tier": "normal",
+  "word": "SHOP",
+  "grid": [
+   5,
+   5
+  ],
+  "bay": 3,
+  "par": 9,
+  "tip": "Clear a lane first, then let the letters roll out.",
+  "cars": [
+   {
+    "l": "R",
+    "r": 2,
+    "c": 2,
+    "dir": "right"
+   },
+   {
+    "l": "J",
+    "r": 1,
+    "c": 2,
+    "dir": "left"
+   },
+   {
+    "l": "W",
+    "r": 4,
+    "c": 4,
+    "dir": "down",
+    "len": 3
+   },
+   {
+    "l": "S",
+    "r": 3,
+    "c": 2,
+    "dir": "left",
+    "len": 2
+   },
+   {
+    "l": "N",
+    "r": 1,
+    "c": 4,
+    "dir": "left"
+   },
+   {
+    "l": "O",
+    "r": 5,
+    "c": 3,
+    "dir": "up"
+   },
+   {
+    "l": "J",
+    "r": 5,
+    "c": 4,
+    "dir": "left"
+   },
+   {
+    "l": "J",
+    "r": 4,
+    "c": 1,
+    "dir": "left",
+    "len": 2
+   },
+   {
+    "l": "P",
+    "r": 4,
+    "c": 5,
+    "dir": "left"
+   },
+   {
+    "l": "Z",
+    "r": 5,
+    "c": 2,
+    "dir": "up"
+   },
+   {
+    "l": "G",
+    "r": 1,
+    "c": 1,
+    "dir": "right"
+   },
+   {
+    "l": "H",
+    "r": 2,
+    "c": 5,
+    "dir": "down",
+    "len": 2
+   },
+   {
+    "l": "W",
+    "r": 1,
+    "c": 3,
+    "dir": "up"
+   }
+  ],
+  "difficulty": {
+   "tier": 3,
+   "label": "Normal",
+   "score": 13.5,
+   "par": 9,
+   "first": "9/10",
+   "track": 0.767
+  }
+ },
+ {
+  "id": "nm3-park",
+  "suggested_level": 13,
+  "tier": "normal",
+  "word": "PARK",
+  "grid": [
+   5,
+   5
+  ],
+  "bay": 3,
+  "par": 10,
+  "tip": "Park a blocker in the bay only when you must: it holds 3.",
+  "cars": [
+   {
+    "l": "W",
+    "r": 5,
+    "c": 1,
+    "dir": "right"
+   },
+   {
+    "l": "W",
+    "r": 1,
+    "c": 4,
+    "dir": "right"
+   },
+   {
+    "l": "N",
+    "r": 2,
+    "c": 5,
+    "dir": "up",
+    "len": 3
+   },
+   {
+    "l": "R",
+    "r": 1,
+    "c": 2,
+    "dir": "right"
+   },
+   {
+    "l": "Y",
+    "r": 5,
+    "c": 4,
+    "dir": "right"
+   },
+   {
+    "l": "P",
+    "r": 2,
+    "c": 4,
+    "dir": "right",
+    "len": 2
+   },
+   {
+    "l": "X",
+    "r": 4,
+    "c": 4,
+    "dir": "down"
+   },
+   {
+    "l": "K",
+    "r": 3,
+    "c": 4,
+    "dir": "left"
+   },
+   {
+    "l": "N",
+    "r": 2,
+    "c": 2,
+    "dir": "left"
+   },
+   {
+    "l": "V",
+    "r": 5,
+    "c": 2,
+    "dir": "right"
+   },
+   {
+    "l": "X",
+    "r": 3,
+    "c": 2,
+    "dir": "up"
+   },
+   {
+    "l": "A",
+    "r": 2,
+    "c": 1,
+    "dir": "down",
+    "len": 2
+   },
+   {
+    "l": "G",
+    "r": 1,
+    "c": 5,
+    "dir": "up"
+   }
+  ],
+  "difficulty": {
+   "tier": 3,
+   "label": "Normal",
+   "score": 13.2,
+   "par": 10,
+   "first": "9/10",
+   "track": 0.856
+  }
+ },
+ {
+  "id": "nm4-music",
+  "suggested_level": 14,
+  "tier": "normal",
+  "word": "MUSIC",
+  "grid": [
+   6,
+   6
+  ],
+  "bay": 3,
+  "par": 10,
+  "tip": "Look for the letter that is almost free, and free it first.",
+  "cars": [
+   {
+    "l": "D",
+    "r": 1,
+    "c": 6,
+    "dir": "left"
+   },
+   {
+    "l": "C",
+    "r": 5,
+    "c": 3,
+    "dir": "down",
+    "len": 3
+   },
+   {
+    "l": "U",
+    "r": 6,
+    "c": 2,
+    "dir": "left"
+   },
+   {
+    "l": "K",
+    "r": 1,
+    "c": 1,
+    "dir": "right"
+   },
+   {
+    "l": "W",
+    "r": 4,
+    "c": 1,
+    "dir": "down"
+   },
+   {
+    "l": "Z",
+    "r": 6,
+    "c": 1,
+    "dir": "down",
+    "len": 2
+   },
+   {
+    "l": "N",
+    "r": 5,
+    "c": 5,
+    "dir": "down"
+   },
+   {
+    "l": "V",
+    "r": 1,
+    "c": 4,
+    "dir": "right"
+   },
+   {
+    "l": "B",
+    "r": 2,
+    "c": 3,
+    "dir": "down"
+   },
+   {
+    "l": "M",
+    "r": 3,
+    "c": 2,
+    "dir": "left"
+   },
+   {
+    "l": "N",
+    "r": 6,
+    "c": 6,
+    "dir": "down"
+   },
+   {
+    "l": "Z",
+    "r": 2,
+    "c": 2,
+    "dir": "right",
+    "len": 2
+   },
+   {
+    "l": "I",
+    "r": 3,
+    "c": 5,
+    "dir": "down",
+    "len": 3
+   },
+   {
+    "l": "Q",
+    "r": 3,
+    "c": 4,
+    "dir": "left"
+   },
+   {
+    "l": "W",
+    "r": 3,
+    "c": 6,
+    "dir": "down"
+   },
+   {
+    "l": "S",
+    "r": 3,
+    "c": 1,
+    "dir": "up"
+   }
+  ],
+  "difficulty": {
+   "tier": 3,
+   "label": "Normal",
+   "score": 15.4,
+   "par": 10,
+   "first": "12/13",
+   "track": 0.739
+  }
+ },
+ {
+  "id": "nm5-candy",
+  "suggested_level": 15,
+  "tier": "normal",
+  "word": "CANDY",
+  "grid": [
+   5,
+   5
+  ],
+  "bay": 3,
+  "par": 10,
+  "tip": "Back a car up to open a path for the next letter.",
+  "cars": [
+   {
+    "l": "K",
+    "r": 1,
+    "c": 1,
+    "dir": "up"
+   },
+   {
+    "l": "N",
+    "r": 4,
+    "c": 3,
+    "dir": "down"
+   },
+   {
+    "l": "X",
+    "r": 2,
+    "c": 1,
+    "dir": "up",
+    "len": 3
+   },
+   {
+    "l": "H",
+    "r": 4,
+    "c": 4,
+    "dir": "down"
+   },
+   {
+    "l": "H",
+    "r": 5,
+    "c": 3,
+    "dir": "down"
+   },
+   {
+    "l": "Z",
+    "r": 2,
+    "c": 4,
+    "dir": "left",
+    "len": 2
+   },
+   {
+    "l": "F",
+    "r": 3,
+    "c": 2,
+    "dir": "left"
+   },
+   {
+    "l": "G",
+    "r": 5,
+    "c": 5,
+    "dir": "down"
+   },
+   {
+    "l": "Z",
+    "r": 1,
+    "c": 3,
+    "dir": "down"
+   },
+   {
+    "l": "A",
+    "r": 5,
+    "c": 2,
+    "dir": "down"
+   },
+   {
+    "l": "Y",
+    "r": 5,
+    "c": 1,
+    "dir": "right"
+   },
+   {
+    "l": "Q",
+    "r": 3,
+    "c": 5,
+    "dir": "right"
+   },
+   {
+    "l": "M",
+    "r": 5,
+    "c": 4,
+    "dir": "up"
+   },
+   {
+    "l": "D",
+    "r": 4,
+    "c": 2,
+    "dir": "right"
+   },
+   {
+    "l": "C",
+    "r": 3,
+    "c": 4,
+    "dir": "right"
+   }
+  ],
+  "difficulty": {
+   "tier": 3,
+   "label": "Normal",
+   "score": 15.3,
+   "par": 10,
+   "first": "11/11",
+   "track": 0.733
+  }
+ },
+ {
+  "id": "nm6-clock",
+  "suggested_level": 16,
+  "tier": "normal",
+  "word": "CLOCK",
+  "grid": [
+   5,
+   5
+  ],
+  "bay": 3,
+  "par": 11,
+  "tip": "Two C's: either C car can board first.",
+  "cars": [
+   {
+    "l": "C",
+    "r": 4,
+    "c": 5,
+    "dir": "down",
+    "len": 3
+   },
+   {
+    "l": "O",
+    "r": 3,
+    "c": 4,
+    "dir": "right"
+   },
+   {
+    "l": "C",
+    "r": 2,
+    "c": 2,
+    "dir": "down"
+   },
+   {
+    "l": "K",
+    "r": 5,
+    "c": 3,
+    "dir": "up"
+   },
+   {
+    "l": "H",
+    "r": 4,
+    "c": 3,
+    "dir": "right"
+   },
+   {
+    "l": "X",
+    "r": 5,
+    "c": 2,
+    "dir": "left"
+   },
+   {
+    "l": "G",
+    "r": 5,
+    "c": 4,
+    "dir": "right"
+   },
+   {
+    "l": "G",
+    "r": 2,
+    "c": 4,
+    "dir": "right"
+   },
+   {
+    "l": "D",
+    "r": 5,
+    "c": 5,
+    "dir": "left"
+   },
+   {
+    "l": "Z",
+    "r": 1,
+    "c": 3,
+    "dir": "right"
+   },
+   {
+    "l": "N",
+    "r": 1,
+    "c": 4,
+    "dir": "right"
+   },
+   {
+    "l": "L",
+    "r": 2,
+    "c": 1,
+    "dir": "left"
+   },
+   {
+    "l": "Z",
+    "r": 2,
+    "c": 3,
+    "dir": "right"
+   }
+  ],
+  "difficulty": {
+   "tier": 3,
+   "label": "Normal",
+   "score": 15.3,
+   "par": 11,
+   "first": "9/10",
+   "track": 0.819
+  }
+ },
+ {
+  "id": "nm7-tower",
+  "suggested_level": 17,
+  "tier": "normal",
+  "word": "TOWER",
+  "grid": [
+   6,
+   6
+  ],
+  "bay": 3,
+  "par": 11,
+  "tip": "Long trucks block whole rows. Slide them out of the way.",
+  "cars": [
+   {
+    "l": "R",
+    "r": 5,
+    "c": 5,
+    "dir": "up",
+    "len": 2
+   },
+   {
+    "l": "O",
+    "r": 5,
+    "c": 2,
+    "dir": "down",
+    "len": 3
+   },
+   {
+    "l": "X",
+    "r": 2,
+    "c": 5,
+    "dir": "right",
+    "len": 2
+   },
+   {
+    "l": "E",
+    "r": 4,
+    "c": 3,
+    "dir": "left",
+    "len": 3
+   },
+   {
+    "l": "F",
+    "r": 5,
+    "c": 1,
+    "dir": "down",
+    "len": 2
+   },
+   {
+    "l": "H",
+    "r": 3,
+    "c": 5,
+    "dir": "right",
+    "len": 2
+   },
+   {
+    "l": "T",
+    "r": 1,
+    "c": 5,
+    "dir": "left",
+    "len": 2
+   },
+   {
+    "l": "Q",
+    "r": 1,
+    "c": 3,
+    "dir": "up"
+   },
+   {
+    "l": "W",
+    "r": 5,
+    "c": 4,
+    "dir": "left"
+   },
+   {
+    "l": "Q",
+    "r": 1,
+    "c": 4,
+    "dir": "down"
+   },
+   {
+    "l": "X",
+    "r": 2,
+    "c": 3,
+    "dir": "left"
+   },
+   {
+    "l": "Y",
+    "r": 5,
+    "c": 3,
+    "dir": "up"
+   },
+   {
+    "l": "F",
+    "r": 2,
+    "c": 2,
+    "dir": "up"
+   }
+  ],
+  "difficulty": {
+   "tier": 3,
+   "label": "Normal",
+   "score": 16,
+   "par": 11,
+   "first": "10/10",
+   "track": 0.773
+  }
+ },
+ {
+  "id": "nm8-cinema",
+  "suggested_level": 18,
+  "tier": "normal",
+  "word": "CINEMA",
+  "grid": [
+   5,
+   5
+  ],
+  "bay": 3,
+  "par": 11,
+  "tip": "Plan two moves ahead: what does each slide open up?",
+  "cars": [
+   {
+    "l": "C",
+    "r": 4,
+    "c": 4,
+    "dir": "down"
+   },
+   {
+    "l": "E",
+    "r": 4,
+    "c": 2,
+    "dir": "down",
+    "len": 2
+   },
+   {
+    "l": "N",
+    "r": 4,
+    "c": 5,
+    "dir": "down",
+    "len": 2
+   },
+   {
+    "l": "Z",
+    "r": 5,
+    "c": 3,
+    "dir": "left",
+    "len": 2
+   },
+   {
+    "l": "Q",
+    "r": 1,
+    "c": 4,
+    "dir": "left"
+   },
+   {
+    "l": "J",
+    "r": 5,
+    "c": 2,
+    "dir": "down"
+   },
+   {
+    "l": "I",
+    "r": 3,
+    "c": 3,
+    "dir": "left"
+   },
+   {
+    "l": "B",
+    "r": 2,
+    "c": 4,
+    "dir": "left"
+   },
+   {
+    "l": "K",
+    "r": 1,
+    "c": 3,
+    "dir": "right"
+   },
+   {
+    "l": "J",
+    "r": 1,
+    "c": 2,
+    "dir": "up",
+    "len": 2
+   },
+   {
+    "l": "V",
+    "r": 5,
+    "c": 1,
+    "dir": "right"
+   },
+   {
+    "l": "M",
+    "r": 4,
+    "c": 1,
+    "dir": "down",
+    "len": 2
+   },
+   {
+    "l": "A",
+    "r": 5,
+    "c": 5,
+    "dir": "right"
+   }
+  ],
+  "difficulty": {
+   "tier": 3,
+   "label": "Normal",
+   "score": 16.3,
+   "par": 11,
+   "first": "9/10",
+   "track": 0.771
+  }
+ },
+ {
+  "id": "nm9-bakery",
+  "suggested_level": 19,
+  "tier": "normal",
+  "word": "BAKERY",
+  "grid": [
+   6,
+   6
+  ],
+  "bay": 3,
+  "par": 12,
+  "tip": "Six letters now. Keep the bay free for the end.",
+  "cars": [
+   {
+    "l": "Q",
+    "r": 3,
+    "c": 4,
+    "dir": "left",
+    "len": 2
+   },
+   {
+    "l": "J",
+    "r": 5,
+    "c": 5,
+    "dir": "up"
+   },
+   {
+    "l": "A",
+    "r": 2,
+    "c": 2,
+    "dir": "down"
+   },
+   {
+    "l": "R",
+    "r": 1,
+    "c": 2,
+    "dir": "left",
+    "len": 2
+   },
+   {
+    "l": "E",
+    "r": 4,
+    "c": 4,
+    "dir": "up"
+   },
+   {
+    "l": "X",
+    "r": 5,
+    "c": 2,
+    "dir": "down"
+   },
+   {
+    "l": "X",
+    "r": 2,
+    "c": 4,
+    "dir": "left"
+   },
+   {
+    "l": "B",
+    "r": 2,
+    "c": 6,
+    "dir": "left"
+   },
+   {
+    "l": "H",
+    "r": 5,
+    "c": 4,
+    "dir": "up"
+   },
+   {
+    "l": "M",
+    "r": 4,
+    "c": 6,
+    "dir": "down",
+    "len": 2
+   },
+   {
+    "l": "Y",
+    "r": 4,
+    "c": 3,
+    "dir": "up",
+    "len": 3
+   },
+   {
+    "l": "D",
+    "r": 3,
+    "c": 3,
+    "dir": "left"
+   },
+   {
+    "l": "X",
+    "r": 6,
+    "c": 5,
+    "dir": "up"
+   },
+   {
+    "l": "K",
+    "r": 4,
+    "c": 5,
+    "dir": "right"
+   },
+   {
+    "l": "D",
+    "r": 6,
+    "c": 6,
+    "dir": "left"
+   },
+   {
+    "l": "M",
+    "r": 3,
+    "c": 2,
+    "dir": "right"
+   }
+  ],
+  "difficulty": {
+   "tier": 3,
+   "label": "Normal",
+   "score": 16.5,
+   "par": 12,
+   "first": "10/10",
+   "track": 0.813
+  }
+ },
+ {
+  "id": "nm10-street",
+  "suggested_level": 20,
+  "tier": "normal",
+  "word": "STREET",
+  "grid": [
+   5,
+   5
+  ],
+  "bay": 3,
+  "par": 12,
+  "tip": "Main Street boss! Two T's and two E's give you choices.",
+  "cars": [
+   {
+    "l": "T",
+    "r": 4,
+    "c": 1,
+    "dir": "up",
+    "len": 2
+   },
+   {
+    "l": "E",
+    "r": 2,
+    "c": 4,
+    "dir": "down"
+   },
+   {
+    "l": "E",
+    "r": 1,
+    "c": 3,
+    "dir": "left",
+    "len": 2
+   },
+   {
+    "l": "T",
+    "r": 4,
+    "c": 2,
+    "dir": "down",
+    "len": 2
+   },
+   {
+    "l": "R",
+    "r": 5,
+    "c": 4,
+    "dir": "left"
+   },
+   {
+    "l": "X",
+    "r": 5,
+    "c": 3,
+    "dir": "up"
+   },
+   {
+    "l": "N",
+    "r": 3,
+    "c": 1,
+    "dir": "right"
+   },
+   {
+    "l": "Q",
+    "r": 3,
+    "c": 3,
+    "dir": "left"
+   },
+   {
+    "l": "S",
+    "r": 5,
+    "c": 2,
+    "dir": "left"
+   },
+   {
+    "l": "D",
+    "r": 2,
+    "c": 1,
+    "dir": "up"
+   },
+   {
+    "l": "M",
+    "r": 1,
+    "c": 1,
+    "dir": "left"
+   },
+   {
+    "l": "Z",
+    "r": 4,
+    "c": 5,
+    "dir": "down"
+   }
+  ],
+  "difficulty": {
+   "tier": 3,
+   "label": "Normal",
+   "score": 17.4,
+   "par": 12,
+   "first": "11/11",
+   "track": 0.777
+  }
+ },
+ {
+  "id": "lv1-bus",
+  "suggested_level": 21,
   "word": "BUS",
   "grid": [
    5,
@@ -787,7 +1896,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "sc1-pizza",
-  "suggested_level": 12,
+  "suggested_level": 22,
   "tier": "core",
   "mode": "scramble",
   "teaches": "scramble",
@@ -905,7 +2014,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "lv2-car",
-  "suggested_level": 13,
+  "suggested_level": 23,
   "word": "CAR",
   "grid": [
    5,
@@ -1025,7 +2134,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "lv3-planet",
-  "suggested_level": 14,
+  "suggested_level": 24,
   "word": "PLANET",
   "grid": [
    5,
@@ -1146,7 +2255,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "lv4-apple",
-  "suggested_level": 15,
+  "suggested_level": 25,
   "word": "APPLE",
   "grid": [
    5,
@@ -1263,7 +2372,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "lv5-garden",
-  "suggested_level": 16,
+  "suggested_level": 26,
   "word": "GARDEN",
   "grid": [
    6,
@@ -1433,7 +2542,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "sc2-jungle",
-  "suggested_level": 17,
+  "suggested_level": 27,
   "tier": "core",
   "mode": "scramble",
   "teaches": "bayword",
@@ -1573,7 +2682,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "lv6-rocket",
-  "suggested_level": 18,
+  "suggested_level": 28,
   "word": "ROCKET",
   "grid": [
    6,
@@ -1722,7 +2831,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "lv7-ticket",
-  "suggested_level": 19,
+  "suggested_level": 29,
   "word": "TICKET",
   "grid": [
    6,
@@ -1884,7 +2993,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "lv8-mother",
-  "suggested_level": 20,
+  "suggested_level": 30,
   "word": "MOTHER",
   "grid": [
    6,
@@ -2040,7 +3149,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "lv9-busstop",
-  "suggested_level": 21,
+  "suggested_level": 31,
   "words": [
    "BUS",
    "STOP"
@@ -2220,7 +3329,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "sc3-dragons",
-  "suggested_level": 22,
+  "suggested_level": 32,
   "tier": "core",
   "mode": "scramble",
   "teaches": "scramble",
@@ -2363,7 +3472,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "lv10-school",
-  "suggested_level": 23,
+  "suggested_level": 33,
   "word": "SCHOOL",
   "grid": [
    7,
@@ -2495,7 +3604,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "dt1-bank",
-  "suggested_level": 24,
+  "suggested_level": 34,
   "teaches": "keys",
   "word": "BANK",
   "grid": [
@@ -2651,7 +3760,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "dt2-hotel",
-  "suggested_level": 25,
+  "suggested_level": 35,
   "word": "HOTEL",
   "grid": [
    6,
@@ -2775,7 +3884,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "dt3-market",
-  "suggested_level": 26,
+  "suggested_level": 36,
   "word": "MARKET",
   "grid": [
    6,
@@ -2928,7 +4037,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "sc4-subway",
-  "suggested_level": 27,
+  "suggested_level": 37,
   "mode": "scramble",
   "word": "SUBWAY",
   "grid": [
@@ -3080,7 +4189,7 @@ window.WJB_LEVELS = [
  },
  {
   "id": "dt4-square",
-  "suggested_level": 28,
+  "suggested_level": 38,
   "word": "SQUARE",
   "grid": [
    6,
@@ -3234,6 +4343,12 @@ window.WJB_MAP = {
    "dark": "#b8381f"
   },
   {
+   "id": "trolley",
+   "name": "Trolley Green",
+   "body": "#2fa36b",
+   "dark": "#1d7a4d"
+  },
+  {
    "id": "surf",
    "name": "Surf Teal",
    "body": "#22c3b4",
@@ -3280,10 +4395,9 @@ window.WJB_MAP = {
     "st7-frog",
     "st8-train",
     "st9-tiger",
-    "st10-house",
-    "lv1-bus"
+    "st10-house"
    ],
-   "boss": "lv1-bus",
+   "boss": "st10-house",
    "chest": {
     "coins": 150,
     "boosters": {
@@ -3294,12 +4408,41 @@ window.WJB_MAP = {
    }
   },
   {
+   "id": "mainst",
+   "name": "Main Street",
+   "theme": "mainst",
+   "teaches": "mixed",
+   "intro": "Ten forgiving lots with many ways to win",
+   "levels": [
+    "nm1-bread",
+    "nm2-shop",
+    "nm3-park",
+    "nm4-music",
+    "nm5-candy",
+    "nm6-clock",
+    "nm7-tower",
+    "nm8-cinema",
+    "nm9-bakery",
+    "nm10-street"
+   ],
+   "boss": "nm10-street",
+   "chest": {
+    "coins": 175,
+    "boosters": {
+     "tow": 1,
+     "nudge": 1
+    },
+    "paint": "trolley"
+   }
+  },
+  {
    "id": "beach",
    "name": "Sunny Beach",
    "theme": "beach",
    "teaches": "scramble",
-   "intro": "Scramble stops: letters board in any order",
+   "intro": "Bigger lots + Scramble stops: letters board in any order",
    "levels": [
+    "lv1-bus",
     "sc1-pizza",
     "lv2-car",
     "lv3-planet",

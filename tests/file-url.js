@@ -13,7 +13,9 @@ const { chromium } = require('playwright');
   await page.goto('file://' + path.join(__dirname, '..', 'index.html'));
   await page.click('#btn-play');                    // v8: Play opens the city map...
   await page.waitForSelector('#screen-map.active');
-  if (await page.locator('.lvl.stop').count() !== 28) errors.push('map does not list 28 stops');
+  const NLEV = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'levels', 'levels.json'), 'utf8')).levels.length;
+  if (await page.locator('.lvl.stop').count() !== NLEV) errors.push('map does not list ' + NLEV + ' stops');
+  if (await page.locator('.lvl.stop .tier-stop').count() !== NLEV) errors.push('map stops lack difficulty badges');
   await page.click('#btn-map-play');                // ...and "Play stop 1" starts level 1
   await page.waitForSelector('#screen-game.active');
   await page.waitForTimeout(700);
