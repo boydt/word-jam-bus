@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#2b6cb0">
-<meta name="wjb-version" content="0.9.1">
+<meta name="wjb-version" content="0.10.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="description" content="Word Jam Bus: a parking-jam word puzzle. Drive letter cars out of the lot in the order that spells the word.">
 <title>Word Jam Bus</title>
@@ -28,7 +28,27 @@
       <p class="subtitle">Unjam the lot. Spell the word.</p>
       <div class="title-row"><div class="coin-pill title-coins" aria-label="Coins"><i class="coin"></i><b id="title-coins">0</b></div><span class="test-badge" aria-label="Test mode is on">TEST MODE</span></div>
       <button id="btn-play" class="btn btn-big btn-go">Play</button>
+      <button id="btn-world-trial" class="btn btn-trial" aria-label="World Trial">World Trial <span class="trial-badge">NEW</span></button>
       <div id="title-route" class="title-route" aria-live="polite"></div>
+      <p id="title-mode" class="title-mode" hidden></p>
+    </div>
+  </section>
+
+
+  <!-- v10 World Trial overview: City icons with district paths between -->
+  <section id="screen-world" class="screen" aria-label="World Trial">
+    <header class="map-top world-top">
+      <button id="btn-world-home" class="icon-btn" aria-label="Title screen"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-6h4v6"/></svg></button>
+      <div class="map-title"><b>World Trial</b><small id="world-sub">City 1 → Maple → City 2 → Main Street → City 3</small></div>
+      <span class="test-badge" aria-label="Test mode is on">TEST MODE</span>
+      <div class="coin-pill map-coins" aria-label="Coins"><i class="coin"></i><b id="world-coins">0</b></div>
+    </header>
+    <div id="world-scroll" class="world-scroll">
+      <div id="world-track" class="world-track" role="list"></div>
+    </div>
+    <div class="map-foot">
+      <button id="btn-world-main" class="btn btn-ghost">Back to main game</button>
+      <button id="btn-world-play" class="btn btn-big btn-go">Continue</button>
     </div>
   </section>
 
@@ -148,7 +168,8 @@
     <div class="card settings-card" role="dialog" aria-labelledby="settings-h">
       <div class="set-head"><h2 id="settings-h">Settings</h2><button id="btn-settings-close" class="btn btn-small btn-ghost">Done</button></div>
       <div class="set-sec">
-        <div class="set-row"><span class="set-label"><b>Sound</b></span><label class="switch"><input type="checkbox" id="set-sound" role="switch" aria-label="Sound"><i></i></label><button id="btn-howto" class="btn btn-small btn-ghost">How to play</button></div>
+        <div class="set-row"><span class="set-label"><b>Sound</b></span><label class="switch"><input type="checkbox" id="set-sound" role="switch" aria-label="Sound"><i></i></label><button id="btn-trial-toggle" class="btn btn-small btn-trial-set" type="button">Enter World Trial</button>
+        <button id="btn-howto" class="btn btn-small btn-ghost">How to play</button></div>
         <div class="set-row set-paint"><span class="set-label"><b>Bus paint</b><small>More paints come from district chests.</small></span><div id="paint-row" class="paint-row" role="radiogroup" aria-label="Bus paint"></div></div>
       </div>
       <div class="set-sec set-test">
@@ -226,6 +247,10 @@
 <script src="js/baywords.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/levels.js"></script>
+<script src="js/world-trial.js"></script>
+<script src="js/packs/c01.js"></script>
+<script src="js/packs/c02.js"></script>
+<script src="js/packs/c03.js"></script>
 <script src="js/game.js"></script>
 </body>
 </html>

@@ -2,7 +2,12 @@
 (function () {
   'use strict';
   var E = window.WJBEngine;
-  var LEVELS = window.WJB_LEVELS || [];
+  var MAIN_LEVELS = window.WJB_LEVELS || [];
+  var LEVELS = MAIN_LEVELS;
+  var MAIN_STORE = 'wordJamBus.progress.v1';
+  var TRIAL_STORE = 'wordJamBus.trial.v1';
+  var mode = 'main';   // 'main' | 'trial'
+  var trialScope = 'world'; // world overview, or a city/path id when drilling in later
   var $ = function (id) { return document.getElementById(id); };
   var PALETTE = ['#ff6b6b', '#4dabf7', '#51cf66', '#ff922b', '#cc5de8', '#20c997', '#f06595', '#5c7cfa', '#94d82d', '#e8590c', '#15aabf', '#be4bdb'];
   var ANGLE = { right: 0, down: 90, left: 180, up: -90 };
@@ -34,7 +39,7 @@
       '<rect x="4" y="10" width="16" height="12" rx="2.6" fill="' + k.hex + '"/>' + shapeSvg(k.shape, 12, 16.2, 3.3, 'fill="#fff"') + '</svg>';
   }
   function keyName(color) { var k = KEY_STYLE[color]; return k.name + ' ' + k.shape; }
-  var STORE_KEY = 'wordJamBus.progress.v1';
+  function storeKey() { return mode === 'trial' ? TRIAL_STORE : MAIN_STORE; }
 
   /* ---------------- persistence ---------------- */
   // Saved progress: { v, unlocked, unlockedId, stars{id:n}, best{id:moves}, sound, coins, seen{},
@@ -51,7 +56,7 @@
   function indexOfId(id) { for (var i = 0; i < LEVELS.length; i++) if (LEVELS[i].id === id) return i; return -1; }
   function loadProgress() {
     var p = null;
-    try { p = JSON.parse(localStorage.getItem(STORE_KEY)); } catch (e) { p = null; }
+    try { p = JSON.parse(localStorage.getItem(storeKey())); } catch (e) { p = null; }
     if (!p || typeof p !== 'object') p = {};
     p.stars = p.stars || {};
     p.best = p.best || {};
@@ -82,7 +87,7 @@
   }
   function saveProgress() {
     progress.unlockedId = LEVELS[progress.unlocked] ? LEVELS[progress.unlocked].id : undefined;
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(progress)); } catch (e) { /* private mode */ }
+    try { localStorage.setItem(storeKey(), JSON.stringify(progress)); } catch (e) { /* private mode */ }
   }
   var progress = loadProgress();
   saveProgress(); // persist a migrated save right away
@@ -143,15 +148,33 @@
    * (translate + rotate per frame), so it stays at 60 fps. Lengths along the road come from a
    * sampled table of the curve (no SVG geometry calls, so it works while the map is hidden). */
   var MAPDATA = window.WJB_MAP || { paints: [], districts: [] };
+  var MAIN_MAP = MAPDATA;
   var PAINTS = {};
   (MAPDATA.paints || []).forEach(function (p) { PAINTS[p.id] = p; });
   if (!PAINTS.classic) PAINTS.classic = { id: 'classic', name: 'School Yellow', body: '#f6c026', dark: '#d99d0b' };
-  var DISTRICTS = (MAPDATA.districts || []).filter(function (d) { return indexOfId(d.levels[0]) >= 0 && indexOfId(d.boss) >= 0; });
-  if (!DISTRICTS.length) DISTRICTS = [{ id: 'city', name: 'Word Jam City', theme: 'school', teaches: 'basics', intro: '', levels: LEVELS.map(function (l) { return l.id; }), boss: LEVELS[LEVELS.length - 1].id, chest: { coins: 0, boosters: {} } }];
+  var DISTRICTS = [];
   var DIST_OF = [];
-  DISTRICTS.forEach(function (d, k) { d.k = k; d.first = indexOfId(d.levels[0]); d.last = indexOfId(d.boss); for (var i = d.first; i <= d.last; i++) DIST_OF[i] = k; });
-  for (var dl = 0; dl < LEVELS.length; dl++) if (DIST_OF[dl] === undefined) DIST_OF[dl] = DISTRICTS.length - 1;
-  var MECH = { basics: 'Driving basics', trucks: 'Long trucks', scramble: 'Scramble stops', specials: 'Chunk trucks and the taxi', keys: 'Keys and padlocks', mixed: 'Many ways to win + Scramble', biglots: 'Big jammed lots + Bay Words' };
+  var MECH = { basics: 'Driving basics', trucks: 'Long trucks', scramble: 'Scramble stops', specials: 'Chunk trucks and the taxi', keys: 'Keys and padlocks', mixed: 'Many ways to win + Scramble', biglots: 'Big jammed lots + Bay Words', city: 'City routes', path: 'District path' };
+  var mapNodes = [], nodeOfLevel = [], nodeOfChest = [];
+  function rebuildCampaign(levels, mapData) {
+    LEVELS = levels || MAIN_LEVELS;
+    MAPDATA = mapData || MAIN_MAP;
+    DISTRICTS = (MAPDATA.districts || []).filter(function (d) { return indexOfId(d.levels[0]) >= 0 && indexOfId(d.boss) >= 0; });
+    if (!DISTRICTS.length) DISTRICTS = [{ id: 'city', name: 'Word Jam City', theme: 'school', teaches: 'basics', intro: '', levels: LEVELS.map(function (l) { return l.id; }), boss: LEVELS[LEVELS.length - 1].id, chest: { coins: 0, boosters: {} } }];
+    DIST_OF = [];
+    DISTRICTS.forEach(function (d, k) { d.k = k; d.first = indexOfId(d.levels[0]); d.last = indexOfId(d.boss); for (var i = d.first; i <= d.last; i++) DIST_OF[i] = k; });
+    for (var dl = 0; dl < LEVELS.length; dl++) if (DIST_OF[dl] === undefined) DIST_OF[dl] = DISTRICTS.length - 1;
+    mapNodes = []; nodeOfLevel = []; nodeOfChest = [];
+    DISTRICTS.forEach(function (d, k) {
+      for (var i = d.first; i <= d.last; i++) { nodeOfLevel[i] = mapNodes.length; mapNodes.push({ type: 'stop', i: i, k: k }); }
+      var c = d.chest || {}, has = (c.coins > 0) || (c.paint) || (c.boosters && Object.keys(c.boosters).length);
+      if (has) { nodeOfChest[k] = mapNodes.length; mapNodes.push({ type: 'chest', k: k }); }
+      else nodeOfChest[k] = null;
+    });
+    M.busNode = nodeFromKey(progress.busAt);
+    if (M.busNode !== null && !nodeReal(M.busNode)) M.busNode = null;
+    if (window.WJB) { window.WJB.levels = LEVELS; window.WJB.map.districts = DISTRICTS; }
+  }
 
   /* v9 difficulty tiers: generated per level by tools/difficulty.js from solver data (levels.json "difficulty").
      Shown as a coloured badge with 1-5 filled pips (so it never relies on colour alone). */
@@ -177,7 +200,14 @@
   function districtDone(k) { return !!progress.stars[DISTRICTS[k].boss]; }
   function districtOpen(k) { return realUnlocked(DISTRICTS[k].first); }
   /** 'claimed' (opened for real), 'ready' (boss beaten, not opened yet) or 'locked'. */
-  function chestState(k) { return progress.chests[DISTRICTS[k].id] ? 'claimed' : districtDone(k) ? 'ready' : 'locked'; }
+  function chestHasReward(k) {
+    var c = DISTRICTS[k].chest || {};
+    return (c.coins > 0) || !!c.paint || (c.boosters && Object.keys(c.boosters).some(function (b) { return c.boosters[b] > 0; }));
+  }
+  function chestState(k) {
+    if (!chestHasReward(k)) return 'claimed';
+    return progress.chests[DISTRICTS[k].id] ? 'claimed' : districtDone(k) ? 'ready' : 'locked';
+  }
   function readyChests() { var r = []; DISTRICTS.forEach(function (d, k) { if (chestState(k) === 'ready') r.push(k); }); return r; }
   function districtStars(k) { var s = 0; DISTRICTS[k].levels.forEach(function (id) { s += progress.stars[id] || 0; }); return s; }
   function rewardList(c) {
@@ -194,12 +224,8 @@
   }
   function reduceMotion() { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } }
 
-  // nodes along the road: every stop, and a chest after each district's boss
-  var mapNodes = [], nodeOfLevel = [], nodeOfChest = [];
-  DISTRICTS.forEach(function (d, k) {
-    for (var i = d.first; i <= d.last; i++) { nodeOfLevel[i] = mapNodes.length; mapNodes.push({ type: 'stop', i: i, k: k }); }
-    nodeOfChest[k] = mapNodes.length; mapNodes.push({ type: 'chest', k: k });
-  });
+  // mapNodes / nodeOfLevel / nodeOfChest rebuilt by rebuildCampaign()
+  function endNode(k) { return nodeOfChest[k] != null ? nodeOfChest[k] : nodeOfLevel[DISTRICTS[k].last]; }
   function nodeKey(n) { var nd = mapNodes[n]; return nd.type === 'chest' ? 'chest:' + DISTRICTS[nd.k].id : LEVELS[nd.i].id; }
   function nodeFromKey(v) {
     if (!v) return null;
@@ -209,8 +235,7 @@
   /** Can the bus really be parked here (without test options)? */
   function nodeReal(n) { var nd = mapNodes[n]; return nd.type === 'chest' ? districtDone(nd.k) : realUnlocked(nd.i); }
   var M = { W: 0, H: 0, pts: [], lens: [], gates: [], secs: [], samp: null, total: 0, busNode: null, busLen: 0, driving: null, angle: 90 };
-  M.busNode = nodeFromKey(progress.busAt);
-  if (M.busNode !== null && !nodeReal(M.busNode)) M.busNode = null;
+  rebuildCampaign(MAIN_LEVELS, MAIN_MAP);
   /** The bus parks at a node. Saved (cosmetic) only when the node is really open and no test option is on,
    *  so the real save never changes because of a cheat. v9.1: parking at a stop (playing it, opening it,
    *  or arriving there) also records it as progress.lastStop, the stop the map shows the bus at. */
@@ -239,11 +264,11 @@
       var gx = cx + A * Math.sin((g - 0.5) * 0.95 + 0.3);
       if (k === 0) route.push({ x: cx + A * Math.sin(-0.95 + 0.3), y: top + HEAD_H + 4, depot: true });
       else { var gate = { x: gx, y: top + HEAD_H + 30, k: k }; M.gates[k] = gate; route.push(gate); }
-      for (var n = n0; n <= nodeOfChest[k]; n++) {
+      for (var n = n0; n <= endNode(k); n++) {
         var p = { x: cx + A * Math.sin(g * 0.95 + 0.3), y: first + (n - n0) * STEP, n: n };
         M.pts[n] = p; route.push(p); g++;
       }
-      y = M.pts[nodeOfChest[k]].y + 66;
+      y = M.pts[endNode(k)].y + 66;
       M.secs[k] = { top: top, h: y - top };
     });
     M.H = y + 20;
@@ -346,7 +371,7 @@
       var sec = M.secs[k], open = districtOpen(k) || !!test.unlockAll, cheatOpen = !districtOpen(k) && !!test.unlockAll;
       var cs = chestState(k), stars = districtStars(k), max = d.levels.length * 3, won = d.levels.filter(function (id) { return progress.stars[id]; }).length;
       var deco = '';
-      for (var n = nodeOfLevel[d.first]; n < nodeOfChest[k]; n++) {   // landmarks in the free space beside the road
+      for (var n = nodeOfLevel[d.first]; n < endNode(k); n++) {   // landmarks in the free space beside the road
         var a = M.pts[n], b = M.pts[n + 1], lo = Math.min(a.x, b.x) - 40, hi = Math.max(a.x, b.x) + 40, left = lo, right = W - hi;
         var side = left >= right ? 'l' : 'r', room = Math.max(left, right), sz = Math.min(W > 600 ? 92 : 64, room - 6);
         if (sz < 34) continue;
@@ -400,6 +425,7 @@
       layer.appendChild(b);
     });
     DISTRICTS.forEach(function (d, k) {
+      if (nodeOfChest[k] == null) return;
       var p = M.pts[nodeOfChest[k]], cs = chestState(k), c = document.createElement('button');
       c.className = 'chest-node cs-' + cs + ' th-' + d.theme;
       c.setAttribute('data-chest', k); c.setAttribute('data-district', d.id);
@@ -410,7 +436,7 @@
       layer.appendChild(c);
     });
     host.querySelectorAll('.dh-chest[data-chest]').forEach(function (btn) {
-      btn.addEventListener('click', function () { var k = +btn.getAttribute('data-chest'); scrollMapTo(nodeOfChest[k]); chestTap(k); });
+      btn.addEventListener('click', function () { var k = +btn.getAttribute('data-chest'); if (nodeOfChest[k] != null) scrollMapTo(nodeOfChest[k]); chestTap(k); });
     });
     if (!$('map-bus')) {
       var bus = document.createElement('div');
@@ -516,7 +542,7 @@
   function mapTarget(opts) {
     opts = opts || {};
     var b = M.busNode, nd = b !== null ? mapNodes[b] : null;
-    if (opts.stay === undefined && nd && nd.type === 'stop' && nd.i === DISTRICTS[nd.k].last && chestState(nd.k) === 'ready' && !testOn()) return nodeOfChest[nd.k];
+    if (opts.stay === undefined && nd && nd.type === 'stop' && nd.i === DISTRICTS[nd.k].last && chestState(nd.k) === 'ready' && !testOn() && nodeOfChest[nd.k] != null) return nodeOfChest[nd.k];
     if (opts.next !== undefined && opts.next < LEVELS.length && isUnlocked(opts.next)) return nodeOfLevel[opts.next];
     var at = opts.stay !== undefined ? opts.stay : opts.won !== undefined ? opts.won : indexOfId(progress.lastStop);
     if (at >= 0 && at < LEVELS.length && isUnlocked(at)) return nodeOfLevel[at];
@@ -683,6 +709,158 @@
     });
   }
 
+
+  /* ---------------- World Trial (v10) ---------------- */
+  var WORLD = window.WJB_WORLD_TRIAL || null;
+  var PACKS = window.WJB_PACKS || {};
+  function pathDistrict(id) {
+    return (MAIN_MAP.districts || []).filter(function (d) { return d.id === id; })[0] || null;
+  }
+  function pathLevels(id) {
+    var d = pathDistrict(id);
+    if (!d) return [];
+    return d.levels.map(function (lid) {
+      for (var i = 0; i < MAIN_LEVELS.length; i++) if (MAIN_LEVELS[i].id === lid) return MAIN_LEVELS[i];
+      return null;
+    }).filter(Boolean);
+  }
+  /** Flatten trial sequence into LEVELS + districts (routes + path districts). */
+  function buildTrialCampaign() {
+    if (!WORLD) return null;
+    var levels = [], districts = [];
+    WORLD.sequence.forEach(function (step) {
+      if (step.city) {
+        var city = WORLD.cities[step.city];
+        var pack = PACKS[step.city];
+        if (!city || !pack) return;
+        (pack.routes || []).forEach(function (route, ri) {
+          var ids = [];
+          (route.levels || []).forEach(function (lv) {
+            levels.push(lv);
+            ids.push(lv.id);
+          });
+          if (!ids.length) return;
+          var isLast = ri === pack.routes.length - 1;
+          districts.push({
+            id: route.id,
+            name: city.name + ' · ' + (route.name || ('Route ' + (ri + 1))),
+            theme: city.theme || 'school',
+            teaches: 'city',
+            intro: isLast ? 'Finish the city for the BIG CHEST!' : (city.name + ' route'),
+            levels: ids,
+            boss: ids[ids.length - 1],
+            chest: isLast ? city.bigChest : { coins: 0, boosters: {} },
+            art: city.art || 'default'
+          });
+        });
+      } else if (step.path) {
+        var d = pathDistrict(step.path);
+        var pls = pathLevels(step.path);
+        if (!d || !pls.length) return;
+        pls.forEach(function (lv) { levels.push(lv); });
+        districts.push({
+          id: d.id, name: d.name, theme: d.theme, teaches: d.teaches || 'path',
+          intro: d.intro || '', levels: d.levels.slice(), boss: d.boss, chest: d.chest
+        });
+      }
+    });
+    return { levels: levels, map: { paints: MAIN_MAP.paints, districts: districts } };
+  }
+  function trialReady() {
+    if (!WORLD) return false;
+    return WORLD.sequence.every(function (s) {
+      if (s.city) {
+        var p = PACKS[s.city];
+        return p && p.routes && p.routes.every(function (r) { return r.levels && r.levels.length; });
+      }
+      return !!pathDistrict(s.path);
+    });
+  }
+  function enterTrial() {
+    if (!trialReady()) { toast('World Trial packs are still generating…'); return false; }
+    var camp = buildTrialCampaign();
+    if (!camp || !camp.levels.length) { toast('World Trial has no levels yet'); return false; }
+    mode = 'trial';
+    progress = loadProgress();
+    rebuildCampaign(camp.levels, camp.map);
+    applyPaint();
+    renderLevelGrid();
+    renderWorld();
+    show('screen-world');
+    var btn = $('btn-trial-toggle'); if (btn) btn.textContent = 'Back to main game';
+    var tm = $('title-mode'); if (tm) { tm.hidden = false; tm.textContent = 'World Trial · separate save'; }
+    return true;
+  }
+  function exitTrial() {
+    mode = 'main';
+    progress = loadProgress();
+    rebuildCampaign(MAIN_LEVELS, MAIN_MAP);
+    applyPaint();
+    renderLevelGrid();
+    show('screen-title');
+    var btn = $('btn-trial-toggle'); if (btn) btn.textContent = 'Enter World Trial';
+    var tm = $('title-mode'); if (tm) tm.hidden = true;
+  }
+  function seqStatus(step) {
+    if (step.city) {
+      var city = WORLD.cities[step.city], pack = PACKS[step.city];
+      if (!pack) return { open: false, done: false, label: '…' };
+      var ids = [];
+      pack.routes.forEach(function (r) { (r.levels || []).forEach(function (l) { ids.push(l.id); }); });
+      var won = ids.filter(function (id) { return progress.stars[id]; }).length;
+      var done = won >= ids.length && !!progress.chests[pack.routes[pack.routes.length - 1].id];
+      return { open: true, done: done, label: won + '/' + ids.length, name: city.name, kind: 'city', id: step.city };
+    }
+    var d = pathDistrict(step.path);
+    var ids = d ? d.levels : [];
+    var won = ids.filter(function (id) { return progress.stars[id]; }).length;
+    var done = d && !!progress.stars[d.boss] && !!progress.chests[d.id];
+    return { open: true, done: done, label: won + '/' + ids.length, name: d ? d.name : step.path, kind: 'path', id: step.path };
+  }
+  function renderWorld() {
+    if (!WORLD || !$('world-track')) return;
+    $('world-coins').textContent = test.unlimitedCoins ? '\u221e' : progress.coins;
+    var host = $('world-track'); host.innerHTML = '';
+    var prevDone = true;
+    WORLD.sequence.forEach(function (step, i) {
+      var st = seqStatus(step);
+      var open = prevDone || !!test.unlockAll;
+      var el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'world-node kind-' + st.kind + (open ? '' : ' locked') + (st.done ? ' done' : '') + (open && !st.done ? ' current' : '');
+      el.setAttribute('role', 'listitem');
+      el.disabled = !open;
+      el.innerHTML = '<span class="wn-ico" aria-hidden="true">' + (st.kind === 'city' ? '🏙️' : '🚌') + '</span>' +
+        '<b class="wn-name">' + st.name + '</b>' +
+        '<small class="wn-meta">' + (st.kind === 'city' ? 'City' : 'Path') + ' · ' + st.label + (st.done ? ' · done' : open ? '' : ' · locked') + '</small>';
+      el.addEventListener('click', function () {
+        if (!open) return;
+        Sound.unlock();
+        // Open the city/path map scrolled to that district group
+        showMap({});
+        // Find first district matching this step
+        var target = null;
+        if (step.city) {
+          DISTRICTS.forEach(function (d, k) { if (!target && d.id.indexOf(step.city) === 0) target = k; });
+        } else {
+          DISTRICTS.forEach(function (d, k) { if (d.id === step.path) target = k; });
+        }
+        if (target !== null) {
+          var n = nodeOfLevel[DISTRICTS[target].first];
+          setTimeout(function () { scrollMapTo(n); placeBus(n, true); }, 80);
+        }
+      });
+      host.appendChild(el);
+      if (i < WORLD.sequence.length - 1) {
+        var bridge = document.createElement('div');
+        bridge.className = 'world-bridge' + (st.done ? ' done' : '');
+        bridge.setAttribute('aria-hidden', 'true');
+        host.appendChild(bridge);
+      }
+      prevDone = st.done;
+    });
+  }
+
   /* ---------------- sound + haptics (generated, no assets) ---------------- */
   var Sound = {
     ctx: null,
@@ -723,8 +901,9 @@
 
   /* ---------------- screens ---------------- */
   function show(id) {
-    ['screen-title', 'screen-game', 'screen-map'].forEach(function (s) { $(s).classList.toggle('active', s === id); });
-    document.body.classList.toggle('on-map', id === 'screen-map');
+    ['screen-title', 'screen-game', 'screen-map', 'screen-world'].forEach(function (s) { var el = $(s); if (el) el.classList.toggle('active', s === id); });
+    document.body.classList.toggle('on-map', id === 'screen-map' || id === 'screen-world');
+    document.body.classList.toggle('on-trial', mode === 'trial');
     if (id !== 'screen-map') M.driving = null;
   }
   function overlay(id, on) {
@@ -1683,10 +1862,22 @@
   lotEl.addEventListener('contextmenu', function (e) { e.preventDefault(); });
 
   // v8: Play / Continue opens the city map; the bus drives on to the stop to play next
-  $('btn-play').addEventListener('click', function () { Sound.unlock(); showMap({}); });
+  $('btn-play').addEventListener('click', function () {
+    Sound.unlock();
+    if (mode === 'trial') { renderWorld(); show('screen-world'); }
+    else showMap({});
+  });
+  if ($('btn-world-trial')) $('btn-world-trial').addEventListener('click', function () { Sound.unlock(); enterTrial(); });
+  if ($('btn-world-home')) $('btn-world-home').addEventListener('click', function () { show('screen-title'); });
+  if ($('btn-world-main')) $('btn-world-main').addEventListener('click', function () { Sound.unlock(); exitTrial(); });
+  if ($('btn-world-play')) $('btn-world-play').addEventListener('click', function () { Sound.unlock(); showMap({}); });
+  if ($('btn-trial-toggle')) $('btn-trial-toggle').addEventListener('click', function () {
+    Sound.unlock();
+    if (mode === 'trial') exitTrial(); else { overlay('ov-settings', false); enterTrial(); }
+  });
   // v9.1: Map from inside a level keeps the bus on that level (it no longer drives on to the Continue stop)
   $('btn-menu').addEventListener('click', function () { showMap(cur ? { stay: cur.index } : {}); });
-  $('btn-map-home').addEventListener('click', function () { M.driving = null; renderLevelGrid(); show('screen-title'); try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* file:// */ } });
+  $('btn-map-home').addEventListener('click', function () { M.driving = null; renderLevelGrid(); if (mode === 'trial') { renderWorld(); show('screen-world'); } else show('screen-title'); try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* file:// */ } });
   $('btn-map-play').addEventListener('click', function () { Sound.unlock(); goToStop(firstUnsolved()); });
   $('btn-map-chest').addEventListener('click', function () { var rc = readyChests(); if (!rc.length) return; Sound.unlock(); scrollMapTo(nodeOfChest[rc[0]]); openChest(rc[0], {}); });
   $('chest-big').addEventListener('click', crackChest);
@@ -1781,6 +1972,11 @@
   // Test / debug hook (read-only helpers).
   window.WJB = {
     levels: LEVELS,
+    get mode() { return mode; },
+    enterTrial: enterTrial,
+    exitTrial: exitTrial,
+    trialReady: trialReady,
+    world: WORLD,
     /** v9.1: the release (index.html <meta name="wjb-version">, same as package.json) */
     version: (function () { var m = document.querySelector('meta[name="wjb-version"]'); return m ? m.getAttribute('content') : ''; })(),
     get session() { return cur; },

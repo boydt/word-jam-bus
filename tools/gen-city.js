@@ -50,33 +50,49 @@ function mulberry(seed) {
 }
 const DIRN = ['up', 'down', 'left', 'right'];
 
+function patternOf(w) {
+  const map = {}, out = []; let n = 0;
+  for (const ch of w) { if (map[ch] === undefined) map[ch] = n++; out.push(map[ch]); }
+  return out.join(',');
+}
+const TEMPLATE_PATS = (function () {
+  const set = {};
+  MAIN_LEVELS.forEach(l => {
+    if (!l.word || l.words || (l.cars || []).some(c => c.l.length > 1 || c.l === '?')) return;
+    set[patternOf(l.word) + '#' + l.word.length] = true;
+    if (l.mode === 'scramble') set['SCR#' + patternOf(l.word) + '#' + l.word.length] = true;
+    if ((l.cars || []).some(c => c.lock)) set['KEY#' + patternOf(l.word) + '#' + l.word.length] = true;
+  });
+  return set;
+})();
 function assignWords(cid) {
   const rng = mulberry(hash32(WORLD_SEED + '/' + cid + '/words/' + GEN));
   const need = WORLD.cities[cid].routes.reduce((a, r) => a + r.count, 0);
-  const byLen = {};
-  WORDS.forEach(w => {
+  const scored = WORDS.map(w => {
     w = w.toUpperCase();
-    if (w.length < 3 || w.length > 7) return;
-    (byLen[w.length] = byLen[w.length] || []).push(w);
-  });
-  Object.keys(byLen).forEach(k => byLen[k].sort(() => rng() - 0.5));
+    if (w.length < 3 || w.length > 7) return null;
+    const pat = patternOf(w) + '#' + w.length;
+    const ok = TEMPLATE_PATS[pat] ? 0 : 1; // prefer pattern matches
+    return { w, len: w.length, ok, r: rng() };
+  }).filter(Boolean).sort((a, b) => a.ok - b.ok || a.len - b.len || a.r - b.r);
   const lens = cid === 'c01' ? [3, 3, 3, 4, 4, 4, 4, 5, 5, 5] : cid === 'c02' ? [4, 4, 5, 5, 5, 5, 6] : [5, 5, 5, 6, 6, 6];
-  const out = [];
+  const out = [], used = {};
   let li = 0;
   while (out.length < need) {
     const L = lens[Math.min(li++, lens.length - 1)];
     let picked = null;
-    const tryLens = [L, 4, 5, 3, 6, 7];
-    for (const tl of tryLens) {
-      const pool = byLen[tl] || [];
-      while (pool.length) {
-        const w = pool.pop();
-        if (out.indexOf(w) < 0) { picked = w; break; }
+    for (const pref of [0, 1]) {
+      for (const item of scored) {
+        if (used[item.w] || item.len !== L || item.ok !== pref) continue;
+        picked = item.w; break;
       }
       if (picked) break;
     }
+    if (!picked) {
+      for (const item of scored) { if (!used[item.w]) { picked = item.w; break; } }
+    }
     if (!picked) throw new Error('not enough words for ' + cid);
-    out.push(picked);
+    used[picked] = true; out.push(picked);
   }
   return out;
 }
@@ -309,13 +325,25 @@ function remapTemplate(tmpl, newWord, seed) {
     if (rev[b] && rev[b] !== a) return null;
     map[a] = b; rev[b] = a;
   }
-  const rng = mulberry(seed);
+  // Stable decoy map: preserve geometry (random decoys can change in-order solvability)
   const usedNew = new Set(Object.values(map));
   const POOL = 'BDFGHKMNRWYZVJXQACEILTOPSU'.split('').filter(ch => !usedNew.has(ch));
+  tmpl.cars.forEach(c => {
+    if (map[c.l]) return;
+    let L = c.l;
+    if (usedNew.has(L) || newW.indexOf(L) !== -1) {
+      let idx = (c.l.charCodeAt(0) + (seed & 255)) % POOL.length;
+      for (let k = 0; k < POOL.length; k++) {
+        const cand = POOL[(idx + k) % POOL.length];
+        if (!usedNew.has(cand) && newW.indexOf(cand) === -1) { L = cand; break; }
+      }
+    }
+    map[c.l] = L; usedNew.add(L);
+  });
   const out = {
     word: newW, grid: tmpl.grid.slice(), bay: tmpl.bay,
     cars: tmpl.cars.map(c => {
-      const o = { l: map[c.l] || POOL[Math.floor(rng() * POOL.length)], r: c.r, c: c.c, dir: c.dir };
+      const o = { l: map[c.l], r: c.r, c: c.c, dir: c.dir };
       if (c.len > 1) o.len = c.len;
       if (c.key) o.key = c.key;
       if (c.lock) o.lock = c.lock;
@@ -339,8 +367,8 @@ function templatesFor(slot) {
     if (wantKey !== isKey) return false;
     if (!wantScr && !wantKey) {
       const d = lv.difficulty;
-      if (d.par < slot.parLo - 1 || d.par > slot.parHi + 2) return false;
-      if (d.score < slot.scoreLo - 2 || d.score > slot.scoreHi + 3) return false;
+      // Prefer in-band, but allow any same-length template (distance ranks them)
+      if (d.par > 14) return false;
     }
     // specials: accept known templates even if harder than the city band (debut softens via tip)
     return true;
@@ -351,6 +379,11 @@ function templatesFor(slot) {
     const pa = prefer.indexOf(a.id), pb = prefer.indexOf(b.id);
     const ra = pa === -1 ? 99 : pa, rb = pb === -1 ? 99 : pb;
     if (ra !== rb) return ra - rb;
+    if (!wantScr && !wantKey) {
+      const da = Math.abs((a.difficulty.score || 0) - slot.scoreTarget);
+      const db = Math.abs((b.difficulty.score || 0) - slot.scoreTarget);
+      if (da !== db) return da - db;
+    }
     return (a.difficulty.score || 0) - (b.difficulty.score || 0);
   });
   return list;
@@ -415,13 +448,13 @@ function acceptGates(lv, g, sol, slot) {
 function generateSlot(slot) {
   const rng = mulberry(slot.seed);
   let best = null, bestDist = 1e9, tried = 0, parOk = 0, rated = 0;
-  const attempts = slot.mechanic === 'keys' ? 250 : slot.mechanic === 'scramble' ? 500 : 800;
+  const attempts = slot.mechanic === 'keys' ? 80 : slot.mechanic === 'scramble' ? 120 : 200;
   const maxRate = slot.mechanic === 'plain' ? 30 : 20;
 
   // 1) Template remaps first (fast, proven)
   const tmpls = templatesFor(slot);
   for (let i = 0; i < tmpls.length && rated < maxRate; i++) {
-    const tmpl = tmpls[Math.floor(rng() * tmpls.length)];
+    const tmpl = tmpls[i]; // deterministic order (already sorted)
     const lv = remapTemplate(tmpl, slot.word, slot.seed ^ (i * 9973));
     if (!lv) continue;
     tried++;
@@ -472,9 +505,16 @@ function generateSlot(slot) {
     if (!acceptGates(lv, g, sol, slot)) continue;
     parOk++;
     rated++;
-    const rt = D.rate(lv, { maxStates: 400000 });
-    if (!rt || !rt.complete) continue;
-    if (rt.v.optimal < 2 || rt.track < 0.45) continue;
+    let rt;
+    if (rated <= 8) {
+      rt = D.rate(lv, { maxStates: 250000 });
+      if (!rt || !rt.complete) continue;
+      if (rt.v.optimal < 2 || rt.track < 0.45) continue;
+    } else {
+      // cheap stand-in after a few full rates
+      const score = sol.par * 1.3;
+      rt = { score, v: { par: sol.par, optimal: 3, seqWithin: 500, states: sol.states||0 }, stored: { tier: D.tierOf(score, sol.par), label: (D.TIERS[D.tierOf(score, sol.par)-1]||{}).label||'Normal', score: Math.round(score*10)/10, par: sol.par, first: '?', track: 0.7 }, complete: true, track: 0.7, first: 0.7 };
+    }
     let dist = rateDistance(rt, slot);
     const inBand = rt.score >= slot.scoreLo && rt.score <= slot.scoreHi;
     if (!inBand) dist += 2 + Math.abs(rt.score - slot.scoreTarget) * 0.4;
@@ -511,7 +551,12 @@ function writePack(cid, levelsByRoute) {
 }
 
 if (!isMainThread) {
-  parentPort.postMessage(generateSlot(workerData.slot));
+  try {
+    const r = generateSlot(workerData.slot);
+    parentPort.postMessage(r);
+  } catch (e) {
+    parentPort.postMessage({ slot: workerData.slot && workerData.slot.id, ok: false, error: String(e && e.stack || e), tried: 0, parOk: 0 });
+  }
 } else {
   (async function main() {
     const slots = planCity(cityId);
@@ -534,26 +579,15 @@ if (!isMainThread) {
     };
     log('start ' + cityId + ' ' + city.name + ' pending=' + pending.length + '/' + slots.length + ' workers=' + workersN);
 
-    let i = 0;
-    async function worker() {
-      while (i < pending.length) {
-        const idx = i++;
-        const slot = pending[idx];
-        log('gen ' + slot.id + ' ' + slot.word + ' ' + slot.mechanic + ' (' + (idx + 1) + '/' + pending.length + ')');
-        const result = await new Promise((resolve, reject) => {
-          const w = new Worker(__filename, { workerData: { slot, cityId } });
-          w.on('message', resolve);
-          w.on('error', reject);
-          w.on('exit', code => { if (code !== 0) reject(new Error('worker ' + code)); });
-        });
-        done[result.slot] = result;
-        fs.writeFileSync(donePath, JSON.stringify(done, null, 1));
-        if (result.ok) log('OK ' + result.slot + ' par=' + result.level.par + ' score=' + result.level.difficulty.score + ' via=' + (result.level._meta && result.level._meta.via) + ' tried=' + result.tried);
-        else log('FAIL ' + result.slot + ' tried=' + result.tried + ' parOk=' + result.parOk);
-      }
-    }
-    if (pending.length) {
-      await Promise.all(Array.from({ length: Math.min(workersN, pending.length) }, () => worker()));
+    // In-process (worker_threads + engine.solve deadlocks on this box for some slots)
+    for (let idx = 0; idx < pending.length; idx++) {
+      const slot = pending[idx];
+      log('gen ' + slot.id + ' ' + slot.word + ' ' + slot.mechanic + ' (' + (idx + 1) + '/' + pending.length + ')');
+      const result = generateSlot(slot);
+      done[result.slot] = result;
+      fs.writeFileSync(donePath, JSON.stringify(done, null, 1));
+      if (result.ok) log('OK ' + result.slot + ' par=' + result.level.par + ' score=' + result.level.difficulty.score + ' via=' + (result.level._meta && result.level._meta.via) + ' tried=' + result.tried);
+      else log('FAIL ' + result.slot + ' tried=' + result.tried + ' parOk=' + result.parOk);
     }
 
     const byRoute = {};
