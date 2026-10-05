@@ -202,8 +202,8 @@ async function mapBasics(page, ctx, label) {
   check((await p.textContent('#hud-level')).trim() === 'Level ' + R5 + ' of ' + NLEV && (await stored(p)).lastStop === LVS[R5 - 1].id, 'v9.1: replaying earlier stop ' + R5 + ' records it as lastStop');
   // 1. replay an earlier level, then go to the map: the bus is on that level
   await tapEl(p, T, '#btn-menu'); await mapOpen(p); await p.waitForTimeout(800);
-  bi = await busInfo(p); f = await mapFacts(p);
-  check(!bi.driving && bi.at === LVS[R5 - 1].id && bi.off < 2 && f.current === FAR, 'v9.1 regression 1: Map from replayed stop ' + R5 + ': the bus stays at stop ' + R5 + ' (not the furthest stop ' + FAR + '; bus at ' + bi.at + ', ' + bi.off.toFixed(1) + 'px)');
+  bi = await busInfo(p); const rf = await mapFacts(p);
+  check(!bi.driving && bi.at === LVS[R5 - 1].id && bi.off < 2 && rf.current === FAR, 'v9.1 regression 1: Map from replayed stop ' + R5 + ': the bus stays at stop ' + R5 + ' (not the furthest stop ' + FAR + '; bus at ' + bi.at + ', ' + bi.off.toFixed(1) + 'px)');
   await p.evaluate(n => { const m = window.WJB.map, pt = m.point(m.nodeOfLevel(n)), sc = document.getElementById('map-scroll'); sc.scrollTop = Math.max(0, pt.y - sc.clientHeight * 0.45); }, R5);
   await p.waitForTimeout(300);
   await shot(p, 'v9.1-map-bus-on-replayed-stop-390x844.png');
@@ -268,6 +268,27 @@ async function mapBasics(page, ctx, label) {
   await tapEl(p, T, '#btn-lose-menu'); await mapOpen(p); await p.waitForTimeout(800);
   bi = await busInfo(p);
   check(!bi.driving && bi.at === LVS[R7 - 1].id, 'Map from the lose card of stop ' + R7 + ': the bus stays at stop ' + R7);
+
+  // v9.1 tier recalibration: BUS (par 10) is no longer Hard; its banner and header show the new badge; the map's tier badges
+  const BUSN = AT('lv1-bus'), busTier = LVS[BUSN - 1].difficulty;
+  await boot(p, won(BUSN - 1, { chests: { school: true, suburbs: true, mainst: true } }));
+  await tapEl(p, T, '#btn-play'); await mapOpen(p); await notDriving(p); await p.waitForTimeout(300);
+  const badgeRows = await p.evaluate(() => [...document.querySelectorAll('.lvl.stop')].map(b => { const t = b.querySelector('.tier-stop'); return [+b.getAttribute('data-level'), t ? +t.getAttribute('data-tier') : 0]; }));
+  check(badgeRows.length === NLEV && badgeRows.every(([n, t]) => t === LVS[n - 1].difficulty.tier), 'v9.1 map: all ' + NLEV + ' stop badges match the recalibrated tiers in levels.json');
+  await p.evaluate(n => { const m = window.WJB.map, pt = m.point(m.nodeOfLevel(n)), sc = document.getElementById('map-scroll'); sc.scrollTop = Math.max(0, pt.y - sc.clientHeight * 0.6); }, BUSN);
+  await p.waitForTimeout(300);
+  await shot(p, 'v9.1-map-tier-badges-390x844.png');
+  await tapEl(p, T, '#btn-map-play'); await p.waitForSelector('#screen-game.active', { timeout: 5000 });
+  await p.waitForSelector('#banner.show .tier', { timeout: 3000 }).catch(() => {});
+  await p.waitForTimeout(250);
+  const bnT = await p.getAttribute('#banner.show .tier', 'data-tier').catch(() => null), bnTxt = (await p.textContent('#banner')).replace(/\s+/g, ' ').trim();
+  check((await p.textContent('#hud-level')).trim() === 'Level ' + BUSN + ' of ' + NLEV && bnT === String(busTier.tier) && busTier.tier < 4 && busTier.label === 'Normal' && /Normal/.test(bnTxt) && !/Hard/.test(bnTxt), 'v9.1: BUS (stop ' + BUSN + ', par ' + LVS[BUSN - 1].par + ') banner shows the ' + busTier.label + ' badge, not Hard ("' + bnTxt + '")');
+  await shot(p, 'v9.1-bus-banner-normal-390x844.png');
+  await p.waitForFunction(() => !document.querySelector('#banner.show'), null, { timeout: 5000 }).catch(() => {});
+  await p.waitForTimeout(300);
+  const hudT = await p.getAttribute('#hud-tier .tier', 'data-tier'), hudTxt = (await p.textContent('#hud-tier')).trim();
+  check(hudT === String(busTier.tier) && /Normal/.test(hudTxt), 'v9.1: BUS play-screen header shows "Level ' + BUSN + ' of ' + NLEV + '" with the ' + hudTxt + ' badge');
+  await shot(p, 'v9.1-bus-header-normal-390x844.png');
 
   // the boss lot -> chest -> gate -> next district
   console.log('\n# Boss, chest, gate, next district');

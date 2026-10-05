@@ -192,7 +192,7 @@ v8 table (v8 stop numbers; v9 added Main Street and moved stops, see [v9](#v9-ma
 The level order and ids are unchanged (the 28 levels were already in this order), so saves keep working. The data is in `levels/districts.json`, which `tools/verify-levels.js --write` copies into `js/levels.js` as `window.WJB_MAP`.
 
 - **The map:** a vertical, scrolling map, centred and wider (up to 820 px) on desktop. Each district has a sticky header with its number, name, "New: <mechanic>", a progress bar, stars (for example 7/15) and a chest chip (Boss chest / Open! / Opened). Stops show their stars, and are styled as current (a pulsing ring), done, locked (padlock), boss (bigger, gold, BOSS tag) and test-opened (dashed red). Scramble stops show a shuffle badge and key levels a key badge. A locked district sits under a fog behind a closed gate with a padlock. The map scrolls to the current stop when it opens.
-- **The bus:** a top-down bus (in your chosen paint) parks just before the stop it is at. When you return to the map it drives along the road from the last stop played to the next one. After a win, **Next stop** drives on to the next stop and starts it. Tap any open stop and the bus drives there, then the level starts; tap it again to skip the drive. The camera follows the bus on long drives. The bus is moved only with `transform` (translate + rotate) in `requestAnimationFrame`, with an ease-in-out, a little bob and exhaust puffs. The first time the bus enters a district, its gate barrier lifts.
+- **The bus:** a top-down bus (in your chosen paint) parks just before the stop it is at. When you return to the map from a level it stays on that stop (v9.1; in v8/v9 it drove on to the Continue stop). After a win, **Next stop** drives on to the next stop and starts it. Tap any open stop and the bus drives there, then the level starts; tap it again to skip the drive. The camera follows the bus on long drives. The bus is moved only with `transform` (translate + rotate) in `requestAnimationFrame`, with an ease-in-out, a little bob and exhaust puffs. The first time the bus enters a district, its gate barrier lifts.
 - **Play-screen tint:** each level's play screen gets a soft tint for its district (warm for School Street, sea and sand for Sunny Beach, deep blue for Harbor Docks, night purple for Downtown).
 - **Reduced motion:** the bus jumps straight to the stop. There is no pulsing, bobbing, rattling, confetti or spinning rays, and the chest opens at once.
 
@@ -226,7 +226,7 @@ Opening the chest is never needed to go on. A ready chest is waiting for you, ne
 
 ### Saves and migration
 
-The save format is still `v: 4`, with new fields added: `inv`, `chests` (opened chests by district id), `paints`, `paint` and `busAt` (where the bus is parked; cosmetic). Older saves (v2, v3 and v4) load with defaults: nothing in the inventory, no chests opened, School Yellow paint. They land on the right district and stop, because the bus starts at the Continue stop.
+The save format is still `v: 4`, with new fields added: `inv`, `chests` (opened chests by district id), `paints`, `paint` and `busAt` (where the bus is parked; cosmetic). v9.1 adds `lastStop` (the level last played or opened). Older saves (v2, v3 and v4) load with defaults: nothing in the inventory, no chests opened, School Yellow paint. They land on the right district and stop, because the bus starts at the Continue stop.
 
 For districts an older save has already finished, the chests are **claimable, one time each**, rather than auto-awarded, so players still get the chest-opening moment. The title says "N chests to open on the map!". The map shows the chests as ready, with a **N chests to open!** button that opens them one after another (the bus doesn't need to drive back). **Reset progress** clears the inventory, chests, paints and bus spot too.
 
@@ -251,7 +251,7 @@ The step from HOUSE (par 9, Easy) to BUS (par 10, but exacting) was the steepest
 | 20 | nm9-bakery | BAKERY | 6x6 | 16 | 3 | 12 | 10/10 / 10/10 | 0.813 | 739,149 | 206 | 16.5 | Normal |
 | 21 | nm10-street | STREET | 5x5 | 12 | 3 | 12 | 11/11 / 11/11 | 0.777 | ≥1,000,000 | 1,116 | 17.4 | Normal |
 
-"≥1,000,000" means the count reached the solver's 1M cap. The lots were found with `tools/normal-lab.js` (random layouts filtered by the normal thresholds) and polished with `tools/normal-improve.js` (a random-edit hill-climb that keeps each lot inside the normal-tier limits), then checked by the verifier.
+Score and tier here are the v9 values; v9.1 re-scored every level (all ten are still Normal, 10.8-14.7), see [Levels (v9 order)](#levels-v9-order). "≥1,000,000" means the count reached the solver's 1M cap. The lots were found with `tools/normal-lab.js` (random layouts filtered by the normal thresholds) and polished with `tools/normal-improve.js` (a random-edit hill-climb that keeps each lot inside the normal-tier limits), then checked by the verifier.
 
 **Comparison** (par / first-move slack at par+1 / on-track share / score):
 
@@ -278,21 +278,21 @@ Within par + 2 nearly every move is "fine" (a wasted slide can be undone with th
 
 ### Difficulty tiers
 
-Every level has a generated `difficulty` field (`tools/difficulty.js --write`; the verifier fails if it doesn't match the formula):
+Every level has a generated `difficulty` field (`tools/difficulty.js --write`; the verifier fails if it doesn't match the formula). **Recalibrated in v9.1** (see [v9.1](#v91-091-the-bus-stays-put-and-recalibrated-tiers)); the v9 formula was `score = par × (1 + 2 × (1 − track)) + 3 × (1 − first)` with bands 7 / 12 / 18 / 60, which made short exacting lots such as BUS (par 10) Hard. Today:
 
-    score = par × (1 + 2 × (1 − track)) + 3 × (1 − first)
+    score = par × (1 + (1 − track)) + 3 × (1 − first)
 
-where `first` = first-move slack at par + 1 (as a share) and `track` = the on-track share at par + 1. A level where every move keeps you on track scores its par; one where only half the moves do scores double.
+where `first` = first-move slack at par + 1 (as a share) and `track` = the on-track share at par + 1. A level where every move keeps you on track scores its par; one where no move does scores at most double. The score band gives a tier, then **par bands** clamp it:
 
-| Tier | Badge | Score |
-|---|---|---|
-| 1 Very Easy | green, 1 pip | < 7 |
-| 2 Easy | teal, 2 pips | 7 to < 12 |
-| 3 Normal | blue, 3 pips | 12 to < 18 |
-| 4 Hard | orange, 4 pips | 18 to < 60 |
-| 5 Super Hard | red, 5 pips | ≥ 60 |
+| Tier | Badge | Score band | Par bands |
+|---|---|---|---|
+| 1 Very Easy | green, 1 pip | < 7 | |
+| 2 Easy | teal, 2 pips | 7 to < 10.5 | par ≤ 8 is at most Easy |
+| 3 Normal | blue, 3 pips | 10.5 to < 20 | par ≥ 9 is at least Normal; par ≤ 12 is at most Normal (never Hard) |
+| 4 Hard | orange, 4 pips | 20 to < 50 | par ≥ 20 is at least Hard; par ≤ 25 is at most Hard |
+| 5 Super Hard | red, 5 pips | ≥ 50 | par ≥ 30 is always Super Hard |
 
-The tier is computed from the unrounded score and depends only on the lot, never on its position; there are no manual overrides, so tiers can go up and down along the map (HOUSE is Easy after the Normal TIGER; PIZZA is Normal; JUNGLE and SUBWAY are Hard). The badge shows coloured pips (and the name on the banner and the HUD), so it never relies on colour alone, and has an aria label ("Difficulty: Normal (3 of 5)"). It shows:
+The tier is computed from the unrounded score and the par, and depends only on the lot, never on its position; there are no manual overrides. Since v9.1 tiers rise district by district (Downtown restarts at Hard for the keys ramp): Very Easy 1-5, Easy 6-8, Normal 9-22, Hard 23-31, Super Hard 32-33, Hard 34-37, Super Hard 38. The badge shows coloured pips (and the name on the banner and the HUD), so it never relies on colour alone, and has an aria label ("Difficulty: Normal (3 of 5)"). It shows:
 - on **map stops**, as a small pip pill under each stop (the stop's aria label also says the tier);
 - on the **level-intro banner** ("Level N · District · Par P" plus the badge, 1.8 s; on Scramble stops in the Scramble banner);
 - in the **play-screen header**, under "Level N of 38".
@@ -346,46 +346,80 @@ The save format is still `v: 4`. Stars, best scores and chests are kept **by lev
 
 ### Levels (v9 order)
 
+Tier and score columns as of v9.1.
+
 | # | District | id | Word | Mode | Par | Tier | First (par+1) | Track (par+1) | Score |
 |---|---|---|---|---|---|---|---|---|---|
 | 1 | School Street | st1-cat | CAT | in order | 3 | Very Easy | 6/6 | 1 | 3.0 |
-| 2 | School Street | st2-dog | DOG | in order | 4 | Very Easy | 3/3 | 0.938 | 4.5 |
-| 3 | School Street | st3-sun | SUN | in order | 5 | Very Easy | 6/6 | 0.92 | 5.8 |
-| 4 | School Street | st4-hat | HAT | in order | 5 | Very Easy | 6/6 | 0.96 | 5.4 |
-| 5 | School Street | st5-fish | FISH | in order | 6 | Very Easy | 8/8 | 0.983 | 6.2 |
-| 6 | School Street | st6-milk | MILK | in order | 6 | Easy | 6/7 | 0.852 | 8.2 |
-| 7 | Maple Suburbs | st7-frog | FROG | in order | 7 | Easy | 7/7 | 0.914 | 8.2 |
-| 8 | Maple Suburbs | st8-train | TRAIN | in order | 8 | Easy | 8/8 | 0.939 | 9.0 |
-| 9 | Maple Suburbs | st9-tiger | TIGER | in order | 9 | Normal | 8/8 | 0.806 | 12.5 |
-| 10 | Maple Suburbs | st10-house | HOUSE | in order | 9 | Easy | 11/12 | 0.911 | 10.8 |
-| 11 | Main Street | nm1-bread | BREAD | in order | 9 | Normal | 10/10 | 0.796 | 12.7 |
-| 12 | Main Street | nm2-shop | SHOP | in order | 9 | Normal | 9/10 | 0.767 | 13.5 |
-| 13 | Main Street | sc1-pizza | PIZZA | **Scramble** | 9 | Normal | 10/11 | 0.795 | 13.0 |
-| 14 | Main Street | nm3-park | PARK | in order | 10 | Normal | 9/10 | 0.856 | 13.2 |
-| 15 | Main Street | nm4-music | MUSIC | in order | 10 | Normal | 12/13 | 0.739 | 15.4 |
-| 16 | Main Street | nm5-candy | CANDY | in order | 10 | Normal | 11/11 | 0.733 | 15.3 |
-| 17 | Main Street | nm6-clock | CLOCK | in order | 11 | Normal | 9/10 | 0.819 | 15.3 |
-| 18 | Main Street | nm7-tower | TOWER | in order | 11 | Normal | 10/10 | 0.773 | 16.0 |
-| 19 | Main Street | nm8-cinema | CINEMA | in order | 11 | Normal | 9/10 | 0.771 | 16.3 |
-| 20 | Main Street | nm9-bakery | BAKERY | in order | 12 | Normal | 10/10 | 0.813 | 16.5 |
-| 21 | Main Street | nm10-street | STREET | in order | 12 | Normal | 11/11 | 0.777 | 17.4 |
-| 22 | Sunny Beach | lv1-bus | BUS | in order | 10 | Hard | 7/8 | 0.59 | 18.6 |
-| 23 | Sunny Beach | lv2-car | CAR | in order | 13 | Hard | 2/8 | 0.316 | 33.0 |
-| 24 | Sunny Beach | lv3-planet | PLANET | in order | 17 | Hard | 2/7 | 0.451 | 37.8 |
-| 25 | Sunny Beach | sc2-jungle | JUNGLE | **Scramble** | 17 | Hard | 7/9 | 0.618 | 30.7 |
-| 26 | Sunny Beach | lv4-apple | APPLE | in order | 21 | Hard | 3/4 | 0.43 | 45.7 |
-| 27 | Sunny Beach | lv5-garden | GARDEN | in order | 24 | Hard | 4/6 | 0.612 | 43.6 |
-| 28 | Harbor Docks | lv6-rocket | ROCKET | in order | 26 | Super Hard | 2/7 | 0.363 | 61.3 |
-| 29 | Harbor Docks | lv7-ticket | TICKET | in order | 27 | Hard | 2/3 | 0.555 | 52.0 |
-| 30 | Harbor Docks | lv8-mother | MOTHER | in order | 26 | Hard | 5/5 | 0.685 | 42.4 |
-| 31 | Harbor Docks | sc3-dragons | DRAGONS | **Scramble** | 22 | Hard | 3/4 | 0.581 | 41.2 |
-| 32 | Harbor Docks | lv9-busstop | BUS + STOP | in order | 30 | Super Hard | 5/12 | 0.241 | 77.3 |
-| 33 | Harbor Docks | lv10-school | SCHOOL | in order | 36 | Super Hard | 1/2 | 0.441 | 77.8 |
-| 34 | Downtown | dt1-bank | BANK | in order | 14 | Hard | 5/10 | 0.41 | 32.0 |
-| 35 | Downtown | sc4-subway | SUBWAY | **Scramble** | 17 | Hard | 3/5 | 0.682 | 29.0 |
-| 36 | Downtown | dt2-hotel | HOTEL | in order | 20 | Hard | 5/11 | 0.473 | 42.7 |
-| 37 | Downtown | dt3-market | MARKET | in order | 22 | Hard | 5/7 | 0.571 | 41.7 |
-| 38 | Downtown | dt4-square | SQUARE | in order | 33 | Super Hard | 4/8 | 0.328 | 78.9 |
+| 2 | School Street | st2-dog | DOG | in order | 4 | Very Easy | 3/3 | 0.938 | 4.3 |
+| 3 | School Street | st3-sun | SUN | in order | 5 | Very Easy | 6/6 | 0.92 | 5.4 |
+| 4 | School Street | st4-hat | HAT | in order | 5 | Very Easy | 6/6 | 0.96 | 5.2 |
+| 5 | School Street | st5-fish | FISH | in order | 6 | Very Easy | 8/8 | 0.983 | 6.1 |
+| 6 | School Street | st6-milk | MILK | in order | 6 | Easy | 6/7 | 0.852 | 7.3 |
+| 7 | Maple Suburbs | st7-frog | FROG | in order | 7 | Easy | 7/7 | 0.914 | 7.6 |
+| 8 | Maple Suburbs | st8-train | TRAIN | in order | 8 | Easy | 8/8 | 0.939 | 8.5 |
+| 9 | Maple Suburbs | st9-tiger | TIGER | in order | 9 | Normal | 8/8 | 0.806 | 10.7 |
+| 10 | Maple Suburbs | st10-house | HOUSE | in order | 9 | Normal | 11/12 | 0.911 | 10.0 |
+| 11 | Main Street | nm1-bread | BREAD | in order | 9 | Normal | 10/10 | 0.796 | 10.8 |
+| 12 | Main Street | nm2-shop | SHOP | in order | 9 | Normal | 9/10 | 0.767 | 11.4 |
+| 13 | Main Street | sc1-pizza | PIZZA | **Scramble** | 9 | Normal | 10/11 | 0.795 | 11.1 |
+| 14 | Main Street | nm3-park | PARK | in order | 10 | Normal | 9/10 | 0.856 | 11.7 |
+| 15 | Main Street | nm4-music | MUSIC | in order | 10 | Normal | 12/13 | 0.739 | 12.8 |
+| 16 | Main Street | nm5-candy | CANDY | in order | 10 | Normal | 11/11 | 0.733 | 12.7 |
+| 17 | Main Street | nm6-clock | CLOCK | in order | 11 | Normal | 9/10 | 0.819 | 13.3 |
+| 18 | Main Street | nm7-tower | TOWER | in order | 11 | Normal | 10/10 | 0.773 | 13.5 |
+| 19 | Main Street | nm8-cinema | CINEMA | in order | 11 | Normal | 9/10 | 0.771 | 13.8 |
+| 20 | Main Street | nm9-bakery | BAKERY | in order | 12 | Normal | 10/10 | 0.813 | 14.2 |
+| 21 | Main Street | nm10-street | STREET | in order | 12 | Normal | 11/11 | 0.777 | 14.7 |
+| 22 | Sunny Beach | lv1-bus | BUS | in order | 10 | Normal | 7/8 | 0.59 | 14.5 |
+| 23 | Sunny Beach | lv2-car | CAR | in order | 13 | Hard | 2/8 | 0.316 | 24.1 |
+| 24 | Sunny Beach | lv3-planet | PLANET | in order | 17 | Hard | 2/7 | 0.451 | 28.5 |
+| 25 | Sunny Beach | sc2-jungle | JUNGLE | **Scramble** | 17 | Hard | 7/9 | 0.618 | 24.2 |
+| 26 | Sunny Beach | lv4-apple | APPLE | in order | 21 | Hard | 3/4 | 0.43 | 33.7 |
+| 27 | Sunny Beach | lv5-garden | GARDEN | in order | 24 | Hard | 4/6 | 0.612 | 34.3 |
+| 28 | Harbor Docks | lv6-rocket | ROCKET | in order | 26 | Hard | 2/7 | 0.363 | 44.7 |
+| 29 | Harbor Docks | lv7-ticket | TICKET | in order | 27 | Hard | 2/3 | 0.555 | 40.0 |
+| 30 | Harbor Docks | lv8-mother | MOTHER | in order | 26 | Hard | 5/5 | 0.685 | 34.2 |
+| 31 | Harbor Docks | sc3-dragons | DRAGONS | **Scramble** | 22 | Hard | 3/4 | 0.581 | 32.0 |
+| 32 | Harbor Docks | lv9-busstop | BUS + STOP | in order | 30 | Super Hard | 5/12 | 0.241 | 54.5 |
+| 33 | Harbor Docks | lv10-school | SCHOOL | in order | 36 | Super Hard | 1/2 | 0.441 | 57.6 |
+| 34 | Downtown | dt1-bank | BANK | in order | 14 | Hard | 5/10 | 0.41 | 23.8 |
+| 35 | Downtown | sc4-subway | SUBWAY | **Scramble** | 17 | Hard | 3/5 | 0.682 | 23.6 |
+| 36 | Downtown | dt2-hotel | HOTEL | in order | 20 | Hard | 5/11 | 0.473 | 32.2 |
+| 37 | Downtown | dt3-market | MARKET | in order | 22 | Hard | 5/7 | 0.571 | 32.3 |
+| 38 | Downtown | dt4-square | SQUARE | in order | 33 | Super Hard | 4/8 | 0.328 | 56.7 |
+
+## v9.1 (0.9.1): the bus stays put, and recalibrated tiers
+
+### The bus stays on the stop you were playing
+
+A player at stop 23 who went back to an earlier stop and played forward one level at a time saw the bus drive back to 23 every time they tapped the map button in a level: the map always sent the bus to the Continue stop (the first unsolved stop after the furthest win). Now:
+- The save has a new field, **`lastStop`**: the id of the level last played or opened. It is set when a level starts (from the map, Next stop or a `#level-N` link) and whenever the bus parks at a stop. Like `busAt`, it is saved only for really-open stops with no test option on, so cheats still never touch the real save.
+- **Map from inside a level** (the HUD map button) and **Map after a loss**: the bus stays on that level.
+- **After a win**, the bus may move on only as part of the won-level flow, to the **stop right after the level just won**: **Next stop** drives there and starts it (as before), and **Map** on the win card parks the bus there. After a boss win with a ready chest it still drives to the chest; after the last level it stays.
+- **Title Play / Continue and `#map`** show the bus at `lastStop` instead of driving it to the furthest stop. That is the one change to Continue, because driving to the furthest stop is exactly the jump being fixed. The Continue *target* is unchanged: the pulsing current-stop ring and the map's foot button ("Play stop 23 ▶") still point at the first unsolved stop, so the furthest stop is one tap away.
+- **Older saves** (no `lastStop`) keep the old behaviour once: the bus drives from `busAt` to the Continue stop, and from then on `lastStop` is saved. Nothing else in the save changes.
+
+`tests/map-e2e.js` checks it with real taps (a save at stop 23): replaying stop 5 then the map button keeps the bus at 5, also after a reload and through the title's Continue; after winning a replayed stop 5 the win card's Map parks it at 6 and Next stop drives only to 6, never to 23; quitting stop 7 one move in and losing stop 7 both leave the bus at 7; and a save without `lastStop` still drives to the Continue stop.
+
+### Tier recalibration
+
+BUS (par 10) showed **Hard** (v9 score 18.6) but plays easy: the v9 formula weighted the on-track penalty twice as much as length, so a short lot with a few wrong turns crossed into Hard. v9.1 halves the on-track weight (par now counts at least as much as the penalty can add) and adds par bands, so a short lot can never be Hard and the longest lots are always Super Hard; see [Difficulty tiers](#difficulty-tiers) for the formula and bands. All 38 levels were re-rated; three changed:
+
+| # | Word | Par | v9 tier (score) | v9.1 tier (score) | Why |
+|---|---|---|---|---|---|
+| 10 | HOUSE | 9 | Easy (10.8) | Normal (10.0) | par 9, as long as TIGER and the Main Street lots; the par ≥ 9 floor ends the dip after the Normal TIGER |
+| 22 | BUS | 10 | Hard (18.6) | Normal (14.5) | par 10 can never be Hard; its score now sits with the Main Street lots (12.7-14.7) |
+| 28 | ROCKET | 26 | Super Hard (61.3) | Hard (44.7) | with the on-track weight halved it scores in line with TICKET (27, 40.0) and MOTHER (26, 34.2); Harbor Docks now rises Hard → Super Hard at BUS + STOP and SCHOOL |
+
+Sanity targets: CAT Very Easy (3.0); every Main Street normal lot (par 9-12) Normal; BUS Normal; SCHOOL (par 36, 57.6) and SQUARE (par 33, 56.7) Super Hard. Totals: **Very Easy 5, Easy 3, Normal 14, Hard 13, Super Hard 3**.
+
+The verifier checks the stored `difficulty` against `tools/difficulty.js` and, separately, re-derives the tier and checks every par band, so any mismatch fails. `tests/rules.js` checks the targets above, `tierOf` on edge cases, and that tiers rise district by district.
+
+### Other
+
+- `index.html` carries `<meta name="wjb-version" content="0.9.1">` (also `window.WJB.version`); `package.json` is 0.9.1.
+- Screenshots: `screenshots/v9.1-map-bus-on-replayed-stop-390x844.png` (bus on replayed stop 5 while stop 23 is the current stop), `v9.1-bus-banner-normal-390x844.png`, `v9.1-bus-header-normal-390x844.png` and `v9.1-map-tier-badges-390x844.png`.
 
 ## Levels
 
@@ -535,7 +569,7 @@ The design checks depend on the level's `tier`:
 - **Bay Words:** each level is also solved with the Bay Word rule off and par must match, so a Bay Word is never needed for par; reachable Bay Words are listed.
 - **Scramble** (`mode: "scramble"`): core tier, needs slides, in-order play of the same lot is impossible or at least 2 moves slower, junk exits are reported; pacing: after the starters, at least 3 in-order levels between Scramble levels, par **in line** with the in-order levels just before and after it (0.8 × min to 1.2 × max; v9, replacing the old "60-99% breather" rule), every district after the starter ramp has a Scramble stop, and the first Scramble level has a tip.
 - **`normal`** (v9, Main Street): the normal-tier thresholds in [v9](#variety-metrics) (par 9-12, first-move slack, on-track share, optimal and par+2 sequence counts, no keys/chunks/taxi, a reachable loss, a tip, gentle par steps).
-- **Variety and difficulty** (v9, every level): the variety metrics are printed for every level, and the stored `difficulty` must match `tools/difficulty.js` (tier and score).
+- **Variety and difficulty** (v9, every level): the variety metrics are printed for every level, and the stored `difficulty` must match `tools/difficulty.js` (tier and score), and (v9.1) the tier is re-derived from the score and par and every par band is checked (par ≤ 12 never Hard, par ≥ 30 always Super Hard, and so on).
 - **`core`** in-order levels (default; 11-23 except the Scramble levels): every car carrying a word letter starts blocked; the optimal line needs slides; driving forward only is impossible or slower (except the first core level); par never falls below 75% of an earlier core level's.
 - **`starter`** (levels 1-10): the mechanic named in `teaches` must really be needed: `exit` = the best line is taps only; `slide` = it can't be won as fast without partial slides, and needs no reverse and no bay; `reverse` = it can't be won as fast driving forward only, and needs no bay; `bay` = it can't be won as fast without parking a letter; `trucks` = has a long truck; `bay-limit` = a loss is reachable. `"safe": true` means no losing move exists anywhere. Every starter level needs a tip, starter par never goes down, stays below the first core level's par, and the last starter is within 2 of it.
 - `js/levels.js` is in sync with the JSON, and `js/baywords.js` with `levels/baywords.json` (all 3 letters, each with a vowel);
@@ -573,7 +607,8 @@ node tools/verify-levels.js       # every level + map rules + the Python cross-c
 `tests/map-e2e.js` covers the map:
 - rendering: 6 themed districts, 38 stops, 6 chests; Scramble, key and BOSS markers; 44 px targets; no sideways overflow; the sticky header; the current stop in view;
 - tapping a stop to play it; a locked stop can't be tapped;
-- the bus: driving after **Next stop** (mid-drive check) and parking at the right stop, which then starts; driving from the last stop played to the current one via the HUD map button, ending within 2 px of its spot; transform-only movement; a tap that drives back, with a second tap skipping;
+- the bus: driving after **Next stop** (mid-drive check) and parking at the right stop, which then starts; the HUD map button keeping the bus on the stop being played (v9.1); a save without `lastStop` driving from `busAt` to the current stop, ending within 2 px of its spot; transform-only movement; a tap that drives back, with a second tap skipping;
+- v9.1 bus regressions (replay an earlier stop then the map, a win on a replayed stop, quitting mid-level, a loss) and the BUS banner / header with its new Normal badge;
 - the boss: "Open the chest!", the bus driving to the chest, closed, opening and open states, the claim saved once (coins and inventory), rewards shown, Collect, the gate lifting and the bus parking at the next district's first stop; an opened chest not paying twice (also after a reload); a locked district and a locked chest;
 - the inventory: badges, "Free", the confirm text, used before coins, Undo refunding it to the inventory, a free Tow win capped at 2 stars, coin prices back when empty;
 - migration: a v8 save that beat 1-10 + BUS gets two claimable catch-up chests (School Street, and Maple Suburbs whose boss is now HOUSE; paint unlocked and worn, Settings paint picker), the Main Street chest stays locked, the title says "New: Main Street, 10 new stops!" and the bus goes on to CAR; v8 saves waiting at BUS or with all 28 won continue at Main Street stop 11; v2 and v3 saves land on the right stop;
