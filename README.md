@@ -333,6 +333,16 @@ The save format is still `v: 4`. Stars, best scores and chests are kept **by lev
 - **Access:** players past BUS keep everything they had open. Main Street opens for them but is not forced: the title and the district header say "New: Main Street, 10 new stops!".
 - **Continue:** a save waiting at BUS continues at stop 11 (BREAD). A level that was won always opens the stop after it (this keeps a v8 save that beat BUS and was waiting at PIZZA, now stop 13, moving on to CAR, stop 23). A save that beat everything continues at the first unplayed Main Street stop.
 
+### Other v9 changes
+
+- HOUSE's tip now hands off to Main Street ("Last warm-up! Next up: Main Street, with lots of ways to win.").
+- Settings: with five bus paints the swatches get their own line under the label, and tapping Reset scrolls the confirm buttons into view on short screens.
+- `package.json` is 0.9.0.
+
+### v9 screenshots
+
+`screenshots/v9-mainst-district.png`, `v9-mainst-chest-rewards.png`, `v9-map-overview-full.png` (the whole map), `v9-district-1-school.png` ... `v9-district-6-downtown.png`, `v9-desktop-map.png`, `v9-map-tier-badges-390x844.png`, `v9-map-tier-badges-375x667.png`, `v9-start-banner-tier-390x844.png`, `v9-start-banner-tier-desktop.png`, `v9-play-header-tier-390x844.png`, `v9-play-header-tier-375x667.png`, `v9-normal-nm1-bread-390x844.png`, `v9-normal-nm6-clock-390x844.png`, `v9-normal-nm10-street-390x844.png`, `v9-first-scramble-tip-390x844.png`, `v9-first-scramble-banner-390x844.png`, `v9-hard-scramble-dragons-banner-390x844.png`, `v9-hard-scramble-dragons-header-390x844.png`.
+
 ### Levels (v9 order)
 
 | # | District | id | Word | Mode | Par | Tier | First (par+1) | Track (par+1) | Score |
