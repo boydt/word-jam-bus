@@ -63,11 +63,16 @@
  *    on-track share    mid-game forgiveness: along the optimal line, the
  *                      average share of legal moves that still allow a win
  *                      within par + 1 (and par + 2).
- * Difficulty tier (v9, every level): the generated "difficulty" field must
- *    equal tools/difficulty.js (score = par * (1 + 2 * (1 - on-track)) +
- *    3 * (1 - first-move slack), both at par + 1; tiers Very Easy < 7 <= Easy
- *    < 12 <= Normal < 18 <= Hard < 60 <= Super Hard). Rewrite it with
- *    node tools/difficulty.js --write.
+ * Difficulty tier (v9, recalibrated in v9.1; every level): the generated
+ *    "difficulty" field must equal tools/difficulty.js:
+ *      score = par * (1 + (1 - on-track)) + 3 * (1 - first-move slack),
+ *    both at par + 1; score bands Very Easy < 7 <= Easy < 10.5 <= Normal
+ *    < 20 <= Hard < 50 <= Super Hard; then par bands clamp the tier:
+ *    par <= 8 at most Easy, par >= 9 at least Normal, par <= 12 at most
+ *    Normal (a short lot is never Hard), par <= 25 at most Hard, par >= 20
+ *    at least Hard, par >= 30 Super Hard. The verifier also re-derives the
+ *    tier from the stored score's inputs and fails on any mismatch or any
+ *    par-band breach. Rewrite it with node tools/difficulty.js --write.
  * Bay Word (every level): par with the Bay Word rule equals par without it,
  * so a Bay Word is never needed for 3 stars; reachable Bay Words are listed.
  * Boosters are never part of these proofs: every par is booster-free.
@@ -321,6 +326,15 @@ levels.forEach(function (lv, n) {
         row.variety = { firstMoves: vv.firstMoves, firstOk1: vv.firstOkBySlack[1], firstOk2: vv.firstOk, track1: +rt.track.toFixed(3), track2: +vv.midForgive.toFixed(3), optimal: vv.optimal, within2: vv.seqWithin, horizonStates: vv.states };
         row.difficulty = rt.stored;
         if (JSON.stringify(lv.difficulty) !== JSON.stringify(rt.stored)) problems.push('stored difficulty ' + JSON.stringify(lv.difficulty) + ' != formula ' + JSON.stringify(rt.stored) + ' (run node tools/difficulty.js --write)');
+        // v9.1: the par bands, checked on their own so a stale or hand-edited tier can never slip through
+        var sd = lv.difficulty || {}, want = D.tierOf(rt.score, lv.par);
+        if (sd.tier !== want || sd.label !== D.TIERS[want - 1].label) problems.push('stored tier ' + sd.tier + ' ' + sd.label + ' != ' + want + ' ' + D.TIERS[want - 1].label + ' (score ' + rt.score.toFixed(2) + ', par ' + lv.par + ')');
+        if (lv.par <= 12 && sd.tier >= 4) problems.push('par ' + lv.par + ' (<= 12) can never be Hard or Super Hard');
+        if (lv.par <= 8 && sd.tier >= 3) problems.push('par ' + lv.par + ' (<= 8) is at most Easy');
+        if (lv.par >= 9 && sd.tier <= 2) problems.push('par ' + lv.par + ' (>= 9) is at least Normal');
+        if (lv.par <= 25 && sd.tier >= 5) problems.push('par ' + lv.par + ' (<= 25) is at most Hard');
+        if (lv.par >= 20 && sd.tier <= 3) problems.push('par ' + lv.par + ' (>= 20) is at least Hard');
+        if (lv.par >= 30 && sd.tier !== 5) problems.push('par ' + lv.par + ' (>= 30) must be Super Hard');
         if (tier === 'normal') {
           if (rt.first < NORMAL.first) problems.push('first-move slack ' + vv.firstOkBySlack[1] + '/' + vv.firstMoves + ' is below ' + NORMAL.first * 100 + '%');
           if (rt.track < NORMAL.track) problems.push('on-track share ' + rt.track.toFixed(2) + ' is below ' + NORMAL.track);

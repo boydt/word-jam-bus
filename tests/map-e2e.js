@@ -162,18 +162,23 @@ async function mapBasics(page, ctx, label) {
   check(bi.driving && bi.driving.to === LVS[1].id, 'Next stop: back on the map the bus is driving from stop 1 to stop 2 (' + JSON.stringify(bi.driving) + ')');
   await p.waitForSelector('#screen-game.active', { timeout: 5000 });
   check((await p.textContent('#hud-level')).trim() === 'Level 2 of ' + NLEV && (await stored(p)).busAt === LVS[1].id, '...it parks at stop 2 and level 2 starts by itself (busAt saved: ' + (await stored(p)).busAt + ')');
-  // back to the map from a level: the bus drives from the last stop played to the next
+  // v9.1: Map from inside a level keeps the bus on that level (it used to drive on to the Continue stop)
   await boot(p, won(4));
   await p.goto(URL + '#level-2'); await p.waitForSelector('#screen-game.active'); await p.waitForTimeout(500);
-  await tapEl(p, T, '#btn-menu'); await mapOpen(p);
+  await tapEl(p, T, '#btn-menu'); await mapOpen(p); await p.waitForTimeout(700);
+  bi = await busInfo(p);
+  check(!bi.driving && bi.at === LVS[1].id && bi.off < 2 && (await stored(p)).lastStop === LVS[1].id && (await mapFacts(p)).current === 5, 'HUD map button after replaying stop 2: the bus stays parked at stop 2 (lastStop saved), while stop 5 is the current stop');
+  // a save from before v9.1 (busAt but no lastStop) keeps the old behaviour: Continue drives on to the current stop
+  await boot(p, won(4, { busAt: LVS[1].id }));
+  await tapEl(p, T, '#btn-play'); await mapOpen(p);
   await p.waitForFunction(() => window.WJB.map.driving && window.WJB.map.driving.t > 0.25, null, { timeout: 3000 }).catch(() => {});
   bi = await busInfo(p);
   const midT = bi.driving ? bi.driving.t : 0;
   await shot(p, 'v8-bus-mid-drive.png');
-  check(bi.driving && bi.driving.to === LVS[4].id && midT > 0 && midT < 1, 'HUD map button after replaying stop 2: the bus drives from stop 2 on to the current stop 5 (t=' + midT.toFixed(2) + ')');
+  check(bi.driving && bi.driving.to === LVS[4].id && midT > 0 && midT < 1, 'save without lastStop (fallback): Continue drives the bus from stop 2 (busAt) on to the current stop 5 (t=' + midT.toFixed(2) + ')');
   await notDriving(p); await p.waitForTimeout(200);
   bi = await busInfo(p);
-  check(bi.at === LVS[4].id && bi.off < 2 && bi.inView && !(await p.locator('#screen-game.active').count()), 'the drive ends parked at stop 5 (' + bi.off.toFixed(1) + 'px from its spot, in view); no auto-start without a win');
+  check(bi.at === LVS[4].id && bi.off < 2 && bi.inView && !(await p.locator('#screen-game.active').count()) && (await stored(p)).lastStop === LVS[4].id, 'the drive ends parked at stop 5 (' + bi.off.toFixed(1) + 'px from its spot, in view; lastStop now saved); no auto-start without a win');
   check(await p.evaluate(() => { const b = document.getElementById('map-bus'); return /translate/.test(b.style.transform) && b.style.left === '' && b.style.top === ''; }), 'the bus moves by transform only (translate + rotate)');
   // tap a stop further on: the bus drives there first, then the level starts; tap it again to skip
   await tapEl(p, T, '.lvl[data-level="3"]');
@@ -182,6 +187,87 @@ async function mapBasics(page, ctx, label) {
   await tapEl(p, T, '.lvl[data-level="3"]');
   await p.waitForSelector('#screen-game.active', { timeout: 3000 });
   check(goingTo && goingTo.to === LVS[2].id && (await p.textContent('#hud-level')).trim() === 'Level 3 of ' + NLEV, 'tapping stop 3: the bus drives back to it (a second tap skips the drive), then level 3 starts');
+
+  // v9.1 regressions: the bus stays on a replayed earlier stop and never jumps to the furthest one
+  console.log('\n# v9.1: bus position after replaying earlier stops');
+  const FAR = 23, R5 = 5;
+  await boot(p, won(FAR - 1, { busAt: LVS[FAR - 1].id, lastStop: LVS[FAR - 1].id, chests: { school: true, suburbs: true, mainst: true } }));
+  await tapEl(p, T, '#btn-play'); await mapOpen(p); await p.waitForTimeout(600);
+  bi = await busInfo(p);
+  check(!bi.driving && bi.at === LVS[FAR - 1].id && (await mapFacts(p)).current === FAR, 'v9.1 setup: Continue shows the bus at its last stop ' + FAR + ' (the furthest open stop)');
+  await tapEl(p, T, '.lvl[data-level="' + R5 + '"]');
+  await p.waitForFunction(() => window.WJB.map.driving, null, { timeout: 2000 }).catch(() => {});
+  await tapEl(p, T, '.lvl[data-level="' + R5 + '"]');
+  await p.waitForSelector('#screen-game.active', { timeout: 6000 });
+  check((await p.textContent('#hud-level')).trim() === 'Level ' + R5 + ' of ' + NLEV && (await stored(p)).lastStop === LVS[R5 - 1].id, 'v9.1: replaying earlier stop ' + R5 + ' records it as lastStop');
+  // 1. replay an earlier level, then go to the map: the bus is on that level
+  await tapEl(p, T, '#btn-menu'); await mapOpen(p); await p.waitForTimeout(800);
+  bi = await busInfo(p); f = await mapFacts(p);
+  check(!bi.driving && bi.at === LVS[R5 - 1].id && bi.off < 2 && f.current === FAR, 'v9.1 regression 1: Map from replayed stop ' + R5 + ': the bus stays at stop ' + R5 + ' (not the furthest stop ' + FAR + '; bus at ' + bi.at + ', ' + bi.off.toFixed(1) + 'px)');
+  await p.evaluate(n => { const m = window.WJB.map, pt = m.point(m.nodeOfLevel(n)), sc = document.getElementById('map-scroll'); sc.scrollTop = Math.max(0, pt.y - sc.clientHeight * 0.45); }, R5);
+  await p.waitForTimeout(300);
+  await shot(p, 'v9.1-map-bus-on-replayed-stop-390x844.png');
+  await p.reload(); await mapOpen(p); await p.waitForTimeout(700);
+  bi = await busInfo(p);
+  check(!bi.driving && bi.at === LVS[R5 - 1].id, '...and after a reload (#map) the bus is still at stop ' + R5 + ' (saved lastStop)');
+  await tapEl(p, T, '#btn-map-home'); await p.waitForSelector('#screen-title.active');
+  await tapEl(p, T, '#btn-play'); await mapOpen(p); await p.waitForTimeout(700);
+  bi = await busInfo(p);
+  check(!bi.driving && bi.at === LVS[R5 - 1].id && /Play stop 23/.test(await p.textContent('#btn-map-play')), 'title Continue: the bus stays at stop ' + R5 + '; the foot button still offers "Play stop ' + FAR + '"');
+  // 2. after a win on a replayed earlier level: the bus is on that level or the one right after it, never the furthest stop
+  await tapEl(p, T, '.lvl[data-level="' + R5 + '"]'); await p.waitForSelector('#screen-game.active', { timeout: 4000 });
+  check(await solve(p, T), 'v9.1: replayed stop ' + R5 + ' won');
+  await tapEl(p, T, '#btn-win-menu'); await mapOpen(p); await notDriving(p); await p.waitForTimeout(300);
+  bi = await busInfo(p);
+  check([LVS[R5 - 1].id, LVS[R5].id].includes(bi.at) && bi.at !== LVS[FAR - 1].id && !(await p.locator('#screen-game.active').count()), 'v9.1 regression 2a: Map from the win card of replayed stop ' + R5 + ': the bus is at stop ' + (LVS.findIndex(l => l.id === bi.at) + 1) + ' (' + R5 + ' or ' + (R5 + 1) + ', never ' + FAR + ')');
+  await tapEl(p, T, '.lvl[data-level="' + R5 + '"]');
+  await p.waitForFunction(() => window.WJB.map.driving, null, { timeout: 2000 }).catch(() => {});
+  if (!(await p.locator('#screen-game.active').count())) await tapEl(p, T, '.lvl[data-level="' + R5 + '"]').catch(() => {});
+  await p.waitForSelector('#screen-game.active', { timeout: 6000 });
+  check(await solve(p, T), 'v9.1: replayed stop ' + R5 + ' won again');
+  await tapEl(p, T, '#btn-next'); await mapOpen(p);
+  await p.waitForSelector('#screen-game.active', { timeout: 6000 });
+  check((await p.textContent('#hud-level')).trim() === 'Level ' + (R5 + 1) + ' of ' + NLEV && (await stored(p)).busAt === LVS[R5].id, 'v9.1 regression 2b: Next stop after replayed stop ' + R5 + ' drives only to stop ' + (R5 + 1) + ' and starts it');
+  await tapEl(p, T, '#btn-menu'); await mapOpen(p); await p.waitForTimeout(800);
+  bi = await busInfo(p);
+  check(!bi.driving && bi.at === LVS[R5].id, '...Map from there: the bus stays at stop ' + (R5 + 1) + ', not ' + FAR);
+  // 3. after quitting mid-level: the bus is on that level
+  const R7 = 7;
+  await tapEl(p, T, '.lvl[data-level="' + R7 + '"]');
+  await p.waitForFunction(() => window.WJB.map.driving, null, { timeout: 2000 }).catch(() => {});
+  if (!(await p.locator('#screen-game.active').count())) await tapEl(p, T, '.lvl[data-level="' + R7 + '"]').catch(() => {});
+  await p.waitForSelector('#screen-game.active', { timeout: 6000 }); await p.waitForTimeout(400); await dismissCoach(p);
+  const firstMv = (await p.evaluate(() => window.WJB.solution()))[0];
+  await inputMove(p, T, firstMv.car, firstMv.which); await settle(p);
+  const midMoves = await p.evaluate(() => window.WJB.session.state.moves);
+  await tapEl(p, T, '#btn-menu'); await mapOpen(p); await p.waitForTimeout(800);
+  bi = await busInfo(p);
+  check(midMoves >= 1 && !bi.driving && bi.at === LVS[R7 - 1].id && (await stored(p)).lastStop === LVS[R7 - 1].id, 'v9.1 regression 3: quitting stop ' + R7 + ' mid-level (' + midMoves + ' move in): the bus is at stop ' + R7 + ' (bus at ' + bi.at + ')');
+  // a loss, then Map: the bus stays too
+  await tapEl(p, T, '.lvl[data-level="' + R7 + '"]'); await p.waitForSelector('#screen-game.active', { timeout: 4000 }); await p.waitForTimeout(400);
+  // a real loss: the shortest move list that overflows the bay (searched in the page with the game's own rules)
+  const losePath = await p.evaluate(() => {
+    const E = window.WJBEngine, g = window.WJB.session.game, s0 = window.WJB.session.state, seen = new Set([E.stateKey(s0)]);
+    let fr = [{ st: s0, path: [] }];
+    for (let d = 0; d < 12 && fr.length; d++) {
+      const nx = [];
+      for (const { st, path } of fr) for (let i = 0; i < g.n; i++) for (const w of [0, 1]) {
+        const r = E.step(g, st, i, w);
+        if (r.result === 'lose') return path.concat([{ car: i, which: w }]);
+        if (!r.state || r.won) continue;
+        const k = E.stateKey(r.state); if (seen.has(k)) continue; seen.add(k);
+        nx.push({ st: r.state, path: path.concat([{ car: i, which: w }]) });
+      }
+      fr = nx;
+    }
+    return null;
+  });
+  for (const m of losePath || []) { await inputMove(p, T, m.car, m.which); await settle(p); }
+  await p.waitForSelector('#ov-lose.show', { timeout: 5000 }).catch(() => {});
+  check(!!losePath && await p.locator('#ov-lose.show').count() === 1, 'stop ' + R7 + ' lost by real input (' + (losePath ? losePath.length : '?') + ' moves; bay overflow)');
+  await tapEl(p, T, '#btn-lose-menu'); await mapOpen(p); await p.waitForTimeout(800);
+  bi = await busInfo(p);
+  check(!bi.driving && bi.at === LVS[R7 - 1].id, 'Map from the lose card of stop ' + R7 + ': the bus stays at stop ' + R7);
 
   // the boss lot -> chest -> gate -> next district
   console.log('\n# Boss, chest, gate, next district');

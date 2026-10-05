@@ -38,7 +38,8 @@
 
   /* ---------------- persistence ---------------- */
   // Saved progress: { v, unlocked, unlockedId, stars{id:n}, best{id:moves}, sound, coins, seen{},
-  //   v8: inv{tow,bay,nudge,flip} (free boosters from chests), chests{districtId:true} (opened), paints[], paint, busAt }.
+  //   v8: inv{tow,bay,nudge,flip} (free boosters from chests), chests{districtId:true} (opened), paints[], paint, busAt,
+  //   v9.1: lastStop (id of the level last played or opened; the map parks the bus there) }.
   // Stars and best moves are keyed by level id, so they survive re-ordering.
   // `unlocked` is the index of the furthest open level; v4 also stores its id
   // (`unlockedId`) so later re-orderings can migrate by id. Older saves stored
@@ -211,12 +212,17 @@
   M.busNode = nodeFromKey(progress.busAt);
   if (M.busNode !== null && !nodeReal(M.busNode)) M.busNode = null;
   /** The bus parks at a node. Saved (cosmetic) only when the node is really open and no test option is on,
-   *  so the real save never changes because of a cheat. */
+   *  so the real save never changes because of a cheat. v9.1: parking at a stop (playing it, opening it,
+   *  or arriving there) also records it as progress.lastStop, the stop the map shows the bus at. */
   function setBusNode(n) {
     M.busNode = n;
     var bus = $('map-bus');
     if (bus) bus.setAttribute('data-at', n === null ? '' : nodeKey(n));
-    if (n !== null && nodeReal(n) && !testOn() && progress.busAt !== nodeKey(n)) { progress.busAt = nodeKey(n); saveProgress(); }
+    if (n === null || !nodeReal(n) || testOn()) return;
+    var key = nodeKey(n), stop = mapNodes[n].type === 'stop', dirty = false;
+    if (progress.busAt !== key) { progress.busAt = key; dirty = true; }
+    if (stop && progress.lastStop !== key) { progress.lastStop = key; dirty = true; }
+    if (dirty) saveProgress();
   }
 
   var HEAD_H = 92, STEP = 104, PARK = 46;
@@ -500,15 +506,25 @@
     var y = Math.abs(ya - yb) < h - 220 ? (ya + yb) / 2 : ya;
     sc.scrollTop = Math.max(0, Math.min(M.H - h, y - h * 0.55));
   }
-  /** Which node the bus heads for when the map opens: a just-finished district's chest, else the stop to play next. */
+  /** Which node the bus heads for when the map opens (v9.1: never the furthest stop just because it is the furthest):
+   *  - opts.stay (Map from inside a level, or after a loss): the stop being played; the bus stays put;
+   *  - a just-finished district's chest (the bus is at a boss whose chest is ready; not with opts.stay);
+   *  - opts.next (after a win: Next stop, or Map from the win card): the stop right after the level just won;
+   *  - opts.won: the level just won, if the stop after it can't be driven to;
+   *  - otherwise (title Play / Continue, #map) the saved last-played stop, progress.lastStop;
+   *  - a save without lastStop (before v9.1) keeps the old behaviour: the Continue stop (firstUnsolved). */
   function mapTarget(opts) {
+    opts = opts || {};
     var b = M.busNode, nd = b !== null ? mapNodes[b] : null;
-    if (nd && nd.type === 'stop' && nd.i === DISTRICTS[nd.k].last && chestState(nd.k) === 'ready' && !testOn()) return nodeOfChest[nd.k];
-    if (opts && opts.next !== undefined && opts.next < LEVELS.length && isUnlocked(opts.next)) return nodeOfLevel[opts.next];
+    if (opts.stay === undefined && nd && nd.type === 'stop' && nd.i === DISTRICTS[nd.k].last && chestState(nd.k) === 'ready' && !testOn()) return nodeOfChest[nd.k];
+    if (opts.next !== undefined && opts.next < LEVELS.length && isUnlocked(opts.next)) return nodeOfLevel[opts.next];
+    var at = opts.stay !== undefined ? opts.stay : opts.won !== undefined ? opts.won : indexOfId(progress.lastStop);
+    if (at >= 0 && at < LEVELS.length && isUnlocked(at)) return nodeOfLevel[at];
     return nodeOfLevel[firstUnsolved()];
   }
-  /** Open the map; the bus drives from where it was parked (the last stop played) to the next stop.
-   *  opts.next: the stop after a win; opts.autoStart: start that level when the bus gets there. */
+  /** Open the map; the bus drives from where it was parked to mapTarget(opts) (often it just stays put).
+   *  opts.stay: the level being left; opts.won / opts.next: the level just won and the stop after it;
+   *  opts.autoStart: start the target level when the bus gets there. */
   function showMap(opts) {
     opts = opts || {};
     if (cur) { cur.token++; cancelSearch(); }
@@ -1668,7 +1684,8 @@
 
   // v8: Play / Continue opens the city map; the bus drives on to the stop to play next
   $('btn-play').addEventListener('click', function () { Sound.unlock(); showMap({}); });
-  $('btn-menu').addEventListener('click', function () { showMap({}); });
+  // v9.1: Map from inside a level keeps the bus on that level (it no longer drives on to the Continue stop)
+  $('btn-menu').addEventListener('click', function () { showMap(cur ? { stay: cur.index } : {}); });
   $('btn-map-home').addEventListener('click', function () { M.driving = null; renderLevelGrid(); show('screen-title'); try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* file:// */ } });
   $('btn-map-play').addEventListener('click', function () { Sound.unlock(); goToStop(firstUnsolved()); });
   $('btn-map-chest').addEventListener('click', function () { var rc = readyChests(); if (!rc.length) return; Sound.unlock(); scrollMapTo(nodeOfChest[rc[0]]); openChest(rc[0], {}); });
@@ -1702,9 +1719,13 @@
     if (cur.index >= LEVELS.length - 1) showMap({});
     else showMap({ next: cur.index + 1, autoStart: true });
   });
-  ['btn-win-menu', 'btn-lose-menu'].forEach(function (id) {
-    $(id).addEventListener('click', function () { showMap({}); });
+  // v9.1: Map after a win: the bus may move on only to the stop right after the level just won (or a boss's chest);
+  // Map after a loss: it stays on the level
+  $('btn-win-menu').addEventListener('click', function () {
+    if (!cur) { showMap({}); return; }
+    showMap(cur.index < LEVELS.length - 1 ? { won: cur.index, next: cur.index + 1 } : { won: cur.index });
   });
+  $('btn-lose-menu').addEventListener('click', function () { showMap(cur ? { stay: cur.index } : {}); });
   /* ---------------- settings ---------------- */
   function renderSettings() {
     $('set-sound').checked = !!progress.sound;
@@ -1760,6 +1781,8 @@
   // Test / debug hook (read-only helpers).
   window.WJB = {
     levels: LEVELS,
+    /** v9.1: the release (index.html <meta name="wjb-version">, same as package.json) */
+    version: (function () { var m = document.querySelector('meta[name="wjb-version"]'); return m ? m.getAttribute('content') : ''; })(),
     get session() { return cur; },
     get progress() { return progress; },
     startLevel: startLevel,

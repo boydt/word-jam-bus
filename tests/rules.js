@@ -204,6 +204,15 @@ console.log('# v8 city map data (levels/districts.json)');
   const tierOfId = id => at(id).difficulty.tier;
   check(tierOfId('st1-cat') === 1 && tierOfId('lv10-school') === 5 && tierOfId('dt4-square') === 5 && normalIdx.filter(i => LV[i].difficulty.tier === 3).length >= 8,
     'v9 tier sanity: CAT Very Easy, SCHOOL and SQUARE Super Hard, the normal set mostly Normal (' + normalIdx.map(i => LV[i].difficulty.label).join(', ') + ')');
+  // v9.1 recalibration targets
+  check(normalIdx.every(i => LV[i].difficulty.tier === 3) && tierOfId('lv1-bus') < 4 && LV.every(l => l.par > 12 || l.difficulty.tier <= 3) && LV.every(l => l.par < 30 || l.difficulty.tier === 5),
+    'v9.1 tier sanity: every Main Street normal lot Normal, BUS ' + at('lv1-bus').difficulty.label + ' (not Hard), no level with par <= 12 Hard or Super Hard, par >= 30 always Super Hard');
+  const DF = require('../tools/difficulty.js');
+  check(DF.tierOf(99, 10) === 3 && DF.tierOf(0, 30) === 5 && DF.tierOf(3, 3) === 1 && DF.tierOf(19.9, 15) === 3 && DF.tierOf(20, 15) === 4 && DF.tierOf(80, 25) === 4 && DF.tierOf(50, 26) === 5 && DF.tierOf(12, 8) === 2,
+    'v9.1 tierOf: score bands and par bands (par 10 never Hard, par 30 always Super Hard, par 25 at most Hard, par 8 at most Easy)');
+  // tiers rise across the game district by district (the lowest tier in each district never falls below the previous district's, except Downtown, which starts the keys ramp)
+  const dTiers = D.map(d => d.levels.map(id => at(id).difficulty.tier));
+  check(dTiers.slice(0, D.length - 1).every((t, k) => !k || Math.min(...t) >= Math.min(...dTiers[k - 1])), 'v9.1 tiers rise by district: ' + D.map((d, k) => d.name + ' ' + Math.min(...dTiers[k]) + '-' + Math.max(...dTiers[k])).join(', '));
   check(LV.every((l, i) => !l.cars.some(c => c.lock) || inD(D[D.length - 1], i)), 'every padlock level sits in the last district (Downtown keys)');
   const kinds = ['tow', 'bay', 'nudge', 'flip'], PA = {};
   MAP.paints.forEach(p => { PA[p.id] = p; });
