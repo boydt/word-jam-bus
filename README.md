@@ -10,6 +10,8 @@ A parking-jam word puzzle for phones and desktops. Every car in a packed lot car
 
 **v9** adds **Main Street**, a new district of 10 forgiving **normal** lots with many ways to win (stops 11-21), spreads the four **Scramble stops** so every district from Main Street on has one with a par in line with its neighbours, turns **Sunny Beach** into the "big jammed lots" district, and shows a five-tier **difficulty badge** (Very Easy to Super Hard, computed from solver data) on every map stop, the level-intro banner and the play-screen header; see [v9](#v9-main-street-scramble-spread-and-difficulty-tiers). There are now 38 levels in 6 districts.
 
+**v10** (0.10.0) adds the opt-in **World Trial**: three generated cities (Pencil Park, Crayon Creek, Notebook Nook; 89 levels) joined by Maple Suburbs and Main Street, with BIG CHESTs and a separate save; the main game is unchanged; see [v10: World Trial](#v10-0100-world-trial).
+
 Plain HTML, CSS and JavaScript. There is no build step and no network or CDN dependency, so it can go straight onto a static host such as GitHub Pages.
 
 Live: https://boydt.github.io/word-jam-bus/
@@ -421,6 +423,61 @@ The verifier checks the stored `difficulty` against `tools/difficulty.js` and, s
 - `index.html` carries `<meta name="wjb-version" content="0.9.1">` (also `window.WJB.version`); `package.json` is 0.9.1.
 - Screenshots: `screenshots/v9.1-map-bus-on-replayed-stop-390x844.png` (bus on replayed stop 5 while stop 23 is the current stop), `v9.1-bus-banner-normal-390x844.png`, `v9.1-bus-header-normal-390x844.png` and `v9.1-map-tier-badges-390x844.png`.
 
+## v10 (0.10.0): World Trial
+
+The **World Trial** is a separate, opt-in campaign that tries out a bigger world: three generated **cities** joined by two of the main game's districts. The main game is untouched (still 38 stops in 6 districts, same save).
+
+### How to enter
+
+- **Title screen:** tap **World Trial** (the button with the **NEW** badge). This opens the **World** view: five nodes in a row, City 1 → Maple Suburbs → City 2 → Main Street → City 3, each with its progress.
+- **Settings** (gear): **Enter World Trial** / **Back to main game**.
+- In the World view, **Continue** opens the trial's city map at your current stop; **Back to main game** returns to the normal title. The map's home button goes back to the World view while you are in the trial, and the title shows "World Trial · separate save".
+
+### The sequence
+
+| Step | Node | Stops | Routes | Par band | Score band | BIG CHEST |
+|---|---|---|---|---|---|---|
+| 1 | **Pencil Park** (City 1, School art) | 24 | 4 × 6 | 3-9 | 4-10 | 500 coins, Tow, Bay +1, Nudge, Flip, Maple paint |
+| 2 | Maple Suburbs (path) | 4 | main-game district 2 | | | its usual chest |
+| 3 | **Crayon Creek** (City 2, Suburbs art) | 30 | 5 × 6 | 7-11 | 8-15 | 1000 coins, Tow, Bay +1, Nudge, Flip, Trolley paint |
+| 4 | Main Street (path) | 11 | main-game district 3 | | | its usual chest |
+| 5 | **Notebook Nook** (City 3, Main Street art) | 35 | 5 × 7 | 9-13 | 12-20 | 1500 coins, Tow, Bay +1, Nudge, Flip, Surf paint |
+
+That is 104 stops: 89 generated city levels plus the 15 Maple Suburbs and Main Street levels reused as-is. Each city's routes are linear and appear on the map as districts named "City · Route N". Only a city's **last route** ends in a chest, the **BIG CHEST**; earlier routes have no chest (the map hides empty chests). Pacing: Scramble first appears in Pencil Park route 2, Bay Words in route 3, and keys/padlocks in Crayon Creek route 1 (one gold key, one gold lock, with the key tip).
+
+### Defaults applied (v10 design)
+
+1. The 38 existing levels stay the main game; the trial reuses only Maple Suburbs and Main Street as paths between cities.
+2. Sunny Beach, Harbor Docks and Downtown stay main-game only.
+3. No new district art: the path segments keep the Maple and Main Street themes, and the cities use the School / Suburbs / Main Street themes.
+4. BIG CHEST = 500 coins × city number, one of each booster (Tow, Bay +1, Nudge, Flip), one paint (Maple / Trolley / Surf for City 1 / 2 / 3).
+5. Levels can be replayed for stars and coins; chests (path districts and BIG CHESTs) pay once.
+6. Routes are linear within a city.
+7. City names: Pencil Park, Crayon Creek, Notebook Nook.
+8. Keys debut in Crayon Creek route 1 with one key and one lock and a tip.
+9. Tiers use the v0.9.1 par-banded formula (`tools/difficulty.js`); each route is meant to end one tier higher than the rest of it, never above the city's top band.
+
+### Save
+
+The trial keeps its own save under **`wordJamBus.trial.v1`** (coins, stars, inventory, paints, bus position). The main save (`wordJamBus.progress.v1`) and the test/cheat options (`wordJamBus.test.v1`, shared) are not touched by trial play. Leaving the trial reloads the main save and the 38-level map.
+
+### Data and tools
+
+- `levels/world-trial.json` (→ `js/world-trial.js`): the manifest: sequence, city names, bands, routes, BIG CHEST contents, pacing, save key, world seed.
+- `levels/packs/c01.json`-`c03.json` (→ `js/packs/c01.js`-`c03.js`): the generated city packs, in the normal level format plus `difficulty` and `metrics`.
+- `levels/shipped-trial.json`: a frozen hash and par of every shipped trial level, written by `tools/freeze-trial.js`, so a later regeneration can't silently change a shipped level.
+- `tools/gen-city.js`: the deterministic city generator (kid word list `levels/kid-words.json`, attempt budgets, remapping of proven layouts to new words). The packs were generated once and are **not** regenerated by the tests.
+- `tests/trial-e2e.js` (`npm run test:trial`): version, 38 main levels, the title button, packs ready, the World view with 5 nodes, entering the trial map, playing a trial level, the Maple path, and returning to the 38-level main game.
+
+### v10 screenshots
+
+`screenshots/v10-title-world-trial.png` (title with the World Trial button), `v10-world-view.png` (the World view), `v10-city1-map.png` (Pencil Park on the trial map) and `v10-trial-level-phone.png` (a Pencil Park level at 390x844), plus `v10-big-chest.png` (the Pencil Park BIG CHEST, previewed under Unlock all).
+
+### Known limits of this trial
+
+- The generator reuses proven layouts with new letters when random search runs out of attempts, so many city levels share a layout (89 levels, 30 distinct layouts). In Notebook Nook, 17 of the last 21 stops fell back to one 4x4 Very Easy layout (par 6), below the city's band. Some Crayon Creek key levels (par 14) sit above its band.
+- Pars were proven by the solver when the packs were made and re-checked against `js/engine.js` for v10 (89/89 match); `tools/verify-levels.js` still checks only the main 38 levels.
+
 ## Levels
 
 v9 has 38 levels; see [Levels (v9 order)](#levels-v9-order) for the current order with modes, par and tiers. The tables below describe the original sets with their v4 numbers: the **10 starter levels** that teach one idea at a time (still stops 1-10), and the **10 v2 main levels** with **3 Scramble stops** (today stops 22-33 in a new order, with JUNGLE and DRAGONS moved); the 5 Downtown key levels are in v7 and the 10 normal lots in v9.
@@ -601,6 +658,7 @@ node tests/e2e.js                 # phone 390x844 touch, 375x667 check, desktop 
 node tests/map-e2e.js             # v8 city map: phone 390x844 touch, 375x667, desktop 1280x800, reduced motion
 node tests/file-url.js            # opens index.html via file://, opens the map and wins level 1
 node tests/flip-orient.js         # a flipped car is drawn facing its new way
+node tests/trial-e2e.js           # v10 World Trial (serves itself on 127.0.0.1:8768)
 node tools/verify-levels.js       # every level + map rules + the Python cross-check (about 10-15 min since v9)
 ```
 
@@ -661,6 +719,11 @@ tests/e2e.js             Playwright play-test (phone + desktop): levels, Scrambl
 tests/flip-orient.js     Playwright check that a flipped car is DRAWN facing its new way (phone + desktop; pass a URL to check the live site)
 tests/map-e2e.js         Playwright play-test of the v8 city map (bus, districts, chests, inventory, cheats, migration)
 tests/file-url.js        file:// smoke test
+tests/trial-e2e.js       Playwright check of the v10 World Trial (title button, World view, trial map, back to main)
+levels/world-trial.json  v10 World Trial manifest (-> js/world-trial.js)
+levels/packs/            v10 generated city packs c01-c03 (-> js/packs/)
+levels/shipped-trial.json frozen hashes of shipped trial levels (tools/freeze-trial.js)
+tools/gen-city.js        v10 city pack generator (dev)
 screenshots/             test screenshots
 ```
 
